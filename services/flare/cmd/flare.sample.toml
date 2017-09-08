@@ -1,0 +1,38 @@
+# --------------------------------------------------------------------------------------------------
+# - http.server.addr
+#   The address and port the HTTP server gonna listen. The value should have this format:
+#   "address:port". The address can be omited, then, Flare gonna bind to all interfaces. The port is
+#   required. Default value: ":8080"
+#
+[http]
+addr = ":8080"
+
+# --------------------------------------------------------------------------------------------------
+# - resource.default-limit
+#   The quantity of resources to be returned by default. Default value: 30.
+#
+[resource]
+default-limit = 30
+
+# --------------------------------------------------------------------------------------------------
+# - repository.engine
+#   The location of the content. Default value: "memory". Possible values: "memory" and "mongodb".
+#
+[repository]
+engine = "memory"
+
+# --------------------------------------------------------------------------------------------------
+# - log.level
+#   The minimum log level to be displayed. Default value: "debug". Possible values: "debug", "info",
+#   "warn" and "error".
+#
+# - log.output
+#   Where the logs gonna be sent. Default value: "stdout". Possible values: "stdout" and "discard".
+#
+# - log.format
+#   Format of the outputed log. Default value: "human". Possible values: "human" and "json".
+#
+[log]
+level  = "debug"
+output = "stdout"
+format = "human"
