@@ -13,7 +13,6 @@ type Resource struct {
 	Path      string
 	Change    ResourceChange
 	CreatedAt time.Time
-	UpdatedAt time.Time
 }
 
 // The types of value Flare support to detect document change.

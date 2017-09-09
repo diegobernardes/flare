@@ -47,14 +47,12 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 		Path      string            `json:"path"`
 		Change    map[string]string `json:"change"`
 		CreatedAt string            `json:"createdAt"`
-		UpdatedAt string            `json:"updatedAt"`
 	}{
 		Id:        r.base.Id,
 		Domains:   r.base.Domains,
 		Path:      r.base.Path,
 		Change:    change,
 		CreatedAt: r.base.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: r.base.UpdatedAt.Format(time.RFC3339),
 	})
 }
 

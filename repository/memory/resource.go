@@ -87,7 +87,6 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 	}
 
 	res.CreatedAt = time.Now()
-	res.UpdatedAt = res.CreatedAt
 	r.resources = append(r.resources, *res)
 	return nil
 }
