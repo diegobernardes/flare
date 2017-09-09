@@ -209,8 +209,8 @@ func ServiceRepository(repo flare.ResourceRepositorier) func(*Service) {
 	return func(s *Service) { s.repository = repo }
 }
 
-// ServiceGetResourceID the function to fetch the resourceId from the URL.
-func ServiceGetResourceID(fn func(*http.Request) string) func(*Service) {
+// ServiceGetResourceId the function to fetch the resourceId from the URL.
+func ServiceGetResourceId(fn func(*http.Request) string) func(*Service) {
 	return func(s *Service) { s.getResourceId = fn }
 }
 

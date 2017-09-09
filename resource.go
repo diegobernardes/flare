@@ -53,7 +53,7 @@ type ResourceRepositorier interface {
 	Delete(context.Context, string) error
 }
 
-// ResourceRepositoryError .
+// ResourceRepositoryError implements all the errrors the repository can return.
 type ResourceRepositoryError interface {
 	AlreadyExists() bool
 	PathConflict() bool

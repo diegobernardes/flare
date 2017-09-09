@@ -4,14 +4,11 @@
 #   "address:port". The address can be omited, then, Flare gonna bind to all interfaces. The port is
 #   required. Default value: ":8080"
 #
-[http]
-addr = ":8080"
-
-# --------------------------------------------------------------------------------------------------
-# - resource.default-limit
-#   The quantity of resources to be returned by default. Default value: 30.
+# - http.default-limit
+#   The quantity of entities to be returned by default. Default value: 30.
 #
-[resource]
+[http]
+addr          = ":8080"
 default-limit = 30
 
 # --------------------------------------------------------------------------------------------------

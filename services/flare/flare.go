@@ -11,8 +11,10 @@ import (
 	"github.com/go-kit/kit/log/term"
 	"github.com/pkg/errors"
 
+	"github.com/diegobernardes/flare"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/resource"
+	"github.com/diegobernardes/flare/subscription"
 )
 
 const (
@@ -43,7 +45,8 @@ func (c *Client) Start() error {
 	}
 	c.logger.Log("message", "Starting Flare")
 
-	resourceService, err := c.initResourceService()
+	subscriptionRepository := memory.NewSubscription()
+	resourceService, resourceRepository, err := c.initResourceService(subscriptionRepository)
 	if err != nil {
 		level.Debug(c.logger).Log(
 			"error", err.Error(), "message", "error during resource service initialization",
@@ -51,9 +54,15 @@ func (c *Client) Start() error {
 		return err
 	}
 
+	subscriptionService, err := c.initSubscriptionService(resourceRepository, subscriptionRepository)
+	if err != nil {
+		panic(err)
+	}
+
 	c.server = newServer(
 		serverAddr(config.getString("http.addr")),
 		serverHandlerResource(resourceService),
+		serverHandlerSubscription(subscriptionService),
 	)
 	c.server.start()
 	return nil
@@ -134,21 +143,48 @@ func (c *Client) initLoggerLevel(logger log.Logger) (log.Logger, error) {
 	}
 }
 
-func (c *Client) initResourceService() (*resource.Service, error) {
+func (c *Client) initResourceService(
+	subscriptionRepository flare.SubscriptionRepositorier,
+) (*resource.Service, flare.ResourceRepositorier, error) {
+	repository := memory.NewResource(memory.ResourceSubscriptionRepository(subscriptionRepository))
+
 	resourceService, err := resource.NewService(
-		resource.ServiceDefaultLimit(c.config.getInt("resource.default-limit")),
-		resource.ServiceGetResourceID(func(r *http.Request) string { return chi.URLParam(r, "id") }),
+		resource.ServiceDefaultLimit(c.config.getInt("http.default-limit")),
+		resource.ServiceGetResourceId(func(r *http.Request) string { return chi.URLParam(r, "id") }),
 		resource.ServiceGetResourceURI(func(id string) string {
 			return fmt.Sprintf("/resources/%s", id)
 		}),
 		resource.ServiceLogger(c.logger),
-		resource.ServiceRepository(memory.NewResource()),
+		resource.ServiceRepository(repository),
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "error during resource.Service initialization")
+		return nil, nil, errors.Wrap(err, "error during resource.Service initialization")
 	}
 
-	return resourceService, nil
+	return resourceService, repository, nil
+}
+
+func (c *Client) initSubscriptionService(
+	resourceRepository flare.ResourceRepositorier,
+	subscriptionRepository flare.SubscriptionRepositorier,
+) (*subscription.Service, error) {
+	subscriptionService, err := subscription.NewService(
+		subscription.ServiceDefaultLimit(c.config.getInt("http.default-limit")),
+		subscription.ServiceGetResourceId(func(r *http.Request) string {
+			return chi.URLParam(r, "resourceId")
+		}),
+		subscription.ServiceGetSubscriptionId(func(r *http.Request) string {
+			return chi.URLParam(r, "id")
+		}),
+		subscription.ServiceGetSubscriptionURI(func(resourceId, id string) string {
+			return fmt.Sprintf("/resources/%s/subscriptions/%s", resourceId, id)
+		}),
+		subscription.ServiceLogger(c.logger),
+		subscription.ServiceResourceRepository(resourceRepository),
+		subscription.ServiceSubscriptionRepository(subscriptionRepository),
+	)
+
+	return subscriptionService, err
 }
 
 func (c *Client) loggerColor(keyvals ...interface{}) term.FgBgColor {

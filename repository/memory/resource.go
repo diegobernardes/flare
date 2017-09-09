@@ -6,25 +6,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/diegobernardes/flare"
 )
 
-type errResource struct {
-	message       string
-	alreadyExists bool
-	pathConflict  bool
-	notFound      bool
-}
-
-func (e *errResource) Error() string       { return e.message }
-func (e *errResource) AlreadyExists() bool { return e.alreadyExists }
-func (e *errResource) PathConflict() bool  { return e.pathConflict }
-func (e *errResource) NotFound() bool      { return e.notFound }
-
 // Resource implements the data layer for the Resource service.
 type Resource struct {
-	mutex     sync.RWMutex
-	resources []flare.Resource
+	mutex                  sync.RWMutex
+	resources              []flare.Resource
+	subscriptionRepository flare.SubscriptionRepositorier
 }
 
 // FindAll returns a list of resources.
@@ -61,7 +52,7 @@ func (r *Resource) FindOne(_ context.Context, id string) (*flare.Resource, error
 			return &resource, nil
 		}
 	}
-	return nil, &errResource{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
+	return nil, &errMemory{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
 }
 
 // Create a resource.
@@ -71,13 +62,13 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 
 	for _, resource := range r.resources {
 		if resource.Id == res.Id {
-			return &errResource{
+			return &errMemory{
 				alreadyExists: true, message: fmt.Sprintf("already exists a resource with id '%s'", res.Id),
 			}
 		}
 
 		if sliceIntersection(resource.Domains, res.Domains, resource.Path, res.Path) {
-			return &errResource{
+			return &errMemory{
 				message: fmt.Sprintf(
 					"domain+path already associated to another resource '%s'", resource.Id,
 				),
@@ -92,9 +83,20 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 }
 
 // Delete a given resource.
-func (r *Resource) Delete(_ context.Context, id string) error {
+func (r *Resource) Delete(ctx context.Context, id string) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
+
+	_, pagination, err := r.subscriptionRepository.FindAll(ctx, &flare.Pagination{Limit: 1}, id)
+	if err != nil {
+		return errors.Wrap(err, "error during subscription search")
+	}
+	if pagination.Total > 0 {
+		return &errMemory{
+			message:  fmt.Sprintf("there are subscriptions associated with this resource '%s'", id),
+			notFound: true,
+		}
+	}
 
 	for i, res := range r.resources {
 		if res.Id == id {
@@ -103,7 +105,7 @@ func (r *Resource) Delete(_ context.Context, id string) error {
 		}
 	}
 
-	return &errResource{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
+	return &errMemory{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
 }
 
 func sliceIntersection(a, b []string, a1, b1 string) bool {
@@ -118,6 +120,17 @@ func sliceIntersection(a, b []string, a1, b1 string) bool {
 }
 
 // NewResource returns a configured resource repository.
-func NewResource() *Resource {
-	return &Resource{resources: make([]flare.Resource, 0)}
+func NewResource(options ...func(*Resource)) *Resource {
+	r := &Resource{resources: make([]flare.Resource, 0)}
+	for _, option := range options {
+		option(r)
+	}
+	return r
+}
+
+// ResourceSubscriptionRepository .
+func ResourceSubscriptionRepository(
+	subscriptionRepository flare.SubscriptionRepositorier,
+) func(*Resource) {
+	return func(r *Resource) { r.subscriptionRepository = subscriptionRepository }
 }
