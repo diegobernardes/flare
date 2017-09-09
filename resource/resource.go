@@ -89,6 +89,13 @@ func (r *resourceCreate) valid() error {
 		return errors.New("missing path")
 	}
 
+	trackCount := strings.Count(r.Path, "{track}")
+	if trackCount == 0 {
+		return errors.New("missing track mark on path")
+	} else if trackCount > 1 {
+		return errors.Errorf("path can have only one track, current has %d", trackCount)
+	}
+
 	if r.Change.Field == "" {
 		return errors.New("missing change")
 	}
