@@ -2,6 +2,7 @@ package resource
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -65,6 +66,18 @@ type resourceCreate struct {
 		Field      string `json:"field"`
 		DateFormat string `json:"dateFormat"`
 	} `json:"change"`
+}
+
+func (r *resourceCreate) cleanup() {
+	trim := func(value string) string { return strings.TrimSpace(value) }
+	r.Path = trim(r.Path)
+	r.Change.Kind = trim(r.Change.Kind)
+	r.Change.Field = trim(r.Change.Field)
+	r.Change.DateFormat = trim(r.Change.DateFormat)
+
+	for i, value := range r.Domains {
+		r.Domains[i] = trim(value)
+	}
 }
 
 func (r *resourceCreate) valid() error {
