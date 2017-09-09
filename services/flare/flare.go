@@ -56,14 +56,19 @@ func (c *Client) Start() error {
 
 	subscriptionService, err := c.initSubscriptionService(resourceRepository, subscriptionRepository)
 	if err != nil {
-		panic(err)
+		return errors.Wrap(err, "error during subscription memory repository initialization")
 	}
 
-	c.server = newServer(
+	srv, err := newServer(
 		serverAddr(config.getString("http.addr")),
 		serverHandlerResource(resourceService),
 		serverHandlerSubscription(subscriptionService),
+		serverLogger(c.logger),
 	)
+	if err != nil {
+		return errors.Wrap(err, "error during server initialization")
+	}
+	c.server = srv
 	c.server.start()
 	return nil
 }

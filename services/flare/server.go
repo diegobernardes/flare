@@ -7,8 +7,10 @@ import (
 	"os"
 
 	"github.com/go-chi/chi"
+	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
+	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
 )
@@ -20,6 +22,8 @@ type server struct {
 		resource     *resource.Service
 		subscription *subscription.Service
 	}
+	logger        log.Logger
+	writeResponse func(http.ResponseWriter, interface{}, int, http.Header)
 }
 
 func (s *server) start() {
@@ -57,6 +61,24 @@ func (s *server) stop() error {
 
 func (s *server) router() http.Handler {
 	r := chi.NewRouter()
+	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
+		s.writeResponse(w, map[string]interface{}{
+			"error": map[string]interface{}{
+				"status": http.StatusBadRequest,
+				"title":  "method not allowed",
+			},
+		}, http.StatusBadRequest, nil)
+	})
+
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		s.writeResponse(w, map[string]interface{}{
+			"error": map[string]interface{}{
+				"status": http.StatusNotFound,
+				"title":  "not found",
+			},
+		}, http.StatusNotFound, nil)
+	})
+
 	r.Route("/resources", s.routerResource)
 	r.Route("/resources/{resourceId}/subscriptions", s.routerSubscription)
 	return r
@@ -76,7 +98,7 @@ func (s *server) routerSubscription(r chi.Router) {
 	r.Delete("/{id}", s.handler.subscription.HandleDelete)
 }
 
-func newServer(options ...func(*server)) *server {
+func newServer(options ...func(*server)) (*server, error) {
 	s := &server{}
 
 	for _, option := range options {
@@ -87,7 +109,20 @@ func newServer(options ...func(*server)) *server {
 		s.addr = ":8080"
 	}
 
-	return s
+	if s.handler.resource == nil {
+		return nil, errors.New("missing handler.resource")
+	}
+
+	if s.handler.subscription == nil {
+		return nil, errors.New("missing handler.subscription")
+	}
+
+	if s.logger == nil {
+		return nil, errors.New("missing logger")
+	}
+
+	s.writeResponse = infraHTTP.WriteResponse(s.logger)
+	return s, nil
 }
 
 func serverAddr(addr string) func(*server) {
@@ -100,4 +135,8 @@ func serverHandlerResource(handler *resource.Service) func(*server) {
 
 func serverHandlerSubscription(handler *subscription.Service) func(*server) {
 	return func(s *server) { s.handler.subscription = handler }
+}
+
+func serverLogger(logger log.Logger) func(*server) {
+	return func(s *server) { s.logger = logger }
 }
