@@ -43,6 +43,18 @@ type SubscriptionRepositorier interface {
 	FindOne(ctx context.Context, resourceId, id string) (*Subscription, error)
 	Create(context.Context, *Subscription) error
 	Delete(ctx context.Context, resourceId, id string) error
+	HasSubscription(ctx context.Context, resourceId string) (bool, error)
+	Trigger(
+		ctx context.Context,
+		action string,
+		document *Document,
+		fn func(context.Context, Subscription) error,
+	) error
+}
+
+// SubscriptionTrigger .
+type SubscriptionTrigger interface {
+	Process(ctx context.Context, kind string, document *Document) error
 }
 
 // SubscriptionRepositoryError implements all the errrors the repository can return.

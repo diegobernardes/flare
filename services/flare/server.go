@@ -10,6 +10,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
+	"github.com/diegobernardes/flare/document"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
@@ -21,6 +22,7 @@ type server struct {
 	handler    struct {
 		resource     *resource.Service
 		subscription *subscription.Service
+		document     *document.Service
 	}
 	logger        log.Logger
 	writeResponse func(http.ResponseWriter, interface{}, int, http.Header)
@@ -81,6 +83,7 @@ func (s *server) router() http.Handler {
 
 	r.Route("/resources", s.routerResource)
 	r.Route("/resources/{resourceId}/subscriptions", s.routerSubscription)
+	r.Route("/documents", s.routerDocument)
 	return r
 }
 
@@ -96,6 +99,12 @@ func (s *server) routerSubscription(r chi.Router) {
 	r.Post("/", s.handler.subscription.HandleCreate)
 	r.Get("/{id}", s.handler.subscription.HandleShow)
 	r.Delete("/{id}", s.handler.subscription.HandleDelete)
+}
+
+func (s *server) routerDocument(r chi.Router) {
+	r.Get("/*", s.handler.document.HandleShow)
+	r.Put("/*", s.handler.document.HandleUpdate)
+	r.Delete("/*", s.handler.document.HandleDelete)
 }
 
 func newServer(options ...func(*server)) (*server, error) {
@@ -117,6 +126,10 @@ func newServer(options ...func(*server)) (*server, error) {
 		return nil, errors.New("missing handler.subscription")
 	}
 
+	// if s.handler.document == nil {
+	// 	return nil, errors.New("missing handler.document")
+	// }
+
 	if s.logger == nil {
 		return nil, errors.New("missing logger")
 	}
@@ -135,6 +148,10 @@ func serverHandlerResource(handler *resource.Service) func(*server) {
 
 func serverHandlerSubscription(handler *subscription.Service) func(*server) {
 	return func(s *server) { s.handler.subscription = handler }
+}
+
+func serverHandlerDocument(handler *document.Service) func(*server) {
+	return func(s *server) { s.handler.document = handler }
 }
 
 func serverLogger(logger log.Logger) func(*server) {

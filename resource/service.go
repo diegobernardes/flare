@@ -169,7 +169,7 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	s.writeResponse(w, nil, http.StatusNoContent, nil)
 }
 
-// NewService initialize the service to handle HTTP Requests.
+// NewService initialize the service to handle HTTP requests.
 func NewService(options ...func(*Service)) (*Service, error) {
 	service := &Service{}
 
