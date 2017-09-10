@@ -2,6 +2,7 @@ package resource
 
 import (
 	"encoding/json"
+	"net/url"
 	"strings"
 	"time"
 
@@ -79,8 +80,8 @@ func (r *resourceCreate) cleanup() {
 }
 
 func (r *resourceCreate) valid() error {
-	if len(r.Domains) == 0 {
-		return errors.New("missing domains")
+	if err := r.validDomains(); err != nil {
+		return err
 	}
 
 	if r.Path == "" {
@@ -133,6 +134,30 @@ func (r *resourceCreate) validWildcard() error {
 			return errors.New("found a mixed wildcard on path, it should appear alone")
 		}
 	}
+	return nil
+}
+
+func (r *resourceCreate) validDomains() error {
+	if len(r.Domains) == 0 {
+		return errors.New("missing domains")
+	}
+
+	for _, domain := range r.Domains {
+		d, err := url.Parse(domain)
+		if err != nil {
+			return errors.Wrap(err, "error during domain parse")
+		}
+
+		switch d.Scheme {
+		case "http", "https":
+			continue
+		case "":
+			return errors.Errorf("missing scheme on domain '%s'", domain)
+		default:
+			return errors.Errorf("invalid scheme on domain '%s'", domain)
+		}
+	}
+
 	return nil
 }
 
