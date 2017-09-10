@@ -87,11 +87,12 @@ func (r *resourceCreate) valid() error {
 		return errors.New("missing path")
 	}
 
-	trackCount := strings.Count(r.Path, "{track}")
-	if trackCount == 0 {
-		return errors.New("missing track mark on path")
-	} else if trackCount > 1 {
-		return errors.Errorf("path can have only one track, current has %d", trackCount)
+	if err := r.validTrack(); err != nil {
+		return err
+	}
+
+	if err := r.validWildcard(); err != nil {
+		return err
 	}
 
 	if r.Change.Field == "" {
@@ -108,6 +109,30 @@ func (r *resourceCreate) valid() error {
 		return errors.New("invalid change.kind")
 	}
 
+	return nil
+}
+
+func (r *resourceCreate) validTrack() error {
+	trackCount := strings.Count(r.Path, "{track}")
+	if trackCount == 0 {
+		return errors.New("missing track mark on path")
+	} else if trackCount > 1 {
+		return errors.Errorf("path can have only one track, current has %d", trackCount)
+	}
+
+	trackSuffix := r.Path[strings.Index(r.Path, "{track}"):]
+	if strings.Contains(trackSuffix, "{*}") {
+		return errors.New("found wildcard after the track mark")
+	}
+	return nil
+}
+
+func (r *resourceCreate) validWildcard() error {
+	for _, value := range strings.Split(r.Path, "/") {
+		if strings.Contains(value, "{*}") && value != "{*}" {
+			return errors.New("found a mixed wildcard on path, it should appear alone")
+		}
+	}
 	return nil
 }
 
