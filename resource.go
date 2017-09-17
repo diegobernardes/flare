@@ -49,6 +49,7 @@ func (rc *ResourceChange) Valid() error {
 type ResourceRepositorier interface {
 	FindAll(context.Context, *Pagination) ([]Resource, *Pagination, error)
 	FindOne(context.Context, string) (*Resource, error)
+	FindByURI(context.Context, string) (*Resource, error)
 	Create(context.Context, *Resource) error
 	Delete(context.Context, string) error
 }

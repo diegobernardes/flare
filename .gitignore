@@ -1,2 +1,3 @@
 services/flare/cmd/flare
 services/flare/cmd/flare.toml
+**/debug.test

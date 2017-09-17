@@ -12,6 +12,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/document"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
@@ -54,15 +55,21 @@ func (c *Client) Start() error {
 		return err
 	}
 
+	documentService, err := c.initDocumentService(resourceRepository, subscriptionRepository)
+	if err != nil {
+		return errors.Wrap(err, "error during document service initialization")
+	}
+
 	subscriptionService, err := c.initSubscriptionService(resourceRepository, subscriptionRepository)
 	if err != nil {
-		return errors.Wrap(err, "error during subscription memory repository initialization")
+		return errors.Wrap(err, "error during subscription service initialization")
 	}
 
 	srv, err := newServer(
 		serverAddr(config.getString("http.addr")),
 		serverHandlerResource(resourceService),
 		serverHandlerSubscription(subscriptionService),
+		serverHandlerDocument(documentService),
 		serverLogger(c.logger),
 	)
 	if err != nil {
@@ -188,8 +195,40 @@ func (c *Client) initSubscriptionService(
 		subscription.ServiceResourceRepository(resourceRepository),
 		subscription.ServiceSubscriptionRepository(subscriptionRepository),
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during subscription.Service initialization")
+	}
 
-	return subscriptionService, err
+	return subscriptionService, nil
+}
+
+func (c *Client) initDocumentService(
+	rr flare.ResourceRepositorier, sr flare.SubscriptionRepositorier,
+) (*document.Service, error) {
+	subscriptionTrigger, err := subscription.NewTrigger(
+		subscription.TriggerRepository(sr),
+		subscription.TriggerHTTPClient(http.DefaultClient),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during subscription.Trigger initialization")
+	}
+
+	documentService, err := document.NewService(
+		document.DocumentSubscriptionTrigger(subscriptionTrigger),
+		document.DocumentDocumentRepository(memory.NewDocument()),
+		document.DocumentResourceRepository(rr),
+		document.DocumentSubscriptionRepository(sr),
+		document.DocumentGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
+		document.DocumentGetDocumentURI(func(id string) string {
+			return fmt.Sprintf("/documents/%s", id)
+		}),
+		document.DocumentLogger(c.logger),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during document.Service initialization")
+	}
+
+	return documentService, nil
 }
 
 func (c *Client) loggerColor(keyvals ...interface{}) term.FgBgColor {
