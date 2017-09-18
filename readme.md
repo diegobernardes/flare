@@ -1,1 +1,1 @@
-## Flare
+## Flare [![Build Status](https://travis-ci.org/diegobernardes/flare.svg?branch=master)](https://travis-ci.org/diegobernardes/flare)
