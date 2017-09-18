@@ -1,0 +1,23 @@
+language: bash
+
+services:
+ - docker
+
+before_install:
+  - docker pull diegobernardes/flare:0.1
+
+stages:
+  - compile
+  - quality
+
+jobs:
+  include:
+    - stage: quality
+      script: make docker-lint-fast
+
+    - script: make docker-lint-slow
+
+    - script: make docker-test
+
+    - stage: compile
+      script: make docker-flare-build

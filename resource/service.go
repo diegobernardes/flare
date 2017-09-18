@@ -71,7 +71,7 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 	re, err := s.repository.FindOne(r.Context(), s.getResourceId(r))
 	if err != nil {
 		var status int
-		if err, ok := err.(flare.ResourceRepositoryError); ok && err.NotFound() {
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
 		} else {
 			status = http.StatusInternalServerError
@@ -127,8 +127,8 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	result := content.toFlareResource()
 	if err := s.repository.Create(r.Context(), result); err != nil {
 		status := http.StatusInternalServerError
-		if err, ok := err.(flare.ResourceRepositoryError); ok {
-			if err.PathConflict() || err.AlreadyExists() {
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok {
+			if errRepo.PathConflict() || errRepo.AlreadyExists() {
 				status = http.StatusConflict
 			}
 		}
@@ -152,7 +152,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	if err := s.repository.Delete(r.Context(), s.getResourceId(r)); err != nil {
 		status := http.StatusInternalServerError
-		if err, ok := err.(flare.ResourceRepositoryError); ok && err.NotFound() {
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
 		}
 

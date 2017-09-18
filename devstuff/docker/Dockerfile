@@ -1,0 +1,3 @@
+FROM golang:1.9.0-stretch
+
+RUN go get -u github.com/alecthomas/gometalinter && gometalinter --install
