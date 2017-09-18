@@ -27,14 +27,6 @@ func transformDocument(d *flare.Document) *document {
 	return &document{d}
 }
 
-func transformDocuments(d []flare.Document) []document {
-	result := make([]document, len(d))
-	for i := 0; i < len(d); i++ {
-		result[i] = document{&d[i]}
-	}
-	return result
-}
-
 type response struct {
 	Error    *responseError `json:"error,omitempty"`
 	Document *document      `json:"document,omitempty"`

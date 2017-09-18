@@ -114,7 +114,7 @@ func (r *Resource) Delete(ctx context.Context, id string) error {
 // FindByURI take a URI and find the resource that match.
 func (r *Resource) FindByURI(_ context.Context, rawURI string) (*flare.Resource, error) {
 	r.mutex.Lock()
-	r.mutex.Unlock()
+	defer r.mutex.Unlock()
 
 	if !strings.HasPrefix(rawURI, "http") {
 		rawURI = "//" + rawURI
@@ -122,9 +122,27 @@ func (r *Resource) FindByURI(_ context.Context, rawURI string) (*flare.Resource,
 
 	uri, err := url.Parse(rawURI)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, fmt.Sprintf("error during url.Parse with '%s'", rawURI))
 	}
 
+	resources, err := r.findResourcesByHost(uri)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during resource search")
+	}
+
+	resource, err := r.selectResouceByHost(uri, resources)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during resource select")
+	}
+	if resource != nil {
+		return resource, nil
+	}
+	return nil, &errMemory{
+		notFound: true, message: fmt.Sprintf("could not found a resource for this uri '%s'", rawURI),
+	}
+}
+
+func (r *Resource) findResourcesByHost(uri *url.URL) ([]flare.Resource, error) {
 	var resources []flare.Resource
 	for _, resource := range r.resources {
 		for _, rawDomain := range resource.Domains {
@@ -139,7 +157,12 @@ func (r *Resource) FindByURI(_ context.Context, rawURI string) (*flare.Resource,
 			}
 		}
 	}
+	return resources, nil
+}
 
+func (r *Resource) selectResouceByHost(
+	uri *url.URL, resources []flare.Resource,
+) (*flare.Resource, error) {
 	segments := strings.Split(uri.Path, "/")
 outer:
 	for _, resourceSegment := range r.genResourceSegments(resources, len(segments)) {
@@ -160,10 +183,7 @@ outer:
 		}
 		break
 	}
-
-	return nil, &errMemory{
-		notFound: true, message: fmt.Sprintf("could not found a resource for this uri '%s'", rawURI),
-	}
+	return nil, nil
 }
 
 func (r *Resource) genResourceSegments(resources []flare.Resource, qtySegments int) [][]string {
