@@ -1,1 +1,1 @@
-## Flare [![Build Status](https://travis-ci.org/diegobernardes/flare.svg?branch=master)](https://travis-ci.org/diegobernardes/flare)
+## Flare [![Build Status](https://travis-ci.org/diegobernardes/flare.svg?branch=master)](https://travis-ci.org/diegobernardes/flare) [![GoDoc](https://godoc.org/github.com/diegobernardes/flare?status.svg)](https://godoc.org/github.com/diegobernardes/flare)
