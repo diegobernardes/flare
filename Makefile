@@ -67,3 +67,7 @@ docker-build:
 docker-push:
 	docker push diegobernardes/flare:latest
 	docker push diegobernardes/flare:0.1
+
+git-clean:
+	git gc
+	git fetch --all --prune
