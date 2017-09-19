@@ -2,7 +2,7 @@ configure:
 	git config pull.rebase true
 
 lint-fast:
-	gometalinter \
+	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 gometalinter \
 		--disable-all \
 		--enable=gas \
 		--enable=goconst \
@@ -24,7 +24,7 @@ lint-fast:
 		--vendor ./...
 
 lint-slow:
-	gometalinter \
+	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 gometalinter \
 		--disable-all \
 		--enable=megacheck \
 		--enable=aligncheck \
@@ -44,22 +44,10 @@ lint-slow:
 		--vendor ./...
 
 test:
-	go test -race ./...
+	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 go test -race ./...
 
 flare-build:
-	go build services/flare/cmd/flare.go
-
-docker-lint-fast:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 make lint-fast
-
-docker-lint-slow:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 make lint-slow
-
-docker-test:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 make test
-
-docker-flare-build:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 make flare-build
+	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.1 go build services/flare/cmd/flare.go
 
 docker-build:
 	docker build -t diegobernardes/flare:latest -t diegobernardes/flare:0.1 devstuff/docker

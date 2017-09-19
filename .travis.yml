@@ -13,11 +13,11 @@ stages:
 jobs:
   include:
     - stage: quality
-      script: make docker-lint-fast
+      script: make lint-fast
 
-    - script: make docker-lint-slow
+    - script: make lint-slow
 
-    - script: make docker-test
+    - script: make test
 
     - stage: compile
-      script: make docker-flare-build
+      script: make flare-build
