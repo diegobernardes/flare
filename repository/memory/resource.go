@@ -70,10 +70,10 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 			}
 		}
 
-		if sliceIntersection(resource.Domains, res.Domains, resource.Path, res.Path) {
+		if sliceIntersection(resource.Addresses, res.Addresses, resource.Path, res.Path) {
 			return &errMemory{
 				message: fmt.Sprintf(
-					"domain+path already associated to another resource '%s'", resource.Id,
+					"address+path already associated to another resource '%s'", resource.Id,
 				),
 				pathConflict: true,
 			}
@@ -145,13 +145,13 @@ func (r *Resource) FindByURI(_ context.Context, rawURI string) (*flare.Resource,
 func (r *Resource) findResourcesByHost(uri *url.URL) ([]flare.Resource, error) {
 	var resources []flare.Resource
 	for _, resource := range r.resources {
-		for _, rawDomain := range resource.Domains {
-			domain, err := url.Parse(rawDomain)
+		for _, rawAddress := range resource.Addresses {
+			address, err := url.Parse(rawAddress)
 			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("error during domain parse '%s'", rawDomain))
+				return nil, errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", address))
 			}
 
-			if domain.Host == uri.Host {
+			if address.Host == uri.Host {
 				resources = append(resources, resource)
 				break
 			}

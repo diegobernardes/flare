@@ -44,13 +44,13 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(&struct {
 		Id        string            `json:"id"`
-		Domains   []string          `json:"domains"`
+		Addresses []string          `json:"addresses"`
 		Path      string            `json:"path"`
 		Change    map[string]string `json:"change"`
 		CreatedAt string            `json:"createdAt"`
 	}{
 		Id:        r.base.Id,
-		Domains:   r.base.Domains,
+		Addresses: r.base.Addresses,
 		Path:      r.base.Path,
 		Change:    change,
 		CreatedAt: r.base.CreatedAt.Format(time.RFC3339),
@@ -58,9 +58,9 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 }
 
 type resourceCreate struct {
-	Path    string   `json:"path"`
-	Domains []string `json:"domains"`
-	Change  struct {
+	Path      string   `json:"path"`
+	Addresses []string `json:"addresses"`
+	Change    struct {
 		Kind       string `json:"kind"`
 		Field      string `json:"field"`
 		DateFormat string `json:"dateFormat"`
@@ -74,13 +74,13 @@ func (r *resourceCreate) cleanup() {
 	r.Change.Field = trim(r.Change.Field)
 	r.Change.DateFormat = trim(r.Change.DateFormat)
 
-	for i, value := range r.Domains {
-		r.Domains[i] = trim(value)
+	for i, value := range r.Addresses {
+		r.Addresses[i] = trim(value)
 	}
 }
 
 func (r *resourceCreate) valid() error {
-	if err := r.validDomains(); err != nil {
+	if err := r.validAddresses(); err != nil {
 		return err
 	}
 
@@ -137,24 +137,24 @@ func (r *resourceCreate) validWildcard() error {
 	return nil
 }
 
-func (r *resourceCreate) validDomains() error {
-	if len(r.Domains) == 0 {
-		return errors.New("missing domains")
+func (r *resourceCreate) validAddresses() error {
+	if len(r.Addresses) == 0 {
+		return errors.New("missing address")
 	}
 
-	for _, domain := range r.Domains {
-		d, err := url.Parse(domain)
+	for _, address := range r.Addresses {
+		d, err := url.Parse(address)
 		if err != nil {
-			return errors.Wrap(err, "error during domain parse")
+			return errors.Wrap(err, "error during address parse")
 		}
 
 		switch d.Scheme {
 		case "http", "https":
 			continue
 		case "":
-			return errors.Errorf("missing scheme on domain '%s'", domain)
+			return errors.Errorf("missing scheme on address '%s'", address)
 		default:
-			return errors.Errorf("invalid scheme on domain '%s'", domain)
+			return errors.Errorf("invalid scheme on address '%s'", address)
 		}
 	}
 
@@ -163,9 +163,9 @@ func (r *resourceCreate) validDomains() error {
 
 func (r *resourceCreate) toFlareResource() *flare.Resource {
 	return &flare.Resource{
-		Id:      uuid.NewV4().String(),
-		Domains: r.Domains,
-		Path:    r.Path,
+		Id:        uuid.NewV4().String(),
+		Addresses: r.Addresses,
+		Path:      r.Path,
 		Change: flare.ResourceChange{
 			Kind:       r.Change.Kind,
 			Field:      r.Change.Field,

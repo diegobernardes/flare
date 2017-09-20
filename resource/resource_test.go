@@ -62,14 +62,14 @@ func TestResourceMarshalJSON(t *testing.T) {
 			flare.Resource{
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-				Domains:   []string{"http://flare.io", "https://flare.com"},
+				Addresses: []string{"http://flare.io", "https://flare.com"},
 				Path:      "/resources/{track}",
 				Change: flare.ResourceChange{
 					Field: "version",
 					Kind:  flare.ResourceChangeInteger,
 				},
 			},
-			`{"id":"id","domains":["http://flare.io","https://flare.com"],"path":"/resources/{track}",
+			`{"id":"id","addresses":["http://flare.io","https://flare.com"],"path":"/resources/{track}",
 			"change":{"field":"version","kind":"integer"},"createdAt":"2009-11-10T23:00:00Z"}`,
 			false,
 		},
@@ -78,7 +78,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 			flare.Resource{
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-				Domains:   []string{"http://flare.io", "https://flare.com"},
+				Addresses: []string{"http://flare.io", "https://flare.com"},
 				Path:      "/resources/{track}",
 				Change: flare.ResourceChange{
 					Field:      "updatedAt",
@@ -86,7 +86,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 					DateFormat: "2006-01-02",
 				},
 			},
-			`{"id":"id","domains":["http://flare.io","https://flare.com"],"path":"/resources/{track}",
+			`{"id":"id","addresses":["http://flare.io","https://flare.com"],"path":"/resources/{track}",
 			"change":{"field":"updatedAt","kind":"date","dateFormat":"2006-01-02"},
 			"createdAt":"2009-11-10T23:00:00Z"}`,
 			false,
@@ -148,7 +148,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			response{
 				Resource: &resource{base: &flare.Resource{
 					Id:        "123",
-					Domains:   []string{"http://domain1", "https://domain2"},
+					Addresses: []string{"http://address1", "https://address2"},
 					Path:      "/products/{track}",
 					CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					Change: flare.ResourceChange{
@@ -157,7 +157,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					},
 				}},
 			},
-			`{"id":"123","domains":["http://domain1","https://domain2"],"path":"/products/{track}",
+			`{"id":"123","addresses":["http://address1","https://address2"],"path":"/products/{track}",
 			"change":{"field":"version","kind":"integer"},"createdAt":"2009-11-10T23:00:00Z"}`,
 			false,
 		},
@@ -169,7 +169,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					{
 						base: &flare.Resource{
 							Id:        "123",
-							Domains:   []string{"http://domain1", "https://domain2"},
+							Addresses: []string{"http://address1", "https://address2"},
 							Path:      "/products/{track}",
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Change: flare.ResourceChange{
@@ -180,7 +180,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					},
 				},
 			},
-			`{"resources":[{"id":"123","domains":["http://domain1","https://domain2"],
+			`{"resources":[{"id":"123","addresses":["http://address1","https://address2"],
 			"path":"/products/{track}","change":{"field":"version","kind":"integer"},
 			"createdAt":"2009-11-10T23:00:00Z"}],"pagination":{"limit":10,"offset":20,"total":30}}`,
 			false,

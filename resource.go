@@ -9,7 +9,7 @@ import (
 // Resource is the base component from Flare. It is holds the data to detect the document change.
 type Resource struct {
 	Id        string
-	Domains   []string
+	Addresses []string
 	Path      string
 	Change    ResourceChange
 	CreatedAt time.Time
