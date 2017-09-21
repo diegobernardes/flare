@@ -48,13 +48,14 @@ type SubscriptionRepositorier interface {
 		ctx context.Context,
 		action string,
 		document *Document,
-		fn func(context.Context, Subscription) error,
+		fn func(context.Context, Subscription, string) error,
 	) error
 }
 
 // SubscriptionTrigger .
 type SubscriptionTrigger interface {
-	Process(ctx context.Context, kind string, document *Document) error
+	Update(ctx context.Context, document *Document) error
+	Delete(ctx context.Context, document *Document) error
 }
 
 // SubscriptionRepositoryError implements all the errrors the repository can return.

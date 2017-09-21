@@ -10,13 +10,14 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/subscription"
 )
 
 // Subscription implements the data layer for the subscription service.
 type Subscription struct {
 	mutex         sync.RWMutex
 	subscriptions map[string][]flare.Subscription
-	changes       map[string]flare.Document
+	changes       map[string]map[string]flare.Document
 }
 
 // FindAll returns a list of subscriptions.
@@ -134,12 +135,12 @@ func (s *Subscription) Delete(_ context.Context, resourceId, id string) error {
 	}
 }
 
-// Trigger .
+// Trigger process the update on a document.
 func (s *Subscription) Trigger(
 	ctx context.Context,
-	action string,
+	kind string,
 	doc *flare.Document,
-	fn func(context.Context, flare.Subscription) error,
+	fn func(context.Context, flare.Subscription, string) error,
 ) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -151,39 +152,69 @@ func (s *Subscription) Trigger(
 
 	group, groupCtx := errgroup.WithContext(ctx)
 	for i := range subscriptions {
-		group.Go(func(subscription flare.Subscription) func() error {
-			return func() error {
-				change, ok := s.changes[subscription.Id]
-				if !ok {
-					err := fn(groupCtx, subscription)
-					return errors.Wrap(err, "error during document subscription processing")
-				}
-
-				newer, err := doc.Newer(&change)
-				if err != nil {
-					return errors.Wrap(err, "error during check if document is newer")
-				}
-
-				if !newer {
-					return nil
-				}
-
-				if err := fn(groupCtx, subscription); err != nil {
-					return errors.Wrap(err, "error during document subscription processing")
-				}
-
-				return nil
-			}
-		}(subscriptions[i]))
+		group.Go(s.triggerProcess(groupCtx, subscriptions[i], doc, kind, fn))
 	}
 
 	return errors.Wrap(group.Wait(), "error during processing")
+}
+
+func (s *Subscription) triggerProcess(
+	groupCtx context.Context,
+	subs flare.Subscription,
+	doc *flare.Document,
+	kind string,
+
+	fn func(context.Context, flare.Subscription, string) error,
+) func() error {
+	return func() error {
+		documents, ok := s.changes[subs.Id]
+		if !ok {
+			documents = make(map[string]flare.Document)
+			s.changes[subs.Id] = documents
+		}
+
+		referenceDocument, ok := documents[doc.Id]
+		if !ok {
+			if kind == subscription.TriggerActionDelete {
+				return nil
+			}
+
+			documents[doc.Id] = *doc
+			return errors.Wrap(
+				fn(groupCtx, subs, subscription.TriggerActionCreate),
+				"error during document subscription processing",
+			)
+		}
+
+		if kind == subscription.TriggerActionDelete {
+			delete(documents, doc.Id)
+			if err := fn(groupCtx, subs, subscription.TriggerActionDelete); err != nil {
+				return errors.Wrap(err, "error during document subscription processing")
+			}
+			return nil
+		}
+
+		newer, err := doc.Newer(&referenceDocument)
+		if err != nil {
+			return errors.Wrap(err, "error during check if document is newer")
+		}
+		if !newer {
+			return nil
+		}
+
+		documents[doc.Id] = *doc
+		if err := fn(groupCtx, subs, subscription.TriggerActionUpdate); err != nil {
+			return errors.Wrap(err, "error during document subscription processing")
+		}
+
+		return nil
+	}
 }
 
 // NewSubscription returns a configured subscription repository.
 func NewSubscription() *Subscription {
 	return &Subscription{
 		subscriptions: make(map[string][]flare.Subscription),
-		changes:       make(map[string]flare.Document),
+		changes:       make(map[string]map[string]flare.Document),
 	}
 }

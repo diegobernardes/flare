@@ -9,9 +9,11 @@
       "remotePath": "",
       "port": 2345,
       "host": "127.0.0.1",
-      "program": "${workspaceRoot}/service/flare/cmd/flare.go",
+      "program": "${workspaceRoot}/services/flare/cmd/flare.go",
       "env": {},
-      "args": [],
+      "args": [
+        "start"
+      ],
       "showLog": true
     }
   ]

@@ -24,24 +24,26 @@ type Trigger struct {
 	httpClient *http.Client
 }
 
-// Process the document change signal.
-func (t *Trigger) Process(ctx context.Context, kind string, document *flare.Document) error {
-	switch kind {
-	case TriggerActionDelete, TriggerActionUpdate, TriggerActionCreate:
-	default:
-		return errors.Errorf("invalid kind '%s'", kind)
+// Update the document change signal.
+func (t *Trigger) Update(ctx context.Context, document *flare.Document) error {
+	if err := t.repository.Trigger(ctx, TriggerActionUpdate, document, t.exec(document)); err != nil {
+		return errors.Wrap(err, "error during trigger")
 	}
+	return nil
+}
 
-	if err := t.repository.Trigger(ctx, kind, document, t.exec(kind, document)); err != nil {
+// Delete the document change signal.
+func (t *Trigger) Delete(ctx context.Context, document *flare.Document) error {
+	if err := t.repository.Trigger(ctx, TriggerActionDelete, document, t.exec(document)); err != nil {
 		return errors.Wrap(err, "error during trigger")
 	}
 	return nil
 }
 
 func (t *Trigger) exec(
-	kind string, document *flare.Document,
-) func(context.Context, flare.Subscription) error {
-	return func(ctx context.Context, sub flare.Subscription) error {
+	document *flare.Document,
+) func(context.Context, flare.Subscription, string) error {
+	return func(ctx context.Context, sub flare.Subscription, kind string) error {
 		content, err := json.Marshal(map[string]interface{}{
 			"id":               document.Id,
 			"changeFieldValue": document.ChangeFieldValue,

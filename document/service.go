@@ -9,7 +9,6 @@ import (
 
 	"github.com/diegobernardes/flare"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
-	"github.com/diegobernardes/flare/subscription"
 )
 
 // Service implements the HTTP handler to manage documents.
@@ -28,13 +27,7 @@ type Service struct {
 func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 	d, err := s.documentRepository.FindOne(r.Context(), s.getDocumentId(r))
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during search",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+		s.writeError(w, err, "error during search", http.StatusInternalServerError)
 		return
 	}
 	if d == nil && err == nil {
@@ -47,104 +40,63 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 
 // HandleUpdate process the request to update a document.
 func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
-	document, err := s.parseHandleUpdateDocument(w, r)
-	if err != nil {
+	document, ok := s.parseHandleUpdateDocument(w, r)
+	if !ok {
 		return
 	}
 
 	referenceDocument, err := s.documentRepository.FindOne(r.Context(), document.Id)
 	if err != nil {
 		if _, ok := err.(flare.DocumentRepositoryError); !ok {
-			s.writeResponse(w, &response{
-				Error: &responseError{
-					Status: http.StatusInternalServerError,
-					Title:  "error during document search",
-					Detail: err.Error(),
-				},
-			}, http.StatusInternalServerError, nil)
+			s.writeError(w, err, "error during document search", http.StatusInternalServerError)
 			return
 		}
 	}
 
-	hasSubscriptions, err := s.subscriptionRepository.HasSubscription(
-		r.Context(), document.Resource.Id,
-	)
+	hasSubscr, err := s.subscriptionRepository.HasSubscription(r.Context(), document.Resource.Id)
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during check if the document resource has subscriptions",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+		s.writeError(
+			w,
+			err,
+			"error during check if the document resource has subscriptions",
+			http.StatusInternalServerError,
+		)
 		return
 	}
-	if !hasSubscriptions {
+	if !hasSubscr {
 		s.writeResponse(w, &response{Document: transformDocument(document)}, http.StatusOK, nil)
 		return
 	}
 
-	var (
-		status int
-		header http.Header
-	)
-
+	status := http.StatusOK
 	if referenceDocument == nil {
 		status = http.StatusCreated
-		header = make(http.Header)
-		header.Set("Location", s.getDocumentURI(document.Id))
-	} else {
-		status = http.StatusOK
-		newer, err := document.Newer(referenceDocument)
-		if err != nil {
-			s.writeResponse(w, &response{
-				Error: &responseError{
-					Status: http.StatusBadRequest,
-					Title:  "error during comparing the document with the latest one on datastorage",
-					Detail: err.Error(),
-				},
-			}, http.StatusBadRequest, nil)
-			return
-		}
-		if !newer {
-			s.writeResponse(w, &response{Document: transformDocument(referenceDocument)}, status, nil)
-			return
-		}
 	}
 
-	if err := s.updateAndTriggerDocumentChange(w, r, document, status); err != nil {
+	if ok := s.updateAndTriggerDocumentChange(w, r, document, referenceDocument, status); !ok {
 		return
 	}
+
+	header := make(http.Header)
+	header.Set("Location", s.getDocumentURI(document.Id))
 	s.writeResponse(w, &response{Document: transformDocument(document)}, status, header)
 }
 
 func (s *Service) parseHandleUpdateDocument(
 	w http.ResponseWriter, r *http.Request,
-) (*flare.Document, error) {
+) (*flare.Document, bool) {
 	d := json.NewDecoder(r.Body)
 	content := make(map[string]interface{})
 	if err := d.Decode(&content); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "invalid body content",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
-		return nil, err
+		s.writeError(w, err, "invalid body content", http.StatusBadRequest)
+		return nil, false
 	}
 
 	documentId := s.getDocumentId(r)
 	resource, err := s.resourceRepository.FindByURI(r.Context(), documentId)
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during resource search",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
-		return nil, err
+		s.writeError(w, err, "error during resource search", http.StatusInternalServerError)
+		return nil, false
 	}
 
 	document := &flare.Document{
@@ -153,65 +105,61 @@ func (s *Service) parseHandleUpdateDocument(
 		Resource:         *resource,
 	}
 	if err = document.Valid(); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "document is not valid",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
-		return nil, err
+		s.writeError(w, err, "document is not valid", http.StatusBadRequest)
+		return nil, false
 	}
 
-	return document, nil
+	return document, true
 }
 
 func (s *Service) updateAndTriggerDocumentChange(
-	w http.ResponseWriter, r *http.Request, document *flare.Document, status int,
-) error {
-	if err := s.documentRepository.Update(r.Context(), document); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during document persistence",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
-		return err
+	w http.ResponseWriter, r *http.Request, document, referenceDocument *flare.Document, status int,
+) bool {
+	var (
+		newer bool
+		err   error
+	)
+
+	if referenceDocument != nil {
+		newer, err = document.Newer(referenceDocument)
+		if err != nil {
+			s.writeError(
+				w,
+				err,
+				"error during comparing the document with the latest one on datastorage",
+				http.StatusBadRequest,
+			)
+			return false
+		}
 	}
 
-	var action string
+	if newer || status == http.StatusCreated {
+		if err = s.documentRepository.Update(r.Context(), document); err != nil {
+			s.writeError(w, err, "error during document persistence", http.StatusInternalServerError)
+			return false
+		}
+	}
+
 	switch status {
-	case http.StatusCreated:
-		action = subscription.TriggerActionCreate
-	case http.StatusOK:
-		action = subscription.TriggerActionUpdate
+	case http.StatusOK, http.StatusCreated:
+		err = s.subscriptionTrigger.Update(r.Context(), document)
+	case http.StatusNoContent:
+		err = s.subscriptionTrigger.Delete(r.Context(), document)
 	}
-
-	if err := s.subscriptionTrigger.Process(r.Context(), action, document); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during document change trigger",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
-		return err
+	if err != nil {
+		s.writeError(w, err, "error during document change trigger", http.StatusInternalServerError)
+		return false
 	}
-	return nil
+	return true
 }
 
 // HandleDelete receive the request to delete a document.
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	document, err := s.documentRepository.FindOne(r.Context(), s.getDocumentId(r))
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during the check if the document exists",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+		s.writeError(
+			w, err, "error during the check if the document exists", http.StatusInternalServerError,
+		)
 		return
 	}
 	if document == nil {
@@ -220,25 +168,12 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err = s.documentRepository.Delete(r.Context(), document.Id); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during delete",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+		s.writeError(w, err, "error during delete", http.StatusInternalServerError)
 		return
 	}
 
-	err = s.subscriptionTrigger.Process(r.Context(), subscription.TriggerActionDelete, document)
-	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during document change trigger",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+	if err = s.subscriptionTrigger.Delete(r.Context(), document); err != nil {
+		s.writeError(w, err, "error during document change trigger", http.StatusInternalServerError)
 		return
 	}
 
