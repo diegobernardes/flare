@@ -57,14 +57,16 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 	})
 }
 
+type resourceCreateChange struct {
+	Kind       string `json:"kind"`
+	Field      string `json:"field"`
+	DateFormat string `json:"dateFormat"`
+}
+
 type resourceCreate struct {
-	Path      string   `json:"path"`
-	Addresses []string `json:"addresses"`
-	Change    struct {
-		Kind       string `json:"kind"`
-		Field      string `json:"field"`
-		DateFormat string `json:"dateFormat"`
-	} `json:"change"`
+	Path      string               `json:"path"`
+	Addresses []string             `json:"addresses"`
+	Change    resourceCreateChange `json:"change"`
 }
 
 func (r *resourceCreate) cleanup() {

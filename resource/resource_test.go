@@ -216,3 +216,42 @@ func TestResponseMarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestResourceCreateCleanup(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  resourceCreate
+		output resourceCreate
+	}{
+		{
+			"Should pass",
+			resourceCreate{
+				Addresses: []string{"space ", " space", " space "},
+				Path:      " space ",
+				Change: resourceCreateChange{
+					Kind:       " space ",
+					Field:      " space ",
+					DateFormat: " space ",
+				},
+			},
+			resourceCreate{
+				Addresses: []string{"space", "space", "space"},
+				Path:      "space",
+				Change: resourceCreateChange{
+					Kind:       "space",
+					Field:      "space",
+					DateFormat: "space",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.input.cleanup()
+			if !reflect.DeepEqual(tt.input, tt.output) {
+				t.Errorf("want '%v', got '%v'", tt.output, tt.input)
+			}
+		})
+	}
+}
