@@ -6,6 +6,7 @@ package resource
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -16,9 +17,7 @@ import (
 	"github.com/diegobernardes/flare"
 )
 
-type pagination struct {
-	base *flare.Pagination
-}
+type pagination flare.Pagination
 
 func (p *pagination) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
@@ -26,24 +25,22 @@ func (p *pagination) MarshalJSON() ([]byte, error) {
 		Offset int `json:"offset"`
 		Total  int `json:"total"`
 	}{
-		Limit:  p.base.Limit,
-		Total:  p.base.Total,
-		Offset: p.base.Offset,
+		Limit:  p.Limit,
+		Total:  p.Total,
+		Offset: p.Offset,
 	})
 }
 
-type resource struct {
-	base *flare.Resource
-}
+type resource flare.Resource
 
 func (r *resource) MarshalJSON() ([]byte, error) {
 	change := map[string]string{
-		"kind":  r.base.Change.Kind,
-		"field": r.base.Change.Field,
+		"kind":  r.Change.Kind,
+		"field": r.Change.Field,
 	}
 
-	if r.base.Change.DateFormat != "" {
-		change["dateFormat"] = r.base.Change.DateFormat
+	if r.Change.DateFormat != "" {
+		change["dateFormat"] = r.Change.DateFormat
 	}
 
 	return json.Marshal(&struct {
@@ -53,11 +50,11 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 		Change    map[string]string `json:"change"`
 		CreatedAt string            `json:"createdAt"`
 	}{
-		Id:        r.base.Id,
-		Addresses: r.base.Addresses,
-		Path:      r.base.Path,
+		Id:        r.Id,
+		Addresses: r.Addresses,
+		Path:      r.Path,
 		Change:    change,
-		CreatedAt: r.base.CreatedAt.Format(time.RFC3339),
+		CreatedAt: r.CreatedAt.Format(time.RFC3339),
 	})
 }
 
@@ -71,18 +68,6 @@ type resourceCreate struct {
 	Path      string               `json:"path"`
 	Addresses []string             `json:"addresses"`
 	Change    resourceCreateChange `json:"change"`
-}
-
-func (r *resourceCreate) cleanup() {
-	trim := func(value string) string { return strings.TrimSpace(value) }
-	r.Path = trim(r.Path)
-	r.Change.Kind = trim(r.Change.Kind)
-	r.Change.Field = trim(r.Change.Field)
-	r.Change.DateFormat = trim(r.Change.DateFormat)
-
-	for i, value := range r.Addresses {
-		r.Addresses[i] = trim(value)
-	}
 }
 
 func (r *resourceCreate) valid() error {
@@ -145,13 +130,13 @@ func (r *resourceCreate) validWildcard() error {
 
 func (r *resourceCreate) validAddresses() error {
 	if len(r.Addresses) == 0 {
-		return errors.New("missing address")
+		return errors.New("missing addresses")
 	}
 
 	for _, address := range r.Addresses {
 		d, err := url.Parse(address)
 		if err != nil {
-			return errors.Wrap(err, "error during address parse")
+			return errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", address))
 		}
 
 		switch d.Scheme {
@@ -180,17 +165,17 @@ func (r *resourceCreate) toFlareResource() *flare.Resource {
 	}
 }
 
-func transformResource(r *flare.Resource) *resource { return &resource{r} }
-
-func transformPagination(p *flare.Pagination) *pagination { return &pagination{base: p} }
-
 func transformResources(r []flare.Resource) []resource {
 	result := make([]resource, len(r))
 	for i := 0; i < len(r); i++ {
-		result[i] = resource{&r[i]}
+		result[i] = (resource)(r[i])
 	}
 	return result
 }
+
+func transformResource(r *flare.Resource) *resource { return (*resource)(r) }
+
+func transformPagination(p *flare.Pagination) *pagination { return (*pagination)(p) }
 
 type response struct {
 	Pagination *pagination

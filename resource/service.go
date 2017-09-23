@@ -116,7 +116,6 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content.cleanup()
 	if err := content.valid(); err != nil {
 		s.writeResponse(w, &response{
 			Error: &responseError{

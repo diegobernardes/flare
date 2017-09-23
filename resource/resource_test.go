@@ -20,19 +20,19 @@ import (
 func TestPaginationMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  flare.Pagination
+		input  pagination
 		output string
 		hasErr bool
 	}{
 		{
 			"Should pass",
-			flare.Pagination{Limit: 30, Offset: 0},
+			pagination{Limit: 30, Offset: 0},
 			`{"limit":30,"offset":0,"total":0}`,
 			false,
 		},
 		{
 			"Should pass",
-			flare.Pagination{Limit: 10, Offset: 30, Total: 120},
+			pagination{Limit: 10, Offset: 30, Total: 120},
 			`{"limit":10,"offset":30,"total":120}`,
 			false,
 		},
@@ -40,8 +40,7 @@ func TestPaginationMarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := pagination{&tt.input}
-			content, err := p.MarshalJSON()
+			content, err := tt.input.MarshalJSON()
 			if tt.hasErr != (err != nil) {
 				t.Errorf("pagination.MarshalJSON error result, want '%v', got '%v'", tt.hasErr, (err != nil))
 				t.FailNow()
@@ -57,13 +56,13 @@ func TestPaginationMarshalJSON(t *testing.T) {
 func TestResourceMarshalJSON(t *testing.T) {
 	tests := []struct {
 		name   string
-		input  flare.Resource
+		input  resource
 		output string
 		hasErr bool
 	}{
 		{
 			"Should pass",
-			flare.Resource{
+			resource{
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				Addresses: []string{"http://flare.io", "https://flare.com"},
@@ -79,7 +78,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 		},
 		{
 			"Should pass",
-			flare.Resource{
+			resource{
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				Addresses: []string{"http://flare.io", "https://flare.com"},
@@ -99,8 +98,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := resource{&tt.input}
-			content, err := r.MarshalJSON()
+			content, err := tt.input.MarshalJSON()
 			if tt.hasErr != (err != nil) {
 				t.Errorf("resource.MarshalJSON error result, want '%v', got '%v'", tt.hasErr, (err != nil))
 				t.FailNow()
@@ -150,7 +148,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 		{
 			"Should pass",
 			response{
-				Resource: &resource{base: &flare.Resource{
+				Resource: &resource{
 					Id:        "123",
 					Addresses: []string{"http://address1", "https://address2"},
 					Path:      "/products/{track}",
@@ -159,7 +157,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Kind:  flare.ResourceChangeInteger,
 						Field: "version",
 					},
-				}},
+				},
 			},
 			`{"id":"123","addresses":["http://address1","https://address2"],"path":"/products/{track}",
 			"change":{"field":"version","kind":"integer"},"createdAt":"2009-11-10T23:00:00Z"}`,
@@ -168,18 +166,16 @@ func TestResponseMarshalJSON(t *testing.T) {
 		{
 			"Should pass",
 			response{
-				Pagination: &pagination{base: &flare.Pagination{Limit: 10, Total: 30, Offset: 20}},
+				Pagination: (*pagination)(&flare.Pagination{Limit: 10, Total: 30, Offset: 20}),
 				Resources: []resource{
 					{
-						base: &flare.Resource{
-							Id:        "123",
-							Addresses: []string{"http://address1", "https://address2"},
-							Path:      "/products/{track}",
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Change: flare.ResourceChange{
-								Kind:  flare.ResourceChangeInteger,
-								Field: "version",
-							},
+						Id:        "123",
+						Addresses: []string{"http://address1", "https://address2"},
+						Path:      "/products/{track}",
+						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+						Change: flare.ResourceChange{
+							Kind:  flare.ResourceChangeInteger,
+							Field: "version",
 						},
 					},
 				},
@@ -221,40 +217,208 @@ func TestResponseMarshalJSON(t *testing.T) {
 	}
 }
 
-func TestResourceCreateCleanup(t *testing.T) {
+func TestResourceCreateValidAddresses(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  resourceCreate
-		output resourceCreate
+		hasErr bool
 	}{
 		{
+			"Empty addresses",
+			resourceCreate{},
+			true,
+		},
+		{
 			"Should pass",
-			resourceCreate{
-				Addresses: []string{"space ", " space", " space "},
-				Path:      " space ",
-				Change: resourceCreateChange{
-					Kind:       " space ",
-					Field:      " space ",
-					DateFormat: " space ",
-				},
-			},
-			resourceCreate{
-				Addresses: []string{"space", "space", "space"},
-				Path:      "space",
-				Change: resourceCreateChange{
-					Kind:       "space",
-					Field:      "space",
-					DateFormat: "space",
-				},
-			},
+			resourceCreate{Addresses: []string{"http://app.io", "https://app.com"}},
+			false,
+		},
+		{
+			"Missing schema",
+			resourceCreate{Addresses: []string{""}},
+			true,
+		},
+		{
+			"Invalid schema",
+			resourceCreate{Addresses: []string{"tcp://127.0.0.1:8080"}},
+			true,
+		},
+		{
+			"Invalid address",
+			resourceCreate{Addresses: []string{"%zzzzz"}},
+			true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.input.cleanup()
-			if !reflect.DeepEqual(tt.input, tt.output) {
-				t.Errorf("want '%v', got '%v'", tt.output, tt.input)
+			result := tt.input.validAddresses()
+			if tt.hasErr != (result != nil) {
+				t.Errorf("resourceCreate.validAddresses, want '%v', got '%v'", tt.hasErr, result)
+			}
+		})
+	}
+}
+
+func TestResourceCreateValidWildcard(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  resourceCreate
+		hasErr bool
+	}{
+		{
+			"Valid wildcard",
+			resourceCreate{Path: "/users/{*}"},
+			false,
+		},
+		{
+			"Invalid wildcard",
+			resourceCreate{Path: "/users{*}"},
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.validWildcard()
+			if tt.hasErr != (result != nil) {
+				t.Errorf("resourceCreate.validWildcard, want '%v', got '%v'", tt.hasErr, result)
+			}
+		})
+	}
+}
+
+func TestResourceCreateValidTrack(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  resourceCreate
+		hasErr bool
+	}{
+		{
+			"Invalid Wildcard",
+			resourceCreate{Path: "/users/{*}"},
+			true,
+		},
+		{
+			"Invalid wildcard",
+			resourceCreate{Path: ""},
+			true,
+		},
+		{
+			"Invalid Wildcard",
+			resourceCreate{Path: "/users/{*}/posts/{*}"},
+			true,
+		},
+		{
+			"Invalid Wildcard",
+			resourceCreate{Path: "/users/{track}/posts/{track}"},
+			true,
+		},
+		{
+			"Invalid Wildcard",
+			resourceCreate{Path: "/users/{track}/posts/{*}"},
+			true,
+		},
+		{
+			"Valid Wildcard",
+			resourceCreate{Path: "/users/{*}/posts/{track}"},
+			false,
+		},
+		{
+			"Valid Wildcard",
+			resourceCreate{Path: "/users/{track}"},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.validTrack()
+			if tt.hasErr != (result != nil) {
+				t.Errorf("resourceCreate.validTrack, want '%v', got '%v'", tt.hasErr, result)
+			}
+		})
+	}
+}
+
+func TestResourceCreateValid(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  resourceCreate
+		hasErr bool
+	}{
+		{
+			"Invalid addresses",
+			resourceCreate{},
+			true,
+		},
+		{
+			"Invalid path",
+			resourceCreate{Addresses: []string{"http://app.com"}},
+			true,
+		},
+		{
+			"Invalid path",
+			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users"},
+			true,
+		},
+		{
+			"Invalid path",
+			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users/{*}-path/posts/{track}"},
+			true,
+		},
+		{
+			"Invalid change",
+			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users/{track}"},
+			true,
+		},
+		{
+			"Invalid change kind",
+			resourceCreate{
+				Addresses: []string{"http://app.com"},
+				Path:      "/users/{track}",
+				Change:    resourceCreateChange{Field: "updatedAt"},
+			},
+			true,
+		},
+		{
+			"Missing date format",
+			resourceCreate{
+				Addresses: []string{"http://app.com"},
+				Path:      "/users/{track}",
+				Change:    resourceCreateChange{Field: "updatedAt", Kind: flare.ResourceChangeDate},
+			},
+			true,
+		},
+		{
+			"Valid resource",
+			resourceCreate{
+				Addresses: []string{"http://app.com"},
+				Path:      "/users/{track}",
+				Change:    resourceCreateChange{Field: "incrCounter", Kind: flare.ResourceChangeInteger},
+			},
+			false,
+		},
+		{
+			"Valid resource",
+			resourceCreate{
+				Addresses: []string{"http://app.com"},
+				Path:      "/users/{track}",
+				Change: resourceCreateChange{
+					Field:      "updatedAt",
+					Kind:       flare.ResourceChangeDate,
+					DateFormat: "2006-01-02T15:04:05Z07:00",
+				},
+			},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.input.valid()
+			if tt.hasErr != (result != nil) {
+				t.Errorf("resourceCreate.valid, want '%v', got '%v'", tt.hasErr, result)
 			}
 		})
 	}
