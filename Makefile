@@ -47,7 +47,7 @@ test:
 	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 go test -race ./...
 
 coveralls:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 goveralls -race
+	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare -e COVERALLS_TOKEN=$$COVERALLS_TOKEN diegobernardes/flare:0.2 goveralls -race
 
 flare-build:
 	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 go build services/flare/cmd/flare.go
