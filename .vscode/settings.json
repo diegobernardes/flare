@@ -25,6 +25,9 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 2
   },
+  "[markdown]": {
+    "files.trimTrailingWhitespace": false
+  },
   "go.formatTool": "goreturns",
   "go.formatFlags": [
     "-local",
