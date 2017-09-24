@@ -1,0 +1,7 @@
+{
+  "error": {
+    "status": 404,
+    "title": "error during delete",
+    "detail": "resource '123' not found"
+  }
+}

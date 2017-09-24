@@ -90,10 +90,6 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 		}, status, nil)
 		return
 	}
-	if re == nil && err == nil {
-		s.writeResponse(w, nil, http.StatusNotFound, nil)
-		return
-	}
 
 	s.writeResponse(w, transformResource(re), http.StatusOK, nil)
 }
