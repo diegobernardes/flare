@@ -5,6 +5,7 @@
 package resource
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/kr/pretty"
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
@@ -94,6 +96,7 @@ func TestHandleIndex(t *testing.T) {
 						},
 					},
 				},
+				"",
 			),
 		},
 		{
@@ -128,6 +131,7 @@ func TestHandleIndex(t *testing.T) {
 						},
 					},
 				},
+				"",
 			),
 		},
 		{
@@ -162,6 +166,7 @@ func TestHandleIndex(t *testing.T) {
 						},
 					},
 				},
+				"",
 			),
 		},
 	}
@@ -201,6 +206,7 @@ func TestHandleShow(t *testing.T) {
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{},
+				"",
 			),
 		},
 		{
@@ -232,6 +238,7 @@ func TestHandleShow(t *testing.T) {
 						},
 					},
 				},
+				"",
 			),
 		},
 	}
@@ -271,6 +278,7 @@ func TestHandleDelete(t *testing.T) {
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{},
+				"",
 			),
 		},
 		{
@@ -302,6 +310,7 @@ func TestHandleDelete(t *testing.T) {
 						},
 					},
 				},
+				"",
 			),
 		},
 	}
@@ -320,6 +329,111 @@ func TestHandleDelete(t *testing.T) {
 		}
 
 		t.Run(tt.name, testService(tt.status, tt.header, service.HandleDelete, tt.req, tt.body))
+	}
+}
+
+func TestHandleCreate(t *testing.T) {
+	tests := []struct {
+		name       string
+		req        *http.Request
+		status     int
+		header     http.Header
+		body       []byte
+		repository resourceRepository
+	}{
+		{
+			"Invalid resource",
+			httptest.NewRequest(http.MethodPost, "http://resources/123", bytes.NewBuffer([]byte{})),
+			http.StatusBadRequest,
+			http.Header{"Content-Type": []string{"application/json"}},
+			load("createInvalid1.json"),
+			resourceRepository{},
+		},
+		{
+			"Invalid resource content",
+			httptest.NewRequest(http.MethodPost, "http://resources/123", bytes.NewBufferString("{}")),
+			http.StatusBadRequest,
+			http.Header{"Content-Type": []string{"application/json"}},
+			load("createInvalid2.json"),
+			resourceRepository{},
+		},
+		{
+			"Conflict",
+			httptest.NewRequest(
+				http.MethodPost,
+				"http://resources/123",
+				bytes.NewBuffer(load("createInputConflict.json")),
+			),
+			http.StatusConflict,
+			http.Header{"Content-Type": []string{"application/json"}},
+			load("createOutputConflict.json"),
+			newResourceRepository(
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+				[]flare.Resource{
+					{
+						Id:        "123",
+						Addresses: []string{"http://app1.com", "https://app1.io"},
+						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+						Path:      "/resources/{track}",
+						Change: flare.ResourceChange{
+							Field:      "updatedAt",
+							Kind:       flare.ResourceChangeDate,
+							DateFormat: "2006-01-02T15:04:05Z07:00",
+						},
+					},
+				},
+				"",
+			),
+		},
+		{
+			"Error",
+			httptest.NewRequest(
+				http.MethodPost,
+				"http://resources/123",
+				bytes.NewBuffer(load("createInputConflict.json")),
+			),
+			http.StatusInternalServerError,
+			http.Header{"Content-Type": []string{"application/json"}},
+			load("createOutputError.json"),
+			resourceRepository{err: errors.New("error during repository save")},
+		},
+		{
+			"Success",
+			httptest.NewRequest(
+				http.MethodPost,
+				"http://resources/123",
+				bytes.NewBuffer(load("createInputConflict.json")),
+			),
+			http.StatusCreated,
+			http.Header{
+				"Content-Type": []string{"application/json"},
+				"Location":     []string{"http://resources/123"},
+			},
+			load("createOutputSuccess.json"),
+			newResourceRepository(
+				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
+				[]flare.Resource{},
+				"123",
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		service, err := NewService(
+			ServiceLogger(log.NewNopLogger()),
+			ServiceRepository(&tt.repository),
+			ServiceGetResourceId(func(r *http.Request) string {
+				return strings.Replace(r.URL.String(), "http://resources/", "", -1)
+			}),
+			ServiceGetResourceURI(func(id string) string {
+				return "http://resources/" + id
+			}),
+		)
+		if err != nil {
+			t.Error(errors.Wrap(err, "error during service initialization"))
+		}
+
+		t.Run(tt.name, testService(tt.status, tt.header, service.HandleCreate, tt.req, tt.body))
 	}
 }
 
@@ -346,6 +460,7 @@ func testService(
 		}
 
 		if !reflect.DeepEqual(header, resp.Header) {
+			pretty.Println(header, resp.Header)
 			t.Errorf("status, want '%v', got '%v'", header, resp.Header)
 		}
 
@@ -365,7 +480,7 @@ func testService(
 		}
 
 		if !reflect.DeepEqual(b1, b2) {
-			t.Errorf("body, want '%v', got '%v'", b1, b2)
+			t.Errorf("body, want '%v', got '%v'", b2, b1)
 		}
 	}
 }
@@ -385,9 +500,10 @@ func load(name string) []byte {
 }
 
 type resourceRepository struct {
-	date time.Time
-	base flare.ResourceRepositorier
-	err  error
+	date     time.Time
+	base     flare.ResourceRepositorier
+	err      error
+	createId string
 }
 
 func (r *resourceRepository) FindAll(
@@ -427,8 +543,14 @@ func (r *resourceRepository) FindByURI(context.Context, string) (*flare.Resource
 	return nil, nil
 }
 
-func (r *resourceRepository) Create(context.Context, *flare.Resource) error {
-	return nil
+func (r *resourceRepository) Create(ctx context.Context, resource *flare.Resource) error {
+	if r.err != nil {
+		return r.err
+	}
+	err := r.base.Create(ctx, resource)
+	resource.CreatedAt = r.date
+	resource.Id = r.createId
+	return err
 }
 
 func (r *resourceRepository) Delete(ctx context.Context, id string) error {
@@ -438,7 +560,9 @@ func (r *resourceRepository) Delete(ctx context.Context, id string) error {
 	return r.base.Delete(ctx, id)
 }
 
-func newResourceRepository(date time.Time, resources []flare.Resource) resourceRepository {
+func newResourceRepository(
+	date time.Time, resources []flare.Resource, createId string,
+) resourceRepository {
 	base := memory.NewResource(
 		memory.ResourceSubscriptionRepository(memory.NewSubscription()),
 	)
@@ -449,5 +573,5 @@ func newResourceRepository(date time.Time, resources []flare.Resource) resourceR
 		}
 	}
 
-	return resourceRepository{base: base, date: date}
+	return resourceRepository{base: base, date: date, createId: createId}
 }

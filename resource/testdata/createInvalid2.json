@@ -1,0 +1,7 @@
+{
+  "error": {
+    "status": 400,
+    "title": "invalid content",
+    "detail": "missing addresses"
+  }
+}

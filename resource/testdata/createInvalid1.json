@@ -1,0 +1,7 @@
+{
+  "error": {
+    "status": 400,
+    "title": "error during content parse",
+    "detail": "EOF"
+  }
+}
