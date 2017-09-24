@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
-	"github.com/kr/pretty"
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
@@ -460,7 +459,6 @@ func testService(
 		}
 
 		if !reflect.DeepEqual(header, resp.Header) {
-			pretty.Println(header, resp.Header)
 			t.Errorf("status, want '%v', got '%v'", header, resp.Header)
 		}
 
