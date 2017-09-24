@@ -7,6 +7,7 @@ package resource
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -205,4 +206,18 @@ type responseError struct {
 	Status int    `json:"status"`
 	Title  string `json:"title"`
 	Detail string `json:"detail,omitempty"`
+}
+
+func (s *Service) writeError(w http.ResponseWriter, err error, title string, status int) {
+	resp := &response{Error: &responseError{Status: status}}
+
+	if err != nil {
+		resp.Error.Detail = err.Error()
+	}
+
+	if title != "" {
+		resp.Error.Title = title
+	}
+
+	s.writeResponse(w, resp, status, nil)
 }

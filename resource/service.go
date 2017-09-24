@@ -31,36 +31,18 @@ type Service struct {
 func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	pagination, err := s.parsePagination(r)
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "error during pagination parse",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "error during pagination parse", http.StatusBadRequest)
 		return
 	}
 
 	if err = pagination.Valid(); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "invalid pagination",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "invalid pagination", http.StatusBadRequest)
 		return
 	}
 
 	resources, paginationResponse, err := s.repository.FindAll(r.Context(), pagination)
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during search",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+		s.writeError(w, err, "error during search", http.StatusInternalServerError)
 		return
 	}
 
@@ -81,13 +63,7 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusInternalServerError
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during search",
-				Detail: err.Error(),
-			},
-		}, status, nil)
+		s.writeError(w, err, "error during search", status)
 		return
 	}
 
@@ -102,24 +78,12 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err := d.Decode(content); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "error during content parse",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "error during content parse", http.StatusBadRequest)
 		return
 	}
 
 	if err := content.valid(); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "invalid content",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "invalid content", http.StatusBadRequest)
 		return
 	}
 
@@ -132,13 +96,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during save",
-				Detail: err.Error(),
-			},
-		}, status, nil)
+		s.writeError(w, err, "error during save", status)
 		return
 	}
 
@@ -155,13 +113,7 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during delete",
-				Detail: err.Error(),
-			},
-		}, status, nil)
+		s.writeError(w, err, "error during delete", status)
 		return
 	}
 
