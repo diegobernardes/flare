@@ -25,6 +25,98 @@ import (
 	"github.com/diegobernardes/flare/repository/memory"
 )
 
+func TestNewService(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  []func(*Service)
+		hasError bool
+	}{
+		{
+			"Fail",
+			[]func(*Service){},
+			true,
+		},
+		{
+			"Fail",
+			[]func(*Service){
+				ServiceLogger(log.NewNopLogger()),
+			},
+			true,
+		},
+		{
+			"Fail",
+			[]func(*Service){
+				ServiceLogger(log.NewNopLogger()),
+				ServiceRepository(memory.NewResource()),
+			},
+			true,
+		},
+		{
+			"Fail",
+			[]func(*Service){
+				ServiceLogger(log.NewNopLogger()),
+				ServiceRepository(memory.NewResource()),
+				ServiceGetResourceId(func(*http.Request) string { return "" }),
+			},
+			true,
+		},
+		{
+			"Fail",
+			[]func(*Service){
+				ServiceLogger(log.NewNopLogger()),
+				ServiceRepository(memory.NewResource()),
+				ServiceGetResourceId(func(*http.Request) string { return "" }),
+				ServiceGetResourceURI(func(string) string { return "" }),
+				ServiceDefaultLimit(-1),
+			},
+			true,
+		},
+		{
+			"Success",
+			[]func(*Service){
+				ServiceLogger(log.NewNopLogger()),
+				ServiceRepository(memory.NewResource()),
+				ServiceGetResourceId(func(*http.Request) string { return "" }),
+				ServiceGetResourceURI(func(string) string { return "" }),
+			},
+			false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewService(tt.options...)
+			if tt.hasError != (err != nil) {
+				t.Errorf("error, want '%v', got '%v'", tt.hasError, err)
+			}
+		})
+	}
+}
+
+func TestServiceDefaultLimit(t *testing.T) {
+	tests := []struct {
+		name         string
+		defaultLimit int
+	}{
+		{"Success", 1},
+		{"Success", 2},
+		{"Success", 3},
+		{"Success", 5},
+		{"Success", 8},
+		{"Success", 13},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &Service{}
+			ServiceDefaultLimit(tt.defaultLimit)(s)
+			if s.defaultLimit != tt.defaultLimit {
+				t.Errorf("Service.defaultLimit, want '%v', got '%v'", tt.defaultLimit, s.defaultLimit)
+			}
+		})
+	}
+}
+
 func TestHandleIndex(t *testing.T) {
 	tests := []struct {
 		name       string
