@@ -56,11 +56,9 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 	re, err := s.repository.FindOne(r.Context(), s.getResourceId(r))
 	if err != nil {
-		var status int
+		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
-		} else {
-			status = http.StatusInternalServerError
 		}
 
 		s.writeError(w, err, "error during search", status)

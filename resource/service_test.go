@@ -87,7 +87,7 @@ func TestNewService(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewService(tt.options...)
 			if tt.hasError != (err != nil) {
-				t.Errorf("error, want '%v', got '%v'", tt.hasError, err)
+				t.Errorf("NewService invalid result, want '%v', got '%v'", tt.hasError, err)
 			}
 		})
 	}
@@ -111,7 +111,9 @@ func TestServiceDefaultLimit(t *testing.T) {
 			s := &Service{}
 			ServiceDefaultLimit(tt.defaultLimit)(s)
 			if s.defaultLimit != tt.defaultLimit {
-				t.Errorf("Service.defaultLimit, want '%v', got '%v'", tt.defaultLimit, s.defaultLimit)
+				t.Errorf(
+					"Service.defaultLimit invalid result, want '%v', got '%v'", tt.defaultLimit, s.defaultLimit,
+				)
 			}
 		})
 	}
@@ -131,7 +133,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources?limit=sample", nil),
 			http.StatusBadRequest,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("invalidPaginationType1.json"),
+			load("handleIndex.invalidPaginationType1.json"),
 			resourceRepository{},
 		},
 		{
@@ -139,7 +141,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources?offset=sample", nil),
 			http.StatusBadRequest,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("invalidPaginationType2.json"),
+			load("handleIndex.invalidPaginationType2.json"),
 			resourceRepository{},
 		},
 		{
@@ -147,7 +149,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources?limit=-1", nil),
 			http.StatusBadRequest,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("invalidPaginationValue1.json"),
+			load("handleIndex.invalidPaginationValue1.json"),
 			resourceRepository{},
 		},
 		{
@@ -155,7 +157,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources?offset=-1", nil),
 			http.StatusBadRequest,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("invalidPaginationValue2.json"),
+			load("handleIndex.invalidPaginationValue2.json"),
 			resourceRepository{},
 		},
 		{
@@ -163,7 +165,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources", nil),
 			http.StatusInternalServerError,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("errorSearch.json"),
+			load("handleIndex.errorSearch.json"),
 			resourceRepository{err: errors.New("error during repository search")},
 		},
 		{
@@ -171,7 +173,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources", nil),
 			http.StatusOK,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("validSearch1.json"),
+			load("handleIndex.validSearch1.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{
@@ -195,7 +197,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources?limit=10", nil),
 			http.StatusOK,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("validSearch2.json"),
+			load("handleIndex.validSearch2.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{
@@ -230,7 +232,7 @@ func TestHandleIndex(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources?limit=10&offset=1", nil),
 			http.StatusOK,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("validSearch3.json"),
+			load("handleIndex.validSearch3.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{
@@ -293,7 +295,7 @@ func TestHandleShow(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources/123", nil),
 			http.StatusNotFound,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("showNotFound.json"),
+			load("handleShow.notFound.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{},
@@ -301,11 +303,11 @@ func TestHandleShow(t *testing.T) {
 			),
 		},
 		{
-			"Resource not found",
+			"Error during search",
 			httptest.NewRequest("GET", "http://resources/123", nil),
 			http.StatusInternalServerError,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("showRepositoryError.json"),
+			load("handleShow.repositoryError.json"),
 			resourceRepository{err: errors.New("error during repository search")},
 		},
 		{
@@ -313,7 +315,7 @@ func TestHandleShow(t *testing.T) {
 			httptest.NewRequest("GET", "http://resources/123", nil),
 			http.StatusOK,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("showSuccess.json"),
+			load("handleShow.success.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{
@@ -365,7 +367,7 @@ func TestHandleDelete(t *testing.T) {
 			httptest.NewRequest(http.MethodDelete, "http://resources/123", nil),
 			http.StatusNotFound,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("deleteNotFound.json"),
+			load("handleDelete.notFound.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{},
@@ -377,7 +379,7 @@ func TestHandleDelete(t *testing.T) {
 			httptest.NewRequest(http.MethodDelete, "http://resources/123", nil),
 			http.StatusInternalServerError,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("deleteError.json"),
+			load("handleDelete.error.json"),
 			resourceRepository{err: errors.New("error during repository delete")},
 		},
 		{
@@ -437,7 +439,7 @@ func TestHandleCreate(t *testing.T) {
 			httptest.NewRequest(http.MethodPost, "http://resources/123", bytes.NewBuffer([]byte{})),
 			http.StatusBadRequest,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("createInvalid1.json"),
+			load("handleCreate.invalid1.json"),
 			resourceRepository{},
 		},
 		{
@@ -445,7 +447,7 @@ func TestHandleCreate(t *testing.T) {
 			httptest.NewRequest(http.MethodPost, "http://resources/123", bytes.NewBufferString("{}")),
 			http.StatusBadRequest,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("createInvalid2.json"),
+			load("handleCreate.invalid2.json"),
 			resourceRepository{},
 		},
 		{
@@ -453,11 +455,11 @@ func TestHandleCreate(t *testing.T) {
 			httptest.NewRequest(
 				http.MethodPost,
 				"http://resources/123",
-				bytes.NewBuffer(load("createInputConflict.json")),
+				bytes.NewBuffer(load("handleCreate.inputConflict.json")),
 			),
 			http.StatusConflict,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("createOutputConflict.json"),
+			load("handleCreate.outputConflict.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{
@@ -481,11 +483,11 @@ func TestHandleCreate(t *testing.T) {
 			httptest.NewRequest(
 				http.MethodPost,
 				"http://resources/123",
-				bytes.NewBuffer(load("createInputConflict.json")),
+				bytes.NewBuffer(load("handleCreate.inputConflict.json")),
 			),
 			http.StatusInternalServerError,
 			http.Header{"Content-Type": []string{"application/json"}},
-			load("createOutputError.json"),
+			load("handleCreate.repositoryError.json"),
 			resourceRepository{err: errors.New("error during repository save")},
 		},
 		{
@@ -493,14 +495,14 @@ func TestHandleCreate(t *testing.T) {
 			httptest.NewRequest(
 				http.MethodPost,
 				"http://resources/123",
-				bytes.NewBuffer(load("createInputConflict.json")),
+				bytes.NewBuffer(load("handleCreate.inputConflict.json")),
 			),
 			http.StatusCreated,
 			http.Header{
 				"Content-Type": []string{"application/json"},
 				"Location":     []string{"http://resources/123"},
 			},
-			load("createOutputSuccess.json"),
+			load("handleCreate.repositorySuccess.json"),
 			newResourceRepository(
 				time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				[]flare.Resource{},
@@ -547,11 +549,11 @@ func testService(
 		}
 
 		if status != resp.StatusCode {
-			t.Errorf("status, want '%v', got '%v'", status, resp.Status)
+			t.Errorf("status invalid result, want '%v', got '%v'", status, resp.Status)
 		}
 
 		if !reflect.DeepEqual(header, resp.Header) {
-			t.Errorf("status, want '%v', got '%v'", header, resp.Header)
+			t.Errorf("header invalid result, want '%v', got '%v'", header, resp.Header)
 		}
 
 		if len(body) == 0 && expectedBody == nil {
@@ -570,7 +572,7 @@ func testService(
 		}
 
 		if !reflect.DeepEqual(b1, b2) {
-			t.Errorf("body, want '%v', got '%v'", b2, b1)
+			t.Errorf("body invalid result, want '%v', got '%v'", b2, b1)
 		}
 	}
 }
@@ -579,12 +581,12 @@ func load(name string) []byte {
 	path := fmt.Sprintf("testdata/%s", name)
 	f, err := os.Open(path)
 	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error during open testfile '%s'", path)))
+		panic(errors.Wrap(err, fmt.Sprintf("error during open 'testdata/%s'", path)))
 	}
 
 	content, err := ioutil.ReadAll(f)
 	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error during read testfile '%s'", path)))
+		panic(errors.Wrap(err, fmt.Sprintf("error during read 'testdata/%s'", path)))
 	}
 	return content
 }

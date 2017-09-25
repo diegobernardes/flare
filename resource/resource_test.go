@@ -25,13 +25,13 @@ func TestPaginationMarshalJSON(t *testing.T) {
 		hasErr bool
 	}{
 		{
-			"Should pass",
+			"Valid pagination",
 			pagination{Limit: 30, Offset: 0},
 			`{"limit":30,"offset":0,"total":0}`,
 			false,
 		},
 		{
-			"Should pass",
+			"Valid pagination",
 			pagination{Limit: 10, Offset: 30, Total: 120},
 			`{"limit":10,"offset":30,"total":120}`,
 			false,
@@ -42,7 +42,7 @@ func TestPaginationMarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			content, err := tt.input.MarshalJSON()
 			if tt.hasErr != (err != nil) {
-				t.Errorf("pagination.MarshalJSON error result, want '%v', got '%v'", tt.hasErr, (err != nil))
+				t.Errorf("pagination.MarshalJSON invalid result, want '%v', got '%v'", tt.hasErr, (err != nil))
 				t.FailNow()
 			}
 
@@ -61,7 +61,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 		hasErr bool
 	}{
 		{
-			"Should pass",
+			"Valid JSON",
 			resource{
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -77,7 +77,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 			false,
 		},
 		{
-			"Should pass",
+			"Valid JSON",
 			resource{
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -100,7 +100,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			content, err := tt.input.MarshalJSON()
 			if tt.hasErr != (err != nil) {
-				t.Errorf("resource.MarshalJSON error result, want '%v', got '%v'", tt.hasErr, (err != nil))
+				t.Errorf("resource.MarshalJSON invalid result, want '%v', got '%v'", tt.hasErr, (err != nil))
 				t.FailNow()
 			}
 
@@ -120,7 +120,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(c1, c2) {
-				t.Errorf("resource.MarshalJSON, want '%v', got '%v'", c2, c1)
+				t.Errorf("resource.MarshalJSON invalid result, want '%v', got '%v'", c2, c1)
 			}
 		})
 	}
@@ -134,7 +134,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 		hasErr bool
 	}{
 		{
-			"Should pass",
+			"Valid JSON",
 			response{
 				Error: &responseError{
 					Status: http.StatusBadRequest,
@@ -146,7 +146,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			false,
 		},
 		{
-			"Should pass",
+			"Valid JSON",
 			response{
 				Resource: &resource{
 					Id:        "123",
@@ -164,7 +164,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			false,
 		},
 		{
-			"Should pass",
+			"Valid JSON",
 			response{
 				Pagination: (*pagination)(&flare.Pagination{Limit: 10, Total: 30, Offset: 20}),
 				Resources: []resource{
@@ -191,7 +191,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			content, err := tt.input.MarshalJSON()
 			if tt.hasErr != (err != nil) {
-				t.Errorf("response.MarshalJSON error result, want '%v', got '%v'", tt.hasErr, (err != nil))
+				t.Errorf("response.MarshalJSON invalid result, want '%v', got '%v'", tt.hasErr, (err != nil))
 				t.FailNow()
 			}
 
@@ -211,7 +211,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(c1, c2) {
-				t.Errorf("response.MarshalJSON, want '%v', got '%v'", c2, c1)
+				t.Errorf("response.MarshalJSON invalid result, want '%v', got '%v'", c2, c1)
 			}
 		})
 	}
@@ -229,7 +229,7 @@ func TestResourceCreateValidAddresses(t *testing.T) {
 			true,
 		},
 		{
-			"Should pass",
+			"Valid addresses",
 			resourceCreate{Addresses: []string{"http://app.io", "https://app.com"}},
 			false,
 		},
@@ -254,7 +254,7 @@ func TestResourceCreateValidAddresses(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.input.validAddresses()
 			if tt.hasErr != (result != nil) {
-				t.Errorf("resourceCreate.validAddresses, want '%v', got '%v'", tt.hasErr, result)
+				t.Errorf("resourceCreate.validAddresses invalid result, want '%v', got '%v'", tt.hasErr, result)
 			}
 		})
 	}
@@ -282,7 +282,7 @@ func TestResourceCreateValidWildcard(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.input.validWildcard()
 			if tt.hasErr != (result != nil) {
-				t.Errorf("resourceCreate.validWildcard, want '%v', got '%v'", tt.hasErr, result)
+				t.Errorf("resourceCreate.validWildcard invalid result, want '%v', got '%v'", tt.hasErr, result)
 			}
 		})
 	}
@@ -295,37 +295,37 @@ func TestResourceCreateValidTrack(t *testing.T) {
 		hasErr bool
 	}{
 		{
-			"Invalid Wildcard",
+			"Missing track",
 			resourceCreate{Path: "/users/{*}"},
 			true,
 		},
 		{
-			"Invalid wildcard",
+			"Empty path",
 			resourceCreate{Path: ""},
 			true,
 		},
 		{
-			"Invalid Wildcard",
+			"Missing track",
 			resourceCreate{Path: "/users/{*}/posts/{*}"},
 			true,
 		},
 		{
-			"Invalid Wildcard",
+			"2 track tags",
 			resourceCreate{Path: "/users/{track}/posts/{track}"},
 			true,
 		},
 		{
-			"Invalid Wildcard",
+			"Wildcard before track",
 			resourceCreate{Path: "/users/{track}/posts/{*}"},
 			true,
 		},
 		{
-			"Valid Wildcard",
+			"Valid track",
 			resourceCreate{Path: "/users/{*}/posts/{track}"},
 			false,
 		},
 		{
-			"Valid Wildcard",
+			"Valid track",
 			resourceCreate{Path: "/users/{track}"},
 			false,
 		},
@@ -335,7 +335,7 @@ func TestResourceCreateValidTrack(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.input.validTrack()
 			if tt.hasErr != (result != nil) {
-				t.Errorf("resourceCreate.validTrack, want '%v', got '%v'", tt.hasErr, result)
+				t.Errorf("resourceCreate.validTrack invalid result, want '%v', got '%v'", tt.hasErr, result)
 			}
 		})
 	}
@@ -418,7 +418,7 @@ func TestResourceCreateValid(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := tt.input.valid()
 			if tt.hasErr != (result != nil) {
-				t.Errorf("resourceCreate.valid, want '%v', got '%v'", tt.hasErr, result)
+				t.Errorf("resourceCreate.valid invalid result, want '%v', got '%v'", tt.hasErr, result)
 			}
 		})
 	}
