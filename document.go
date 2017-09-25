@@ -34,24 +34,25 @@ func (doc *Document) Valid() error {
 		return errors.Wrap(err, "invalid Resource.Change")
 	}
 
-	if doc.Resource.Change.Kind != ResourceChangeDate {
-		return nil
-	}
+	switch doc.Resource.Change.Kind {
+	case ResourceChangeDate, ResourceChangeString:
+		changeFieldValue, ok := doc.ChangeFieldValue.(string)
+		if !ok {
+			return errors.New("invalid ChangeFieldValue, could not cast it to string")
+		}
 
-	changeFieldValue, ok := doc.ChangeFieldValue.(string)
-	if !ok {
-		return errors.New("invalid ChangeFieldValue, could not cast it to string")
-	}
-
-	_, err := time.Parse(doc.Resource.Change.DateFormat, changeFieldValue)
-	if err != nil {
-		return errors.Wrap(
-			err,
-			fmt.Sprintf(
-				"error during time.Parse with format '%s' and value '%s'",
-				doc.Resource.Change.DateFormat,
-				changeFieldValue,
-			))
+		if doc.Resource.Change.Kind == ResourceChangeDate {
+			_, err := time.Parse(doc.Resource.Change.DateFormat, changeFieldValue)
+			if err != nil {
+				return errors.Wrap(
+					err,
+					fmt.Sprintf(
+						"error during time.Parse with format '%s' and value '%s'",
+						doc.Resource.Change.DateFormat,
+						changeFieldValue,
+					))
+			}
+		}
 	}
 
 	return nil
@@ -59,7 +60,7 @@ func (doc *Document) Valid() error {
 
 // Newer indicates if the current document is newer then the one passed as parameter.
 func (doc *Document) Newer(reference *Document) (bool, error) {
-	if doc == nil {
+	if reference == nil {
 		return true, nil
 	}
 
@@ -67,9 +68,9 @@ func (doc *Document) Newer(reference *Document) (bool, error) {
 	case ResourceChangeDate:
 		return doc.newerDate(reference.ChangeFieldValue)
 	case ResourceChangeInteger:
-		return doc.newerInteger(doc.ChangeFieldValue, reference.ChangeFieldValue)
+		return doc.newerInteger(reference.ChangeFieldValue)
 	case ResourceChangeString:
-		return doc.newDocumentVersionString(doc.ChangeFieldValue, reference.ChangeFieldValue)
+		return doc.newerString(reference.ChangeFieldValue)
 	default:
 		return false, errors.New("invalid change kind")
 	}
@@ -112,25 +113,24 @@ func (doc *Document) newerDate(rawReferenceValue interface{}) (bool, error) {
 	return docValueTime.After(referenceValueTime), nil
 }
 
-func (doc *Document) newerInteger(rawDocValue, rawReferenceValue interface{}) (bool, error) {
-	docValue, ok := rawDocValue.(int64)
+func (doc *Document) newerInteger(rawReferenceValue interface{}) (bool, error) {
+	docValue, ok := doc.ChangeFieldValue.(float64)
 	if !ok {
-		return false, fmt.Errorf("could not cast rawDocValue(%v) to integer", rawDocValue)
+		return false, fmt.Errorf("could not cast rawDocValue '%v' to float64", doc.ChangeFieldValue)
 	}
 
-	referenceValue, ok := rawReferenceValue.(int64)
+	referenceValue, ok := rawReferenceValue.(float64)
 	if !ok {
-		return false, fmt.Errorf("could not cast rawReferenceValue(%v) to integer", rawReferenceValue)
+		return false, fmt.Errorf("could not cast rawReferenceValue '%v' to float64", rawReferenceValue)
 	}
 
-	return referenceValue > docValue, nil
+	return docValue > referenceValue, nil
 }
 
-func (doc *Document) newDocumentVersionString(rawDocValue, rawReferenceValue interface{},
-) (bool, error) {
-	docValue, ok := rawDocValue.(string)
+func (doc *Document) newerString(rawReferenceValue interface{}) (bool, error) {
+	docValue, ok := doc.ChangeFieldValue.(string)
 	if !ok {
-		return false, fmt.Errorf("could not cast rawDocValue(%v) to string", rawDocValue)
+		return false, fmt.Errorf("could not cast rawDocValue(%v) to string", doc.ChangeFieldValue)
 	}
 
 	referenceValue, ok := rawReferenceValue.(string)
@@ -138,7 +138,7 @@ func (doc *Document) newDocumentVersionString(rawDocValue, rawReferenceValue int
 		return false, fmt.Errorf("could not cast rawReferenceValue(%v) to string", rawReferenceValue)
 	}
 
-	return referenceValue > docValue, nil
+	return docValue > referenceValue, nil
 }
 
 // DocumentRepositorier used to interact with Document data storage.
