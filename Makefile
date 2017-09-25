@@ -2,7 +2,7 @@ configure:
 	git config pull.rebase true
 
 lint-fast:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 gometalinter \
+	docker run --rm -t -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.3 gometalinter \
 		--disable-all \
 		--enable=gas \
 		--enable=goconst \
@@ -24,7 +24,7 @@ lint-fast:
 		--vendor ./...
 
 lint-slow:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 gometalinter \
+	docker run --rm -t -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.3 gometalinter \
 		--disable-all \
 		--enable=megacheck \
 		--enable=aligncheck \
@@ -44,20 +44,20 @@ lint-slow:
 		--vendor ./...
 
 test:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 go test -race ./...
+	docker run --rm -t -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.3 gotest -v -race ./...
 
 coveralls:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare -e TRAVIS_BRANCH=$$TRAVIS_BRANCH -e COVERALLS_TOKEN=$$COVERALLS_TOKEN diegobernardes/flare:0.2 goveralls -race
+	docker run --rm -t -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare -e TRAVIS_BRANCH=$$TRAVIS_BRANCH -e COVERALLS_TOKEN=$$COVERALLS_TOKEN diegobernardes/flare:0.3 goveralls -race
 
 flare-build:
-	docker run --rm -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.2 go build services/flare/cmd/flare.go
+	docker run --rm -t -v "$$PWD":/go/src/github.com/diegobernardes/flare -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:0.3 go build services/flare/cmd/flare.go
 
 docker-build:
-	docker build -t diegobernardes/flare:latest -t diegobernardes/flare:0.2 devstuff/docker
+	docker build -t diegobernardes/flare:latest -t diegobernardes/flare:0.3 devstuff/docker
 
 docker-push:
 	docker push diegobernardes/flare:latest
-	docker push diegobernardes/flare:0.2
+	docker push diegobernardes/flare:0.3
 
 git-clean:
 	git gc
