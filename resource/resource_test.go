@@ -47,7 +47,9 @@ func TestPaginationMarshalJSON(t *testing.T) {
 			}
 
 			if string(content) != tt.output {
-				t.Errorf("pagination.MarshalJSON, want '%v', got '%v'", string(content), tt.output)
+				t.Errorf(
+					"pagination.MarshalJSON invalid result, want '%v', got '%v'", string(content), tt.output,
+				)
 			}
 		})
 	}
