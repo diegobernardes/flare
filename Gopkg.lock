@@ -146,6 +146,12 @@
   revision = "bd91bbf73e9a4a801adbfb97133c992678533126"
 
 [[projects]]
+  name = "gopkg.in/h2non/gock.v1"
+  packages = ["."]
+  revision = "84d599244901620fb3eb96473eb9e50619f69b47"
+  version = "v1.0.6"
+
+[[projects]]
   branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
@@ -154,6 +160,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e4357629a9eba93848aa32f99351d4ea3b4eea7bea08359fc7d1e1ae8d09f656"
+  inputs-digest = "0b32a0489692fccbbdee1aadf9d913ae6d5bc89948e0209f0d70991ffa9ec866"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -1,0 +1,19 @@
+{
+  "endpoint": {
+    "url": "http://localhost:5001/update",
+    "method": "something",
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  },
+  "delivery": {
+    "success": [
+      200
+    ],
+    "discard": [
+      500
+    ]
+  }
+}

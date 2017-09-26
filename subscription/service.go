@@ -33,43 +33,23 @@ type Service struct {
 func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	pagination, err := s.parsePagination(r)
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "error during pagination parse",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "error during pagination parse", http.StatusBadRequest)
 		return
 	}
 
 	if err = pagination.Valid(); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "invalid pagination",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "invalid pagination", http.StatusBadRequest)
 		return
 	}
 
 	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceId(r))
 	if err != nil {
-		var status int
-		if err, ok := err.(flare.SubscriptionRepositoryError); ok && err.NotFound() {
+		status := http.StatusInternalServerError
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
-		} else {
-			status = http.StatusInternalServerError
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during search",
-				Detail: err.Error(),
-			},
-		}, status, nil)
+		s.writeError(w, err, "error during resource search", status)
 		return
 	}
 
@@ -77,13 +57,7 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		r.Context(), pagination, resource.Id,
 	)
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusInternalServerError,
-				Title:  "error during search",
-				Detail: err.Error(),
-			},
-		}, http.StatusInternalServerError, nil)
+		s.writeError(w, err, "error during subscription search", http.StatusInternalServerError)
 		return
 	}
 
@@ -99,24 +73,12 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 		r.Context(), s.getResourceId(r), s.getSubscriptionId(r),
 	)
 	if err != nil {
-		var status int
+		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.SubscriptionRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
-		} else {
-			status = http.StatusInternalServerError
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during search",
-				Detail: err.Error(),
-			},
-		}, status, nil)
-		return
-	}
-	if subs == nil && err == nil {
-		s.writeResponse(w, nil, http.StatusNotFound, nil)
+		s.writeError(w, err, "error during subscription search", status)
 		return
 	}
 
@@ -131,60 +93,36 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err := d.Decode(content); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "error during content parse",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "error during content parse", http.StatusBadRequest)
 		return
 	}
 
 	if err := content.valid(); err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "invalid content",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "invalid content", http.StatusBadRequest)
 		return
 	}
 
 	result, err := content.toFlareSubscription()
 	if err != nil {
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: http.StatusBadRequest,
-				Title:  "invalid content",
-				Detail: err.Error(),
-			},
-		}, http.StatusBadRequest, nil)
+		s.writeError(w, err, "invalid content", http.StatusBadRequest)
 		return
 	}
 	result.Resource.Id = s.getResourceId(r)
+
 	if err := s.subscriptionRepository.Create(r.Context(), result); err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.SubscriptionRepositoryError); ok && errRepo.AlreadyExists() {
 			status = http.StatusConflict
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during save",
-				Detail: err.Error(),
-			},
-		}, status, nil)
+		s.writeError(w, err, "error during subscription save", status)
 		return
 	}
 
 	header := make(http.Header)
 	header.Set("Location", s.getSubscriptionURI(result.Resource.Id, result.Id))
-	s.writeResponse(w, &response{
-		Subscription: transformSubscription(result),
-	}, http.StatusCreated, header)
+	resp := &response{Subscription: transformSubscription(result)}
+	s.writeResponse(w, resp, http.StatusCreated, header)
 }
 
 // HandleDelete receive the request to delete a resource.
@@ -196,13 +134,7 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeResponse(w, &response{
-			Error: &responseError{
-				Status: status,
-				Title:  "error during delete",
-				Detail: err.Error(),
-			},
-		}, status, nil)
+		s.writeError(w, err, "error during subscription delete", status)
 		return
 	}
 

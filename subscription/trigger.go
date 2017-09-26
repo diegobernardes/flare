@@ -15,13 +15,6 @@ import (
 	"github.com/diegobernardes/flare"
 )
 
-// Kinds of trigger on a document.
-const (
-	TriggerActionDelete = "delete"
-	TriggerActionUpdate = "update"
-	TriggerActionCreate = "create"
-)
-
 // Trigger is used to process the signals on documents change.
 type Trigger struct {
 	repository flare.SubscriptionRepositorier
@@ -30,18 +23,14 @@ type Trigger struct {
 
 // Update the document change signal.
 func (t *Trigger) Update(ctx context.Context, document *flare.Document) error {
-	if err := t.repository.Trigger(ctx, TriggerActionUpdate, document, t.exec(document)); err != nil {
-		return errors.Wrap(err, "error during trigger")
-	}
-	return nil
+	err := t.repository.Trigger(ctx, flare.SubscriptionTriggerUpdate, document, t.exec(document))
+	return errors.Wrap(err, "error during trigger")
 }
 
 // Delete the document change signal.
 func (t *Trigger) Delete(ctx context.Context, document *flare.Document) error {
-	if err := t.repository.Trigger(ctx, TriggerActionDelete, document, t.exec(document)); err != nil {
-		return errors.Wrap(err, "error during trigger")
-	}
-	return nil
+	err := t.repository.Trigger(ctx, flare.SubscriptionTriggerDelete, document, t.exec(document))
+	return errors.Wrap(err, "error during trigger")
 }
 
 func (t *Trigger) exec(

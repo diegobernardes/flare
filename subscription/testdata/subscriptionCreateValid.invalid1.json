@@ -1,0 +1,18 @@
+{
+  "endpoint": {
+    "method": "post",
+    "headers": {
+      "Content-Type": [
+        "application/json"
+      ]
+    }
+  },
+  "delivery": {
+    "success": [
+      200
+    ],
+    "discard": [
+      500
+    ]
+  }
+}

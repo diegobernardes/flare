@@ -1,0 +1,7 @@
+{
+  "error": {
+    "status": 500,
+    "title": "error during subscription search",
+    "detail": "error during repository search"
+  }
+}

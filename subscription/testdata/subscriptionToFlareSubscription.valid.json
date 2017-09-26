@@ -1,0 +1,14 @@
+{
+  "endpoint": {
+    "url": "http://app.io/update",
+    "method": "post"
+  },
+  "delivery": {
+    "success": [
+      200
+    ],
+    "discard": [
+      500
+    ]
+  }
+}

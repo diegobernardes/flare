@@ -14,7 +14,6 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/diegobernardes/flare"
-	"github.com/diegobernardes/flare/subscription"
 )
 
 // Subscription implements the data layer for the subscription service.
@@ -179,20 +178,20 @@ func (s *Subscription) triggerProcess(
 
 		referenceDocument, ok := documents[doc.Id]
 		if !ok {
-			if kind == subscription.TriggerActionDelete {
+			if kind == flare.SubscriptionTriggerDelete {
 				return nil
 			}
 
 			documents[doc.Id] = *doc
 			return errors.Wrap(
-				fn(groupCtx, subs, subscription.TriggerActionCreate),
+				fn(groupCtx, subs, flare.SubscriptionTriggerCreate),
 				"error during document subscription processing",
 			)
 		}
 
-		if kind == subscription.TriggerActionDelete {
+		if kind == flare.SubscriptionTriggerDelete {
 			delete(documents, doc.Id)
-			if err := fn(groupCtx, subs, subscription.TriggerActionDelete); err != nil {
+			if err := fn(groupCtx, subs, flare.SubscriptionTriggerDelete); err != nil {
 				return errors.Wrap(err, "error during document subscription processing")
 			}
 			return nil
@@ -207,7 +206,7 @@ func (s *Subscription) triggerProcess(
 		}
 
 		documents[doc.Id] = *doc
-		if err := fn(groupCtx, subs, subscription.TriggerActionUpdate); err != nil {
+		if err := fn(groupCtx, subs, flare.SubscriptionTriggerUpdate); err != nil {
 			return errors.Wrap(err, "error during document subscription processing")
 		}
 

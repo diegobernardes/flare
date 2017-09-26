@@ -36,7 +36,7 @@ type SubscriptionDelivery struct {
 
 // All kinds of actions a subscription trigger supports.
 const (
-	SubscriptionTriggerInsert = "insert"
+	SubscriptionTriggerCreate = "create"
 	SubscriptionTriggerUpdate = "update"
 	SubscriptionTriggerDelete = "delete"
 )

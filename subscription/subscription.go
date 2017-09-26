@@ -18,9 +18,7 @@ import (
 	"github.com/diegobernardes/flare"
 )
 
-type pagination struct {
-	base *flare.Pagination
-}
+type pagination flare.Pagination
 
 func (p *pagination) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
@@ -28,9 +26,9 @@ func (p *pagination) MarshalJSON() ([]byte, error) {
 		Offset int `json:"offset"`
 		Total  int `json:"total"`
 	}{
-		Limit:  p.base.Limit,
-		Total:  p.base.Total,
-		Offset: p.base.Offset,
+		Limit:  p.Limit,
+		Total:  p.Total,
+		Offset: p.Offset,
 	})
 }
 
@@ -49,32 +47,27 @@ func (r *response) MarshalJSON() ([]byte, error) {
 	} else if r.Subscription != nil {
 		result = r.Subscription
 	} else {
-		result = map[string]interface{}{
-			"pagination":    r.Pagination,
-			"subscriptions": r.Subscriptions,
-		}
+		result = map[string]interface{}{"pagination": r.Pagination, "subscriptions": r.Subscriptions}
 	}
 
 	return json.Marshal(result)
 }
 
-type subscription struct {
-	base *flare.Subscription
-}
+type subscription flare.Subscription
 
 func (s *subscription) MarshalJSON() ([]byte, error) {
 	endpoint := map[string]interface{}{
-		"url":    s.base.Endpoint.URL.String(),
-		"method": s.base.Endpoint.Method,
+		"url":    s.Endpoint.URL.String(),
+		"method": s.Endpoint.Method,
 	}
 
-	if len(s.base.Endpoint.Headers) > 0 {
-		endpoint["headers"] = s.base.Endpoint.Headers
+	if len(s.Endpoint.Headers) > 0 {
+		endpoint["headers"] = s.Endpoint.Headers
 	}
 
 	delivery := map[string][]int{
-		"success": s.base.Delivery.Success,
-		"discard": s.base.Delivery.Discard,
+		"success": s.Delivery.Success,
+		"discard": s.Delivery.Discard,
 	}
 
 	return json.Marshal(&struct {
@@ -83,10 +76,10 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		Delivery  map[string][]int       `json:"delivery"`
 		CreatedAt string                 `json:"createdAt"`
 	}{
-		Id:        s.base.Id,
+		Id:        s.Id,
 		Endpoint:  endpoint,
 		Delivery:  delivery,
-		CreatedAt: s.base.CreatedAt.Format(time.RFC3339),
+		CreatedAt: s.CreatedAt.Format(time.RFC3339),
 	})
 }
 
@@ -96,14 +89,14 @@ type responseError struct {
 	Detail string `json:"detail,omitempty"`
 }
 
-func transformSubscription(s *flare.Subscription) *subscription { return &subscription{s} }
+func transformSubscription(s *flare.Subscription) *subscription { return (*subscription)(s) }
 
-func transformPagination(p *flare.Pagination) *pagination { return &pagination{base: p} }
+func transformPagination(p *flare.Pagination) *pagination { return (*pagination)(p) }
 
 func transformSubscriptions(s []flare.Subscription) []subscription {
 	result := make([]subscription, len(s))
 	for i := 0; i < len(s); i++ {
-		result[i] = subscription{&s[i]}
+		result[i] = (subscription)(s[i])
 	}
 	return result
 }
@@ -113,11 +106,11 @@ type subscriptionCreate struct {
 		URL     string      `json:"url"`
 		Method  string      `json:"method"`
 		Headers http.Header `json:"headers"`
-	}
+	} `json:"endpoint"`
 	Delivery struct {
 		Success []int `json:"success"`
 		Discard []int `json:"discard"`
-	}
+	} `json:"delivery"`
 }
 
 func (s *subscriptionCreate) valid() error {
@@ -161,4 +154,18 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 			Success: s.Delivery.Success,
 		},
 	}, nil
+}
+
+func (s *Service) writeError(w http.ResponseWriter, err error, title string, status int) {
+	resp := &response{Error: &responseError{Status: status}}
+
+	if err != nil {
+		resp.Error.Detail = err.Error()
+	}
+
+	if title != "" {
+		resp.Error.Title = title
+	}
+
+	s.writeResponse(w, resp, status, nil)
 }

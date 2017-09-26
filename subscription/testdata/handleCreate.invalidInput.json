@@ -1,0 +1,14 @@
+{
+  "endpoint": {
+    "url": "%zzzzz",
+    "method": "POST"
+  },
+  "delivery": {
+    "success": [
+      200
+    ],
+    "discard": [
+      500
+    ]
+  }
+}

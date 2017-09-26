@@ -275,6 +275,7 @@ func TestHandleIndex(t *testing.T) {
 		)
 		if err != nil {
 			t.Error(errors.Wrap(err, "error during service initialization"))
+			t.FailNow()
 		}
 
 		t.Run(tt.name, testService(tt.status, tt.header, service.HandleIndex, tt.req, tt.body))
@@ -347,6 +348,7 @@ func TestHandleShow(t *testing.T) {
 		)
 		if err != nil {
 			t.Error(errors.Wrap(err, "error during service initialization"))
+			t.FailNow()
 		}
 
 		t.Run(tt.name, testService(tt.status, tt.header, service.HandleShow, tt.req, tt.body))
@@ -419,6 +421,7 @@ func TestHandleDelete(t *testing.T) {
 		)
 		if err != nil {
 			t.Error(errors.Wrap(err, "error during service initialization"))
+			t.FailNow()
 		}
 
 		t.Run(tt.name, testService(tt.status, tt.header, service.HandleDelete, tt.req, tt.body))
@@ -524,6 +527,7 @@ func TestHandleCreate(t *testing.T) {
 		)
 		if err != nil {
 			t.Error(errors.Wrap(err, "error during service initialization"))
+			t.FailNow()
 		}
 
 		t.Run(tt.name, testService(tt.status, tt.header, service.HandleCreate, tt.req, tt.body))
@@ -581,12 +585,12 @@ func load(name string) []byte {
 	path := fmt.Sprintf("testdata/%s", name)
 	f, err := os.Open(path)
 	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error during open 'testdata/%s'", path)))
+		panic(errors.Wrap(err, fmt.Sprintf("error during open '%s'", path)))
 	}
 
 	content, err := ioutil.ReadAll(f)
 	if err != nil {
-		panic(errors.Wrap(err, fmt.Sprintf("error during read 'testdata/%s'", path)))
+		panic(errors.Wrap(err, fmt.Sprintf("error during read '%s'", path)))
 	}
 	return content
 }
