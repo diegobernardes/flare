@@ -1,0 +1,9 @@
+[
+  {
+    "id": "456",
+    "changeFieldValue": "1",
+    "resource": {
+      "id": "123"
+    }
+  }
+]

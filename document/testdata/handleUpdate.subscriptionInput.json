@@ -1,0 +1,19 @@
+[
+  {
+    "endpoint": {
+      "url": "http://app.com",
+      "method": "POST"
+    },
+    "delivery": {
+      "success": [
+        200
+      ],
+      "discard": [
+        500
+      ]
+    },
+    "resource": {
+      "id": "123"
+    }
+  }
+]

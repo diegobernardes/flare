@@ -18,9 +18,10 @@ import (
 
 // Resource implements flare.ResourceRepositorier.
 type Resource struct {
-	err  error
-	base flare.ResourceRepositorier
-	date time.Time
+	err          error
+	findByURIErr error
+	base         flare.ResourceRepositorier
+	date         time.Time
 }
 
 // FindAll mock flare.ResourceRepositorier.FindAll.
@@ -46,8 +47,13 @@ func (r *Resource) FindOne(ctx context.Context, id string) (*flare.Resource, err
 }
 
 // FindByURI mock flare.ResourceRepositorier.FindByURI.
-func (r *Resource) FindByURI(context.Context, string) (*flare.Resource, error) {
-	return nil, nil
+func (r *Resource) FindByURI(ctx context.Context, uri string) (*flare.Resource, error) {
+	if r.findByURIErr != nil {
+		return nil, r.findByURIErr
+	} else if r.err != nil {
+		return nil, r.err
+	}
+	return r.base.FindByURI(ctx, uri)
 }
 
 // Create mock flare.ResourceRepositorier.Create.
@@ -74,6 +80,11 @@ func NewResource(options ...func(*Resource)) *Resource {
 // ResourceError set the error to be returned during calls.
 func ResourceError(err error) func(*Resource) {
 	return func(r *Resource) { r.err = err }
+}
+
+// ResourceFindByURIError set the error to be returned during findByURI calls.
+func ResourceFindByURIError(err error) func(*Resource) {
+	return func(r *Resource) { r.findByURIErr = err }
 }
 
 // ResourceDate set the date to be used at time fields.

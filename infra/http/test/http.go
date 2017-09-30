@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/kr/pretty"
 	"github.com/pkg/errors"
 )
 
@@ -39,7 +40,10 @@ func Handler(
 		}
 
 		if !reflect.DeepEqual(header, resp.Header) {
-			t.Errorf("header invalid result, want '%v', got '%v'", header, resp.Header)
+			t.Errorf(
+				"header invalid result, want '%v', got '%v'",
+				pretty.Sprint(header), pretty.Sprint(resp.Header),
+			)
 		}
 
 		if len(body) == 0 && expectedBody == nil {
@@ -58,7 +62,7 @@ func Handler(
 		}
 
 		if !reflect.DeepEqual(b1, b2) {
-			t.Errorf("body invalid result, want '%v', got '%v'", b2, b1)
+			t.Errorf("body invalid result, want '%v', got '%v'", pretty.Sprint(b2), pretty.Sprint(b1))
 		}
 	}
 }

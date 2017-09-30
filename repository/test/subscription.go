@@ -20,10 +20,12 @@ import (
 
 // Subscription implements flare.SubscriptionRepositorier.
 type Subscription struct {
-	err      error
-	base     flare.SubscriptionRepositorier
-	date     time.Time
-	createId string
+	err                error
+	hasSubscriptionErr error
+	triggerErr         error
+	base               flare.SubscriptionRepositorier
+	date               time.Time
+	createId           string
 }
 
 // FindAll mock flare.SubscriptionRepositorier.FindAll.
@@ -88,10 +90,13 @@ func (r *Subscription) Delete(ctx context.Context, resourceId, id string) error 
 }
 
 // HasSubscription mock flare.SubscriptionRepositorier.HasSubscription.
-func (r *Subscription) HasSubscription(
-	ctx context.Context, resourceId string,
-) (bool, error) {
-	return false, nil
+func (r *Subscription) HasSubscription(ctx context.Context, resourceId string) (bool, error) {
+	if r.hasSubscriptionErr != nil {
+		return false, r.hasSubscriptionErr
+	} else if r.err != nil {
+		return false, r.err
+	}
+	return r.base.HasSubscription(ctx, resourceId)
 }
 
 // Trigger mock flare.SubscriptionRepositorier.Trigger.
@@ -101,7 +106,9 @@ func (r *Subscription) Trigger(
 	document *flare.Document,
 	fn func(context.Context, flare.Subscription, string) error,
 ) error {
-	if r.err != nil {
+	if r.triggerErr != nil {
+		return r.triggerErr
+	} else if r.err != nil {
 		return r.err
 	}
 	return r.base.Trigger(ctx, action, document, fn)
@@ -126,6 +133,16 @@ func SubscriptionCreateId(id string) func(*Subscription) {
 // SubscriptionError set the error to be returned during calls.
 func SubscriptionError(err error) func(*Subscription) {
 	return func(s *Subscription) { s.err = err }
+}
+
+// SubscriptionTriggerError set the error to be returned during trigger calls.
+func SubscriptionTriggerError(err error) func(*Subscription) {
+	return func(s *Subscription) { s.triggerErr = err }
+}
+
+// SubscriptionHasSubscriptionError set the error to be returned during hasSubscription calls.
+func SubscriptionHasSubscriptionError(err error) func(*Subscription) {
+	return func(s *Subscription) { s.hasSubscriptionErr = err }
 }
 
 // SubscriptionDate set the date to be used at time fields.

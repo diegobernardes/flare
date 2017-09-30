@@ -31,11 +31,12 @@ type Service struct {
 func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 	d, err := s.documentRepository.FindOne(r.Context(), s.getDocumentId(r))
 	if err != nil {
-		s.writeError(w, err, "error during search", http.StatusInternalServerError)
-		return
-	}
-	if d == nil && err == nil {
-		s.writeResponse(w, nil, http.StatusNotFound, nil)
+		status := http.StatusInternalServerError
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
+			status = http.StatusNotFound
+		}
+
+		s.writeError(w, err, "error during document search", status)
 		return
 	}
 
@@ -147,8 +148,6 @@ func (s *Service) updateAndTriggerDocumentChange(
 	switch status {
 	case http.StatusOK, http.StatusCreated:
 		err = s.subscriptionTrigger.Update(r.Context(), document)
-	case http.StatusNoContent:
-		err = s.subscriptionTrigger.Delete(r.Context(), document)
 	}
 	if err != nil {
 		s.writeError(w, err, "error during document change trigger", http.StatusInternalServerError)
@@ -161,13 +160,12 @@ func (s *Service) updateAndTriggerDocumentChange(
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	document, err := s.documentRepository.FindOne(r.Context(), s.getDocumentId(r))
 	if err != nil {
-		s.writeError(
-			w, err, "error during the check if the document exists", http.StatusInternalServerError,
-		)
-		return
-	}
-	if document == nil {
-		s.writeResponse(w, nil, http.StatusNotFound, nil)
+		status := http.StatusInternalServerError
+		if errRepo, ok := err.(flare.DocumentRepositoryError); ok && errRepo.NotFound() {
+			status = http.StatusNotFound
+		}
+
+		s.writeError(w, err, "error during the check if the document exists", status)
 		return
 	}
 
@@ -224,37 +222,37 @@ func NewService(options ...func(*Service)) (*Service, error) {
 	return s, nil
 }
 
-// DocumentDocumentRepository set the repository to access the documents.
-func DocumentDocumentRepository(repo flare.DocumentRepositorier) func(*Service) {
+// ServiceDocumentRepository set the repository to access the documents.
+func ServiceDocumentRepository(repo flare.DocumentRepositorier) func(*Service) {
 	return func(s *Service) { s.documentRepository = repo }
 }
 
-// DocumentResourceRepository set the repository to access the resources.
-func DocumentResourceRepository(repo flare.ResourceRepositorier) func(*Service) {
+// ServiceResourceRepository set the repository to access the resources.
+func ServiceResourceRepository(repo flare.ResourceRepositorier) func(*Service) {
 	return func(s *Service) { s.resourceRepository = repo }
 }
 
-// DocumentSubscriptionRepository set the repository to access the subscriptions.
-func DocumentSubscriptionRepository(repo flare.SubscriptionRepositorier) func(*Service) {
+// ServiceSubscriptionRepository set the repository to access the subscriptions.
+func ServiceSubscriptionRepository(repo flare.SubscriptionRepositorier) func(*Service) {
 	return func(s *Service) { s.subscriptionRepository = repo }
 }
 
-// DocumentLogger set the logger.
-func DocumentLogger(logger log.Logger) func(*Service) {
+// ServiceLogger set the logger.
+func ServiceLogger(logger log.Logger) func(*Service) {
 	return func(s *Service) { s.logger = logger }
 }
 
-// DocumentGetDocumentId set the function to get the document id..
-func DocumentGetDocumentId(fn func(*http.Request) string) func(*Service) {
+// ServiceGetDocumentId set the function to get the document id..
+func ServiceGetDocumentId(fn func(*http.Request) string) func(*Service) {
 	return func(s *Service) { s.getDocumentId = fn }
 }
 
-// DocumentGetDocumentURI set the function to generate the URI of a given Document.
-func DocumentGetDocumentURI(fn func(string) string) func(*Service) {
+// ServiceGetDocumentURI set the function to generate the URI of a given Document.
+func ServiceGetDocumentURI(fn func(string) string) func(*Service) {
 	return func(s *Service) { s.getDocumentURI = fn }
 }
 
-// DocumentSubscriptionTrigger set the subscription trigger processor.
-func DocumentSubscriptionTrigger(trigger flare.SubscriptionTrigger) func(*Service) {
+// ServiceSubscriptionTrigger set the subscription trigger processor.
+func ServiceSubscriptionTrigger(trigger flare.SubscriptionTrigger) func(*Service) {
 	return func(s *Service) { s.subscriptionTrigger = trigger }
 }

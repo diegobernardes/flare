@@ -56,7 +56,7 @@ type SubscriptionRepositorier interface {
 	) error
 }
 
-// SubscriptionTrigger .
+// SubscriptionTrigger is used to trigger the change on Documents.
 type SubscriptionTrigger interface {
 	Update(ctx context.Context, document *Document) error
 	Delete(ctx context.Context, document *Document) error

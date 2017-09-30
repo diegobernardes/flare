@@ -218,15 +218,15 @@ func (c *Client) initDocumentService(
 	}
 
 	documentService, err := document.NewService(
-		document.DocumentSubscriptionTrigger(subscriptionTrigger),
-		document.DocumentDocumentRepository(memory.NewDocument()),
-		document.DocumentResourceRepository(rr),
-		document.DocumentSubscriptionRepository(sr),
-		document.DocumentGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
-		document.DocumentGetDocumentURI(func(id string) string {
+		document.ServiceSubscriptionTrigger(subscriptionTrigger),
+		document.ServiceDocumentRepository(memory.NewDocument()),
+		document.ServiceResourceRepository(rr),
+		document.ServiceSubscriptionRepository(sr),
+		document.ServiceGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
+		document.ServiceGetDocumentURI(func(id string) string {
 			return fmt.Sprintf("/documents/%s", id)
 		}),
-		document.DocumentLogger(c.logger),
+		document.ServiceLogger(c.logger),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during document.Service initialization")

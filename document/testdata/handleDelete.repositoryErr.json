@@ -1,0 +1,7 @@
+{
+  "error": {
+    "status": 500,
+    "title": "error during the check if the document exists",
+    "detail": "repository error"
+  }
+}
