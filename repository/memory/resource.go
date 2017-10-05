@@ -221,9 +221,15 @@ func sliceIntersection(a, b []string, a1, b1 string) bool {
 // NewResource returns a configured resource repository.
 func NewResource(options ...func(*Resource)) *Resource {
 	r := &Resource{resources: make([]flare.Resource, 0)}
+
 	for _, option := range options {
 		option(r)
 	}
+
+	if r.subscriptionRepository == nil {
+		r.subscriptionRepository = NewSubscription()
+	}
+
 	return r
 }
 

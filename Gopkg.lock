@@ -33,6 +33,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/gopherjs/gopherjs"
+  packages = ["js"]
+  revision = "415225646bb92c4449bb484646f2c95a98402f6f"
+
+[[projects]]
+  branch = "master"
   name = "github.com/hashicorp/hcl"
   packages = [".","hcl/ast","hcl/parser","hcl/scanner","hcl/strconv","hcl/token","json/parser","json/scanner","json/token"]
   revision = "8f6b1344a92ff8877cf24a5de9177bf7d0a2a187"
@@ -42,6 +48,12 @@
   packages = ["."]
   revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
   version = "v1.0"
+
+[[projects]]
+  name = "github.com/jtolds/gls"
+  packages = ["."]
+  revision = "77f18212c9c7edc9bd6a33d383a7b545ce62f064"
+  version = "v4.2.1"
 
 [[projects]]
   branch = "master"
@@ -96,6 +108,18 @@
   packages = ["."]
   revision = "879c5887cd475cd7864858769793b2ceb0d44feb"
   version = "v1.1.0"
+
+[[projects]]
+  name = "github.com/smartystreets/assertions"
+  packages = [".","internal/go-render/render","internal/oglematchers"]
+  revision = "ff1918e1e5a13a74014644ae7c1e0ba2f791364d"
+  version = "1.8.0"
+
+[[projects]]
+  name = "github.com/smartystreets/goconvey"
+  packages = ["convey","convey/gotest","convey/reporting"]
+  revision = "9e8dc3f972df6c8fcc0375ef492c24d0bb204857"
+  version = "1.6.3"
 
 [[projects]]
   branch = "master"
@@ -172,6 +196,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "913d7305807f79ecfe429ecb132dcc3402720cc64520dbdca53018df22621e2b"
+  inputs-digest = "fe9c849c1f737b5452ba93f730ebc90a4d659f9843ae0ee59a970151128163d6"
   solver-name = "gps-cdcl"
   solver-version = 1
