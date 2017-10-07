@@ -6,9 +6,19 @@ package flare
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
+
+	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/repository/memory"
+	"github.com/diegobernardes/flare/repository/mongodb"
+)
+
+const (
+	engineMemory  = "memory"
+	engineMongoDB = "mongodb"
 )
 
 type config struct {
@@ -18,7 +28,90 @@ type config struct {
 
 func (c *config) getString(key string) string { return c.viper.GetString(key) }
 
+func (c *config) getStringSlice(key string) []string { return c.viper.GetStringSlice(key) }
+
 func (c *config) getInt(key string) int { return c.viper.GetInt(key) }
+
+func (c *config) documentRepository() (flare.DocumentRepositorier, error) {
+	engine := c.getString("repository.engine")
+	switch engine {
+	case engineMongoDB:
+		client, err := c.mongodb()
+		if err != nil {
+			return nil, err
+		}
+
+		repository, err := mongodb.NewDocument(mongodb.DocumentClient(client))
+		if err != nil {
+			return nil, err
+		}
+		return repository, nil
+	case engineMemory:
+		return memory.NewDocument(), nil
+	default:
+		return nil, fmt.Errorf("invalid repository.engine '%s'", engine)
+	}
+}
+
+func (c *config) subscriptionRepository() (flare.SubscriptionRepositorier, error) {
+	engine := c.getString("repository.engine")
+	switch engine {
+	case engineMongoDB:
+		client, err := c.mongodb()
+		if err != nil {
+			return nil, err
+		}
+
+		repository, err := mongodb.NewSubscription(mongodb.SubscriptionClient(client))
+		if err != nil {
+			return nil, err
+		}
+		return repository, nil
+	case engineMemory:
+		return memory.NewSubscription(), nil
+	default:
+		return nil, fmt.Errorf("invalid repository.engine '%s'", engine)
+	}
+}
+
+func (c *config) resourceRepository() (flare.ResourceRepositorier, error) {
+	engine := c.getString("repository.engine")
+	switch engine {
+	case engineMongoDB:
+		client, err := c.mongodb()
+		if err != nil {
+			return nil, err
+		}
+
+		subscriptionRepository, err := c.subscriptionRepository()
+		if err != nil {
+			return nil, err
+		}
+
+		repository, err := mongodb.NewResource(
+			mongodb.ResourceClient(client),
+			mongodb.ResourceSubscriptionRepository(subscriptionRepository),
+		)
+		if err != nil {
+			return nil, err
+		}
+		return repository, nil
+	case engineMemory:
+		return memory.NewResource(), nil
+	default:
+		return nil, fmt.Errorf("invalid repository.engine '%s'", engine)
+	}
+}
+
+func (c *config) mongodb() (*mongodb.Client, error) {
+	client, err := mongodb.NewClient(
+		mongodb.ClientAddrs(c.getStringSlice("repository.addrs")),
+		mongodb.ClientDatabase(c.getString("repository.database")),
+		mongodb.ClientUsername(c.getString("repository.username")),
+		mongodb.ClientPassword(c.getString("repository.password")),
+	)
+	return client, errors.Wrap(err, "error during MongoDB connection")
+}
 
 func newConfig(options ...func(*config)) (*config, error) {
 	c := &config{viper: viper.New()}

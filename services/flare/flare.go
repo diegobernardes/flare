@@ -17,7 +17,6 @@ import (
 
 	"github.com/diegobernardes/flare"
 	"github.com/diegobernardes/flare/document"
-	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
 )
@@ -50,7 +49,17 @@ func (c *Client) Start() error {
 	}
 	c.logger.Log("message", "Starting Flare")
 
-	subscriptionRepository := memory.NewSubscription()
+	documentRepository, err := c.config.documentRepository()
+	if err != nil {
+		return err
+	}
+
+	subscriptionRepository, err := c.config.subscriptionRepository()
+	if err != nil {
+		return err
+	}
+
+	// subscriptionRepository := memory.NewSubscription()
 	resourceService, resourceRepository, err := c.initResourceService(subscriptionRepository)
 	if err != nil {
 		level.Debug(c.logger).Log(
@@ -59,7 +68,11 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	documentService, err := c.initDocumentService(resourceRepository, subscriptionRepository)
+	documentService, err := c.initDocumentService(
+		documentRepository,
+		resourceRepository,
+		subscriptionRepository,
+	)
 	if err != nil {
 		return errors.Wrap(err, "error during document service initialization")
 	}
@@ -162,7 +175,12 @@ func (c *Client) initLoggerLevel(logger log.Logger) (log.Logger, error) {
 func (c *Client) initResourceService(
 	subscriptionRepository flare.SubscriptionRepositorier,
 ) (*resource.Service, flare.ResourceRepositorier, error) {
-	repository := memory.NewResource(memory.ResourceSubscriptionRepository(subscriptionRepository))
+	repository, err := c.config.resourceRepository()
+	if err != nil {
+		panic(err)
+	}
+
+	// repository := memory.NewResource(memory.ResourceSubscriptionRepository(subscriptionRepository))
 
 	resourceService, err := resource.NewService(
 		resource.ServiceDefaultLimit(c.config.getInt("http.default-limit")),
@@ -207,7 +225,9 @@ func (c *Client) initSubscriptionService(
 }
 
 func (c *Client) initDocumentService(
-	rr flare.ResourceRepositorier, sr flare.SubscriptionRepositorier,
+	dr flare.DocumentRepositorier,
+	rr flare.ResourceRepositorier,
+	sr flare.SubscriptionRepositorier,
 ) (*document.Service, error) {
 	subscriptionTrigger, err := subscription.NewTrigger(
 		subscription.TriggerRepository(sr),
@@ -219,7 +239,7 @@ func (c *Client) initDocumentService(
 
 	documentService, err := document.NewService(
 		document.ServiceSubscriptionTrigger(subscriptionTrigger),
-		document.ServiceDocumentRepository(memory.NewDocument()),
+		document.ServiceDocumentRepository(dr),
 		document.ServiceResourceRepository(rr),
 		document.ServiceSubscriptionRepository(sr),
 		document.ServiceGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),

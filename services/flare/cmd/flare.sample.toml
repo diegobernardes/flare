@@ -19,6 +19,26 @@ default-limit = 30
 engine = "memory"
 
 # --------------------------------------------------------------------------------------------------
+# - repository.addrs
+#   List of "ip:port" to MongoDB servers. Default value: ["localhost:27017"]
+#
+# - repository.database
+#   Name of the database on MongoDB. Default value: "flare"
+#
+# - repository.username
+#   Username used to connect to MongoDB. Default value is unset.
+#
+# - repository.password
+#   Password used to connect to MongoDB. Default value is unset.
+#
+[repository]
+engine   = "mongodb"
+addrs    = ["localhost:27017"]
+database = "flare"
+username = "flare"
+password = "flare"
+
+# --------------------------------------------------------------------------------------------------
 # - log.level
 #   The minimum log level to be displayed. Default value: "debug". Possible values: "debug", "info",
 #   "warn" and "error".
