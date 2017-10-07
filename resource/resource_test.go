@@ -250,6 +250,21 @@ func TestResourceCreateValidAddresses(t *testing.T) {
 			resourceCreate{Addresses: []string{"%zzzzz"}},
 			true,
 		},
+		{
+			"Invalid path",
+			resourceCreate{Addresses: []string{"http://app,com/teste"}},
+			true,
+		},
+		{
+			"Invalid fragment",
+			resourceCreate{Addresses: []string{"http://app,com#fragment"}},
+			true,
+		},
+		{
+			"Invalid query string",
+			resourceCreate{Addresses: []string{"http://app,com?project=flare"}},
+			true,
+		},
 	}
 
 	for _, tt := range tests {

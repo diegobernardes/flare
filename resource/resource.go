@@ -140,6 +140,18 @@ func (r *resourceCreate) validAddresses() error {
 			return errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", address))
 		}
 
+		if d.Path != "" {
+			return fmt.Errorf("address is invalid because it has a path '%s'", d.Path)
+		}
+
+		if d.RawQuery != "" {
+			return fmt.Errorf("address is invalid because it has query string '%s'", d.RawQuery)
+		}
+
+		if d.Fragment != "" {
+			return fmt.Errorf("address is invalid because it has fragment '%s'", d.Fragment)
+		}
+
 		switch d.Scheme {
 		case "http", "https":
 			continue
