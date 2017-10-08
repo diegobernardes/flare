@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,6 +18,22 @@ import (
 
 	"github.com/diegobernardes/flare"
 )
+
+const wildcard = "{*}"
+
+type resourceEntity struct {
+	Id        string               `bson:"id"`
+	Addresses []string             `bson:"addresses"`
+	Path      string               `bson:"path"`
+	Change    resourceChangeEntity `bson:"change"`
+	CreatedAt time.Time            `bson:"createdAt"`
+}
+
+type resourceChangeEntity struct {
+	Field      string `bson:"field"`
+	Kind       string `bson:"kind"`
+	DateFormat string `bson:"dateFormat"`
+}
 
 // Resource implements the data layer for the resource service.
 type Resource struct {
@@ -32,7 +49,7 @@ func (r *Resource) FindAll(
 ) ([]flare.Resource, *flare.Pagination, error) {
 	var (
 		group     errgroup.Group
-		resources []flare.Resource
+		resources []resourceEntity
 		total     int
 	)
 
@@ -68,7 +85,7 @@ func (r *Resource) FindAll(
 		return nil, nil, errors.Wrap(err, "error during MongoDB access")
 	}
 
-	return resources, &flare.Pagination{
+	return r.resourceEntitySliceToFlareResourceSlice(resources), &flare.Pagination{
 		Limit:  pagination.Limit,
 		Offset: pagination.Offset,
 		Total:  total,
@@ -81,15 +98,15 @@ func (r *Resource) FindOne(_ context.Context, id string) (*flare.Resource, error
 	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
 
-	result := &flare.Resource{}
+	result := &resourceEntity{}
 	if err := session.DB(r.database).C(r.collection).Find(bson.M{"id": id}).One(result); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &errMemory{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
 		}
-		return result, errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", id))
+		return nil, errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", id))
 	}
 
-	return result, nil
+	return r.resourceEntityToFlareResource(result), nil
 }
 
 // FindByURI take a URI and find the resource that match.
@@ -98,75 +115,143 @@ func (r *Resource) FindByURI(_ context.Context, rawAddress string) (*flare.Resou
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("error during url '%s' parse", rawAddress))
 	}
-	parsedAddress := fmt.Sprintf("%s://%s", address.Scheme, address.Host)
+
+	query, err := r.findResourceByURI(
+		[]string{fmt.Sprintf("%s://%s", address.Scheme, address.Host)},
+		address.Path,
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during resource find")
+	}
 
 	session := r.client.session()
 	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
 
-	result := &flare.Resource{}
-	err = session.
-		DB(r.database).
-		C(r.collection).
-		Find(bson.M{"addresses": parsedAddress}).
-		One(result)
+	result := &resourceEntity{}
+	err = session.DB(r.database).C(r.collection).Find(query).One(result)
 	if err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &errMemory{
-				message: fmt.Sprintf("resource not found with address '%s'", parsedAddress), notFound: true,
+				message: fmt.Sprintf("resource not found with address '%s'", rawAddress), notFound: true,
 			}
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(
-			"error during find resource by uri '%s'", address.String(),
+			"error during find resource by uri '%s'", rawAddress,
 		))
 	}
 
-	return result, nil
+	return r.resourceEntityToFlareResource(result), nil
 }
 
 // Create a resource.
 func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
-	var group errgroup.Group
+	_, err := r.findResourceByURI(res.Addresses, res.Path)
+	if err == nil {
+		return &errMemory{message: "resource already exists", alreadyExists: true}
+	}
+	if err != nil {
+		if nErr, ok := err.(flare.ResourceRepositoryError); ok {
+			if nErr.AlreadyExists() || nErr.PathConflict() {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	res.CreatedAt = time.Now()
+	contentChange := bson.M{
+		"kind":  res.Change.Kind,
+		"field": res.Change.Field,
+	}
+	if res.Change.Kind == flare.ResourceChangeDate {
+		contentChange["dateFormat"] = res.Change.DateFormat
+	}
+
+	content := bson.M{
+		"id":           res.Id,
+		"addresses":    res.Addresses,
+		"path":         res.Path,
+		"pathSegments": r.pathSegments(res.Path),
+		"change":       contentChange,
+		"createdAt":    res.CreatedAt,
+	}
 
 	session := r.client.session()
 	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
 
-	for _, rawAddr := range res.Addresses {
-		group.Go(func(addr string) func() error {
-			return func() error {
-				qtd, err := session.
-					DB(r.database).
-					C(r.collection).
-					Find(bson.M{"addresses": addr}).
-					Limit(1).
-					Count()
-				if err != nil {
-					return errors.Wrap(err, "error during resource create")
-				}
-
-				if qtd > 0 {
-					return &errMemory{
-						message:       fmt.Sprintf("already has a resource with the address '%s'", addr),
-						alreadyExists: true,
-					}
-				}
-
-				return nil
-			}
-		}(rawAddr))
-	}
-
-	if err := group.Wait(); err != nil {
-		return err
-	}
-
-	res.CreatedAt = time.Now()
-	if err := session.DB(r.database).C(r.collection).Insert(res); err != nil {
+	if err := session.DB(r.database).C(r.collection).Insert(content); err != nil {
 		errors.Wrap(err, "error during resource create")
 	}
 
 	return nil
+}
+
+func (r *Resource) findResourceByURI(addresses []string, path string) (bson.M, error) {
+	session := r.client.session()
+	session.SetMode(mgo.Monotonic, true)
+	defer session.Close()
+
+	segments := strings.Split(path, "/")
+	segments = segments[1:]
+
+	query := bson.M{"pathSegments": bson.M{"$size": len(segments)}}
+	if len(addresses) > 1 {
+		query["addresses"] = bson.M{"$in": addresses}
+	} else if len(addresses) == 1 {
+		query["addresses"] = addresses[0]
+	}
+	count := func() (int, error) { return session.DB(r.database).C(r.collection).Find(query).Count() }
+
+	for i, segment := range segments {
+		query[fmt.Sprintf("pathSegments.%d", i)] = segment
+
+		qtd, err := count()
+		if err != nil {
+			return nil, errors.Wrap(err, "error during resource find")
+		}
+
+		if qtd == 0 {
+			query[fmt.Sprintf("pathSegments.%d", i)] = wildcard
+			qtd, err = count()
+			if err != nil {
+				return nil, errors.Wrap(err, "error during resource find")
+			}
+
+			if qtd == 0 {
+				return nil, &errMemory{message: "resource not found", notFound: true}
+			}
+
+			if i == len(segments)-1 {
+				break
+			}
+		} else if i == len(segments)-1 {
+			break
+		}
+	}
+
+	return query, nil
+}
+
+func (r *Resource) pathSegments(path string) []string {
+	segments := strings.Split(path, "/")
+	result := make([]string, len(segments)-1)
+
+	for i, segment := range segments {
+		if i == 0 {
+			continue
+		}
+
+		if segment[0] == '{' && segment[len(segment)-1] == '}' {
+			result[i-1] = wildcard
+		} else {
+			result[i-1] = segment
+		}
+	}
+
+	return result
 }
 
 // Delete a given resource.
@@ -183,6 +268,30 @@ func (r *Resource) Delete(_ context.Context, id string) error {
 	}
 
 	return nil
+}
+
+func (r *Resource) resourceEntityToFlareResource(content *resourceEntity) *flare.Resource {
+	return &flare.Resource{
+		Id:        content.Id,
+		Addresses: content.Addresses,
+		Path:      content.Path,
+		CreatedAt: content.CreatedAt,
+		Change: flare.ResourceChange{
+			DateFormat: content.Change.DateFormat,
+			Field:      content.Change.Field,
+			Kind:       content.Change.Kind,
+		},
+	}
+}
+
+func (r *Resource) resourceEntitySliceToFlareResourceSlice(
+	entities []resourceEntity,
+) []flare.Resource {
+	result := make([]flare.Resource, len(entities))
+	for i, entity := range entities {
+		result[i] = *r.resourceEntityToFlareResource(&entity)
+	}
+	return result
 }
 
 // NewResource returns a configured resource repository.
