@@ -76,19 +76,7 @@ func (r *resourceCreate) valid() error {
 		return err
 	}
 
-	if r.Path == "" {
-		return errors.New("missing path")
-	}
-
-	if r.Path[0] != '/' {
-		return errors.New("path should start with a slash")
-	}
-
-	if r.Path[len(r.Path)-1] == '/' {
-		return errors.New("path should not end with a slash")
-	}
-
-	if err := r.validWildcard(); err != nil {
+	if err := r.validPath(); err != nil {
 		return err
 	}
 
@@ -104,6 +92,26 @@ func (r *resourceCreate) valid() error {
 		}
 	default:
 		return errors.New("invalid change.kind")
+	}
+
+	return nil
+}
+
+func (r *resourceCreate) validPath() error {
+	if r.Path == "" {
+		return errors.New("missing path")
+	}
+
+	if r.Path[0] != '/' {
+		return errors.New("path should start with a slash")
+	}
+
+	if r.Path[len(r.Path)-1] == '/' {
+		return errors.New("path should not end with a slash")
+	}
+
+	if err := r.validWildcard(); err != nil {
+		return err
 	}
 
 	return nil
