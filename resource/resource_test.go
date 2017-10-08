@@ -293,6 +293,16 @@ func TestResourceCreateValidWildcard(t *testing.T) {
 			resourceCreate{Path: "/users{*}"},
 			true,
 		},
+		{
+			"Invalid wildcard",
+			resourceCreate{Path: "/{*}{*}"},
+			true,
+		},
+		{
+			"Invalid wildcard",
+			resourceCreate{Path: "/{wildcard}}"},
+			true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -319,6 +329,11 @@ func TestResourceCreateValid(t *testing.T) {
 		{
 			"Invalid path",
 			resourceCreate{Addresses: []string{"http://app.com"}},
+			true,
+		},
+		{
+			"Invalid path",
+			resourceCreate{Addresses: []string{"http://app.com"}, Path: "users"},
 			true,
 		},
 		{

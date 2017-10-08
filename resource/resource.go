@@ -80,6 +80,10 @@ func (r *resourceCreate) valid() error {
 		return errors.New("missing path")
 	}
 
+	if r.Path[0] != '/' {
+		return errors.New("path should start with a slash")
+	}
+
 	if err := r.validWildcard(); err != nil {
 		return err
 	}
@@ -102,10 +106,23 @@ func (r *resourceCreate) valid() error {
 }
 
 func (r *resourceCreate) validWildcard() error {
+	var hasWildcard bool
 	for _, value := range strings.Split(r.Path, "/") {
-		if strings.Contains(value, "{*}") && value != "{*}" {
-			return errors.New("found a mixed wildcard on path, it should appear alone")
+		if value == "" {
+			continue
 		}
+
+		if value[0] == '{' && value[len(value)-1] == '}' {
+			hasWildcard = true
+		}
+
+		if strings.Count(value, "{") > 1 || strings.Count(value, "}") > 1 {
+			return errors.New("could not use brackets inside a wildcard or next to another wildcard")
+		}
+	}
+
+	if !hasWildcard {
+		return errors.New("missing wildcard")
 	}
 	return nil
 }

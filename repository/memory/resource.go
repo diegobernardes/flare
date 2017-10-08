@@ -171,9 +171,10 @@ func (r *Resource) selectResouceByHost(
 outer:
 	for _, resourceSegment := range r.genResourceSegments(resources, len(segments)) {
 		for i := 0; i < len(segments); i++ {
-			if segments[i] == resourceSegment[i+1] {
+			segment := resourceSegment[i+1]
+			if segments[i] == segment {
 				continue
-			} else if resourceSegment[i+1] == "{*}" {
+			} else if segment[0] == '{' && segment[len(segment)] == '}' {
 				continue
 			} else {
 				continue outer
@@ -245,13 +246,12 @@ type segment [][]string
 func (s segment) Len() int { return len(s) }
 
 func (s segment) Less(i, j int) bool {
-	wildcard := "{*}"
 	for aux := 0; aux < len(s[i]); aux++ {
 		if s[i][aux] == s[j][aux] {
 			continue
-		} else if s[i][aux] == wildcard {
+		} else if s[i][aux][0] == '{' && s[i][aux][len(s[i][aux])] == '}' {
 			return false
-		} else if s[j][aux] == wildcard {
+		} else if s[j][aux][0] == '{' && s[j][aux][len(s[j][aux])] == '}' {
 			return true
 		}
 	}
