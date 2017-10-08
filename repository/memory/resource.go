@@ -174,7 +174,7 @@ outer:
 			segment := resourceSegment[i+1]
 			if segments[i] == segment {
 				continue
-			} else if segment[0] == '{' && segment[len(segment)] == '}' {
+			} else if segment[0] == '{' && segment[len(segment)-1] == '}' {
 				continue
 			} else {
 				continue outer
@@ -249,9 +249,9 @@ func (s segment) Less(i, j int) bool {
 	for aux := 0; aux < len(s[i]); aux++ {
 		if s[i][aux] == s[j][aux] {
 			continue
-		} else if s[i][aux][0] == '{' && s[i][aux][len(s[i][aux])] == '}' {
+		} else if s[i][aux][0] == '{' && s[i][aux][len(s[i][aux])-1] == '}' {
 			return false
-		} else if s[j][aux][0] == '{' && s[j][aux][len(s[j][aux])] == '}' {
+		} else if s[j][aux][0] == '{' && s[j][aux][len(s[j][aux])-1] == '}' {
 			return true
 		}
 	}
