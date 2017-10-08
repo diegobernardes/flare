@@ -6,7 +6,7 @@
       "https://app1.io"
     ],
     "createdAt": "2009-11-10T23:00:00Z",
-    "path": "/resources/{track}",
+    "path": "/resources/{*}",
     "change": {
       "field": "updatedAt",
       "kind": "date",

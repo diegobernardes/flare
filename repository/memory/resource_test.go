@@ -35,15 +35,15 @@ func TestResourceGenResourceSegments(t *testing.T) {
 			`The result should contain a list of list of strings with the flare.Resource id and each
 path segment`,
 			[]flare.Resource{
-				{Id: "1", Path: "/product/123/stock/{track}"},
-				{Id: "2", Path: "/product/{*}/stock/{track}"},
-				{Id: "3", Path: "/product/456/stock/{track}"},
+				{Id: "1", Path: "/product/123/stock/{*}"},
+				{Id: "2", Path: "/product/{*}/stock/{*}"},
+				{Id: "3", Path: "/product/456/stock/{*}"},
 			},
 			5,
 			[][]string{
-				{"1", "", "product", "123", "stock", "{track}"},
-				{"3", "", "product", "456", "stock", "{track}"},
-				{"2", "", "product", "{*}", "stock", "{track}"},
+				{"1", "", "product", "123", "stock", "{*}"},
+				{"3", "", "product", "456", "stock", "{*}"},
+				{"2", "", "product", "{*}", "stock", "{*}"},
 			},
 		},
 	}

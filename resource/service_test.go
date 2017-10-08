@@ -181,7 +181,7 @@ func TestHandleIndex(t *testing.T) {
 						Id:        "1",
 						Addresses: []string{"http://app1.com", "https://app1.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -205,7 +205,7 @@ func TestHandleIndex(t *testing.T) {
 						Id:        "1",
 						Addresses: []string{"http://app1.com", "https://app1.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -216,7 +216,7 @@ func TestHandleIndex(t *testing.T) {
 						Id:        "2",
 						Addresses: []string{"http://app2.com", "https://app2.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -240,7 +240,7 @@ func TestHandleIndex(t *testing.T) {
 						Id:        "1",
 						Addresses: []string{"http://app1.com", "https://app1.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -251,7 +251,7 @@ func TestHandleIndex(t *testing.T) {
 						Id:        "2",
 						Addresses: []string{"http://app2.com", "https://app2.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -324,7 +324,7 @@ func TestHandleShow(t *testing.T) {
 						Id:        "123",
 						Addresses: []string{"http://app1.com", "https://app1.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -397,7 +397,7 @@ func TestHandleDelete(t *testing.T) {
 						Id:        "123",
 						Addresses: []string{"http://app1.com", "https://app1.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,
@@ -470,7 +470,7 @@ func TestHandleCreate(t *testing.T) {
 						Id:        "123",
 						Addresses: []string{"http://app1.com", "https://app1.io"},
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Path:      "/resources/{track}",
+						Path:      "/resources/{*}",
 						Change: flare.ResourceChange{
 							Field:      "updatedAt",
 							Kind:       flare.ResourceChangeDate,

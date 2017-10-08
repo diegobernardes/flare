@@ -31,7 +31,7 @@ curl -H "Content-Type: application/json" -XPOST http://localhost:8080/resources 
 		"http://app.io",
 		"https://app.com"
 	],
-	"path": "/users/{track}",
+	"path": "/users/{*}",
 	"change": {
 		"kind": "date",
 		"field": "updatedAt",

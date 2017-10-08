@@ -68,13 +68,13 @@ func TestResourceMarshalJSON(t *testing.T) {
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				Addresses: []string{"http://flare.io", "https://flare.com"},
-				Path:      "/resources/{track}",
+				Path:      "/resources/{*}",
 				Change: flare.ResourceChange{
 					Field: "version",
 					Kind:  flare.ResourceChangeInteger,
 				},
 			},
-			`{"id":"id","addresses":["http://flare.io","https://flare.com"],"path":"/resources/{track}",
+			`{"id":"id","addresses":["http://flare.io","https://flare.com"],"path":"/resources/{*}",
 			"change":{"field":"version","kind":"integer"},"createdAt":"2009-11-10T23:00:00Z"}`,
 			false,
 		},
@@ -84,14 +84,14 @@ func TestResourceMarshalJSON(t *testing.T) {
 				Id:        "id",
 				CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 				Addresses: []string{"http://flare.io", "https://flare.com"},
-				Path:      "/resources/{track}",
+				Path:      "/resources/{*}",
 				Change: flare.ResourceChange{
 					Field:      "updatedAt",
 					Kind:       flare.ResourceChangeDate,
 					DateFormat: "2006-01-02",
 				},
 			},
-			`{"id":"id","addresses":["http://flare.io","https://flare.com"],"path":"/resources/{track}",
+			`{"id":"id","addresses":["http://flare.io","https://flare.com"],"path":"/resources/{*}",
 			"change":{"field":"updatedAt","kind":"date","dateFormat":"2006-01-02"},
 			"createdAt":"2009-11-10T23:00:00Z"}`,
 			false,
@@ -153,7 +153,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 				Resource: &resource{
 					Id:        "123",
 					Addresses: []string{"http://address1", "https://address2"},
-					Path:      "/products/{track}",
+					Path:      "/products/{*}",
 					CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					Change: flare.ResourceChange{
 						Kind:  flare.ResourceChangeInteger,
@@ -161,7 +161,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					},
 				},
 			},
-			`{"id":"123","addresses":["http://address1","https://address2"],"path":"/products/{track}",
+			`{"id":"123","addresses":["http://address1","https://address2"],"path":"/products/{*}",
 			"change":{"field":"version","kind":"integer"},"createdAt":"2009-11-10T23:00:00Z"}`,
 			false,
 		},
@@ -173,7 +173,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					{
 						Id:        "123",
 						Addresses: []string{"http://address1", "https://address2"},
-						Path:      "/products/{track}",
+						Path:      "/products/{*}",
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 						Change: flare.ResourceChange{
 							Kind:  flare.ResourceChangeInteger,
@@ -183,7 +183,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 				},
 			},
 			`{"resources":[{"id":"123","addresses":["http://address1","https://address2"],
-			"path":"/products/{track}","change":{"field":"version","kind":"integer"},
+			"path":"/products/{*}","change":{"field":"version","kind":"integer"},
 			"createdAt":"2009-11-10T23:00:00Z"}],"pagination":{"limit":10,"offset":20,"total":30}}`,
 			false,
 		},
@@ -305,59 +305,6 @@ func TestResourceCreateValidWildcard(t *testing.T) {
 	}
 }
 
-func TestResourceCreateValidTrack(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  resourceCreate
-		hasErr bool
-	}{
-		{
-			"Missing track",
-			resourceCreate{Path: "/users/{*}"},
-			true,
-		},
-		{
-			"Empty path",
-			resourceCreate{Path: ""},
-			true,
-		},
-		{
-			"Missing track",
-			resourceCreate{Path: "/users/{*}/posts/{*}"},
-			true,
-		},
-		{
-			"2 track tags",
-			resourceCreate{Path: "/users/{track}/posts/{track}"},
-			true,
-		},
-		{
-			"Wildcard before track",
-			resourceCreate{Path: "/users/{track}/posts/{*}"},
-			true,
-		},
-		{
-			"Valid track",
-			resourceCreate{Path: "/users/{*}/posts/{track}"},
-			false,
-		},
-		{
-			"Valid track",
-			resourceCreate{Path: "/users/{track}"},
-			false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.input.validTrack()
-			if tt.hasErr != (result != nil) {
-				t.Errorf("resourceCreate.validTrack invalid result, want '%v', got '%v'", tt.hasErr, result)
-			}
-		})
-	}
-}
-
 func TestResourceCreateValid(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -381,19 +328,19 @@ func TestResourceCreateValid(t *testing.T) {
 		},
 		{
 			"Invalid path",
-			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users/{*}-path/posts/{track}"},
+			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users/{*}-path/posts/{*}"},
 			true,
 		},
 		{
 			"Invalid change",
-			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users/{track}"},
+			resourceCreate{Addresses: []string{"http://app.com"}, Path: "/users/{*}"},
 			true,
 		},
 		{
 			"Invalid change kind",
 			resourceCreate{
 				Addresses: []string{"http://app.com"},
-				Path:      "/users/{track}",
+				Path:      "/users/{*}",
 				Change:    resourceCreateChange{Field: "updatedAt"},
 			},
 			true,
@@ -402,7 +349,7 @@ func TestResourceCreateValid(t *testing.T) {
 			"Missing date format",
 			resourceCreate{
 				Addresses: []string{"http://app.com"},
-				Path:      "/users/{track}",
+				Path:      "/users/{*}",
 				Change:    resourceCreateChange{Field: "updatedAt", Kind: flare.ResourceChangeDate},
 			},
 			true,
@@ -411,7 +358,7 @@ func TestResourceCreateValid(t *testing.T) {
 			"Valid resource",
 			resourceCreate{
 				Addresses: []string{"http://app.com"},
-				Path:      "/users/{track}",
+				Path:      "/users/{*}",
 				Change:    resourceCreateChange{Field: "incrCounter", Kind: flare.ResourceChangeInteger},
 			},
 			false,
@@ -420,7 +367,7 @@ func TestResourceCreateValid(t *testing.T) {
 			"Valid resource",
 			resourceCreate{
 				Addresses: []string{"http://app.com"},
-				Path:      "/users/{track}",
+				Path:      "/users/{*}",
 				Change: resourceCreateChange{
 					Field:      "updatedAt",
 					Kind:       flare.ResourceChangeDate,

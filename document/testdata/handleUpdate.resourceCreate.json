@@ -5,7 +5,7 @@
       "http://app.com",
       "https://app1.io"
     ],
-    "path": "/{track}",
+    "path": "/{*}",
     "change": {
       "kind": "date",
       "dateFormat": "2006-01-02T15:04:05Z07:00",

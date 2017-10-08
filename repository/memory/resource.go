@@ -173,7 +173,7 @@ outer:
 		for i := 0; i < len(segments); i++ {
 			if segments[i] == resourceSegment[i+1] {
 				continue
-			} else if resourceSegment[i+1] == "{*}" || resourceSegment[i+1] == "{track}" {
+			} else if resourceSegment[i+1] == "{*}" {
 				continue
 			} else {
 				continue outer
