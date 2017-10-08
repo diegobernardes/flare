@@ -7,6 +7,7 @@ package document
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-kit/kit/log"
@@ -45,6 +46,16 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 
 // HandleUpdate process the request to update a document.
 func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.URL.RawQuery != "" {
+		s.writeError(
+			w,
+			fmt.Errorf("query string not allowed '%s'", r.URL.RawQuery),
+			"error during document search",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
 	document, ok := s.parseHandleUpdateDocument(w, r)
 	if !ok {
 		return
