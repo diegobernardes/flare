@@ -84,6 +84,10 @@ func (r *resourceCreate) valid() error {
 		return errors.New("path should start with a slash")
 	}
 
+	if r.Path[len(r.Path)-1] == '/' {
+		return errors.New("path should not end with a slash")
+	}
+
 	if err := r.validWildcard(); err != nil {
 		return err
 	}
