@@ -118,13 +118,21 @@ func (r *resourceCreate) validPath() error {
 }
 
 func (r *resourceCreate) validWildcard() error {
-	var hasWildcard bool
+	var (
+		wildcards   = make(map[string]struct{})
+		hasWildcard bool
+	)
+
 	for _, value := range strings.Split(r.Path, "/") {
 		if value == "" {
 			continue
 		}
 
 		if value[0] == '{' && value[len(value)-1] == '}' {
+			if _, ok := wildcards[value]; ok {
+				return fmt.Errorf("wildcard '%s' is present %d times", value, strings.Count(r.Path, value))
+			}
+			wildcards[value] = struct{}{}
 			hasWildcard = true
 		}
 

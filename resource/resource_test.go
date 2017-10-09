@@ -303,6 +303,16 @@ func TestResourceCreateValidWildcard(t *testing.T) {
 			resourceCreate{Path: "/{wildcard}}"},
 			true,
 		},
+		{
+			"Invalid wildcard",
+			resourceCreate{Path: "/{*}/{*}"},
+			true,
+		},
+		{
+			"Invalid wildcard",
+			resourceCreate{Path: "/{wildcard}/{*}/{wildcard}"},
+			true,
+		},
 	}
 
 	for _, tt := range tests {
