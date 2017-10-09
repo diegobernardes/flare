@@ -37,8 +37,8 @@ func (s *Subscription) FindAll(
 
 	group.Go(func() error {
 		session := s.client.session()
-		defer session.Close()
 		session.SetMode(mgo.Monotonic, true)
+		defer session.Close()
 
 		totalResult, err := session.DB(s.database).C(s.collection).Find(bson.M{}).Count()
 		if err != nil {
@@ -98,10 +98,22 @@ func (s *Subscription) FindOne(
 // Create a subscription.
 func (s *Subscription) Create(_ context.Context, subscription *flare.Subscription) error {
 	session := s.client.session()
+	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
 
+	resourceEntity := &resourceEntity{}
+	err := session.DB(s.database).C(s.collection).Find(bson.M{
+		"resource.id":  subscription.Resource.Id,
+		"endpoint.url": subscription.Endpoint.URL.String(),
+	}).One(resourceEntity)
+	if err == nil {
+		return fmt.Errorf("already has a subscription '%s' with this endpoint", resourceEntity.Id)
+	}
+	if err != nil && err != mgo.ErrNotFound {
+		return errors.Wrap(err, "error during subscription search")
+	}
+
 	subscription.CreatedAt = time.Now()
-	session.SetMode(mgo.Monotonic, true)
 	return errors.Wrap(
 		session.DB(s.database).C(s.collection).Insert(subscription),
 		"error during subscription create",
