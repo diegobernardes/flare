@@ -427,7 +427,9 @@ func TestServiceHandleCreate(t *testing.T) {
 			test.NewSubscription(
 				test.SubscriptionError(errors.New("error at repository")),
 			),
-			test.NewResource(),
+			test.NewResource(
+				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
+			),
 		},
 		{
 			"Conflict at repository",
@@ -443,7 +445,9 @@ func TestServiceHandleCreate(t *testing.T) {
 				test.SubscriptionCreateId("456"),
 				test.SubscriptionLoadSliceByteSubscription(load("handleCreate.inputArray.json")),
 			),
-			test.NewResource(),
+			test.NewResource(
+				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
+			),
 		},
 		{
 			"Create",
@@ -462,7 +466,9 @@ func TestServiceHandleCreate(t *testing.T) {
 				test.SubscriptionCreateId("456"),
 				test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 			),
-			test.NewResource(),
+			test.NewResource(
+				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
+			),
 		},
 	}
 

@@ -107,7 +107,18 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, err, "invalid content", http.StatusBadRequest)
 		return
 	}
-	result.Resource.Id = s.getResourceId(r)
+
+	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceId(r))
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
+			status = http.StatusNotFound
+		}
+
+		s.writeError(w, err, "error during resource search", status)
+		return
+	}
+	result.Resource.Id = resource.Id
 
 	if err := s.subscriptionRepository.Create(r.Context(), result); err != nil {
 		status := http.StatusInternalServerError
