@@ -37,14 +37,9 @@ func (t *Trigger) exec(
 	document *flare.Document,
 ) func(context.Context, flare.Subscription, string) error {
 	return func(ctx context.Context, sub flare.Subscription, kind string) error {
-		content, err := json.Marshal(map[string]interface{}{
-			"id":               document.Id,
-			"changeFieldValue": document.ChangeFieldValue,
-			"updatedAt":        document.UpdatedAt.String(),
-			"action":           kind,
-		})
+		content, err := t.buildContent(document, sub, kind)
 		if err != nil {
-			return errors.Wrap(err, "error during response generate")
+			return errors.Wrap(err, "error during content build")
 		}
 
 		buf := bytes.NewBuffer(content)
@@ -81,6 +76,37 @@ func (t *Trigger) exec(
 			"success and discard status don't match with the response value '%d'", resp.StatusCode,
 		)
 	}
+}
+
+func (t *Trigger) buildContent(
+	document *flare.Document, sub flare.Subscription, kind string,
+) ([]byte, error) {
+	rawContent := map[string]interface{}{
+		"id":               document.Id,
+		"changeFieldValue": document.ChangeFieldValue,
+		"updatedAt":        document.UpdatedAt.String(),
+		"action":           kind,
+	}
+	if sub.Data != nil {
+		replacer, err := sub.Resource.WildcardReplace(document.Id)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
+		}
+
+		for key, rawValue := range sub.Data {
+			if value, ok := rawValue.(string); ok {
+				sub.Data[key] = replacer(value)
+			}
+		}
+
+		rawContent["data"] = sub.Data
+	}
+
+	content, err := json.Marshal(rawContent)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during response generate")
+	}
+	return content, nil
 }
 
 // NewTrigger initialize the Trigger.

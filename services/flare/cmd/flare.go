@@ -33,6 +33,7 @@ look for a 'flare.toml' file at the same directory as the binary.`,
 
 			client := flare.NewClient(flare.ClientConfig(config))
 			if err := client.Start(); err != nil {
+				fmt.Println(errors.Wrap(err, "Error during Flare initialization"))
 				os.Exit(1)
 			}
 

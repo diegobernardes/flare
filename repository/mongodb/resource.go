@@ -294,24 +294,32 @@ func (r *Resource) resourceEntitySliceToFlareResourceSlice(
 	return result
 }
 
-// NewResource returns a configured resource repository.
-func NewResource(options ...func(*Resource)) (*Resource, error) {
-	r := &Resource{}
+// SetSubscriptionRepository set the subscription repository.
+func (r *Resource) SetSubscriptionRepository(repo flare.SubscriptionRepositorier) error {
+	if repo == nil {
+		return errors.New("subscriptionRepository can't be nil")
+	}
+	r.subscriptionRepository = repo
+	return nil
+}
+
+// Init configure the resource repository.
+func (r *Resource) Init(options ...func(*Resource)) error {
 	for _, option := range options {
 		option(r)
 	}
 
 	if r.client == nil {
-		return nil, errors.New("invalid client")
+		return errors.New("invalid client")
 	}
 
 	if r.subscriptionRepository == nil {
-		return nil, errors.New("invalid subscription repository")
+		return errors.New("invalid subscription repository")
 	}
 
 	r.collection = "resources"
 	r.database = r.client.database
-	return r, nil
+	return nil
 }
 
 // ResourceSubscriptionRepository set the repository to access the subscriptions.

@@ -24,6 +24,9 @@ const (
 type config struct {
 	content string
 	viper   *viper.Viper
+
+	subscription *mongodb.Subscription
+	resource     *mongodb.Resource
 }
 
 func (c *config) getString(key string) string { return c.viper.GetString(key) }
@@ -62,11 +65,10 @@ func (c *config) subscriptionRepository() (flare.SubscriptionRepositorier, error
 			return nil, err
 		}
 
-		repository, err := mongodb.NewSubscription(mongodb.SubscriptionClient(client))
-		if err != nil {
+		if err = c.subscription.Init(mongodb.SubscriptionClient(client)); err != nil {
 			return nil, err
 		}
-		return repository, nil
+		return c.subscription, nil
 	case engineMemory:
 		return memory.NewSubscription(), nil
 	default:
@@ -83,19 +85,10 @@ func (c *config) resourceRepository() (flare.ResourceRepositorier, error) {
 			return nil, err
 		}
 
-		subscriptionRepository, err := c.subscriptionRepository()
-		if err != nil {
+		if err = c.resource.Init(mongodb.ResourceClient(client)); err != nil {
 			return nil, err
 		}
-
-		repository, err := mongodb.NewResource(
-			mongodb.ResourceClient(client),
-			mongodb.ResourceSubscriptionRepository(subscriptionRepository),
-		)
-		if err != nil {
-			return nil, err
-		}
-		return repository, nil
+		return c.resource, nil
 	case engineMemory:
 		return memory.NewResource(), nil
 	default:
@@ -123,6 +116,13 @@ func newConfig(options ...func(*config)) (*config, error) {
 
 	if err := c.viper.ReadConfig(bytes.NewBufferString(c.content)); err != nil {
 		return nil, errors.Wrap(err, "error during config setup")
+	}
+
+	if c.getString("repository.engine") == engineMongoDB {
+		c.resource = &mongodb.Resource{}
+		c.subscription = &mongodb.Subscription{}
+		c.resource.SetSubscriptionRepository(c.subscription)
+		c.subscription.SetResourceRepository(c.resource)
 	}
 
 	return c, nil

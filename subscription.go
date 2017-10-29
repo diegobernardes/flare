@@ -17,6 +17,7 @@ type Subscription struct {
 	Endpoint  SubscriptionEndpoint
 	Delivery  SubscriptionDelivery
 	Resource  Resource
+	Data      map[string]interface{}
 	CreatedAt time.Time
 }
 

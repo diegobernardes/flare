@@ -19,10 +19,11 @@ import (
 
 // Subscription implements the data layer for the subscription service.
 type Subscription struct {
-	client            *Client
-	database          string
-	collection        string
-	collectionTrigger string
+	resourceRepository flare.ResourceRepositorier
+	client             *Client
+	database           string
+	collection         string
+	collectionTrigger  string
 }
 
 // FindAll returns a list of subscriptions.
@@ -181,8 +182,14 @@ func (s *Subscription) Trigger(
 		return errors.Wrap(err, "error while subscription search")
 	}
 
+	resource, err := s.resourceRepository.FindOne(ctx, doc.Resource.Id)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", doc.Resource.Id))
+	}
+
 	group, groupCtx := errgroup.WithContext(ctx)
 	for i := range subscriptions {
+		subscriptions[i].Resource = *resource
 		group.Go(s.triggerProcess(groupCtx, subscriptions[i], doc, kind, fn))
 	}
 
@@ -325,26 +332,45 @@ func (s *Subscription) triggerProcess(
 	}
 }
 
-// NewSubscription returns a configured subscription repository.
-func NewSubscription(options ...func(*Subscription)) (*Subscription, error) {
-	s := &Subscription{}
+// SetResourceRepository set the resource repository.
+func (s *Subscription) SetResourceRepository(repo flare.ResourceRepositorier) error {
+	if repo == nil {
+		return errors.New("resourceRepository can't be nil")
+	}
+	s.resourceRepository = repo
+	return nil
+}
+
+// Init configure the subscription repository.
+func (s *Subscription) Init(options ...func(*Subscription)) error {
 	for _, option := range options {
 		option(s)
 	}
 
 	if s.client == nil {
-		return nil, errors.New("invalid client")
+		return errors.New("invalid client")
+	}
+
+	if s.resourceRepository == nil {
+		return errors.New("invalid resource repository")
 	}
 
 	s.collection = "subscriptions"
 	s.collectionTrigger = "subscriptionTriggers"
 	s.database = s.client.database
-	return s, nil
+	return nil
 }
 
 // SubscriptionClient set the client to access MongoDB.
 func SubscriptionClient(client *Client) func(*Subscription) {
 	return func(s *Subscription) {
 		s.client = client
+	}
+}
+
+// SubscriptionResourceRepository set the resource repository.
+func SubscriptionResourceRepository(rr flare.ResourceRepositorier) func(*Subscription) {
+	return func(s *Subscription) {
+		s.resourceRepository = rr
 	}
 }

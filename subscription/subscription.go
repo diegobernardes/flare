@@ -75,11 +75,13 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		Endpoint  map[string]interface{} `json:"endpoint"`
 		Delivery  map[string][]int       `json:"delivery"`
 		CreatedAt string                 `json:"createdAt"`
+		Data      map[string]interface{} `json:"data,omitempty"`
 	}{
 		Id:        s.Id,
 		Endpoint:  endpoint,
 		Delivery:  delivery,
 		CreatedAt: s.CreatedAt.Format(time.RFC3339),
+		Data:      s.Data,
 	})
 }
 
@@ -111,6 +113,7 @@ type subscriptionCreate struct {
 		Success []int `json:"success"`
 		Discard []int `json:"discard"`
 	} `json:"delivery"`
+	Data map[string]interface{} `json:"data"`
 }
 
 func (s *subscriptionCreate) valid() error {
@@ -133,6 +136,30 @@ func (s *subscriptionCreate) valid() error {
 		return errors.New("missing delivery.Discard")
 	}
 
+	if err := s.validData(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *subscriptionCreate) validData() error {
+	for key, value := range s.Data {
+		switch v := value.(type) {
+		case bool, float64, string:
+		case []interface{}:
+			for _, content := range v {
+				switch content.(type) {
+				case bool, float64, string:
+				default:
+					return fmt.Errorf("invalid data content at key '%s'", key)
+				}
+			}
+		default:
+			return fmt.Errorf("invalid data content at key '%s'", key)
+		}
+	}
+
 	return nil
 }
 
@@ -153,6 +180,7 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 			Discard: s.Delivery.Discard,
 			Success: s.Delivery.Success,
 		},
+		Data: s.Data,
 	}, nil
 }
 

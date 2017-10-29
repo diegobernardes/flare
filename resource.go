@@ -6,8 +6,12 @@ package flare
 
 import (
 	"context"
-	"errors"
+	"fmt"
+	"net/url"
+	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Resource is the base component from Flare. It is holds the data to detect the document change.
@@ -17,6 +21,29 @@ type Resource struct {
 	Path      string
 	Change    ResourceChange
 	CreatedAt time.Time
+}
+
+// WildcardReplace take a string and search of wildcards to replace the value.
+func (r *Resource) WildcardReplace(documentPath string) (func(string) string, error) {
+	endpoint, err := url.Parse(documentPath)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("error during url parse of '%s'", documentPath))
+	}
+	wildcards := strings.Split(r.Path, "/")
+	documentWildcards := strings.Split(endpoint.Path, "/")
+
+	return func(value string) string {
+		for i, wildcard := range wildcards {
+			if wildcard == "" {
+				continue
+			}
+
+			if wildcard[0] == '{' && wildcard[len(wildcard)-1] == '}' {
+				value = strings.Replace(value, wildcard, documentWildcards[i], -1)
+			}
+		}
+		return value
+	}, nil
 }
 
 // The types of value Flare support to detect document change.
