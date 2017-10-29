@@ -1,0 +1,133 @@
+#!/bin/bash
+
+CONTAINER_VERSION=0.3
+
+exec-docker() {
+  container_qtd=$(docker ps -a -f "name=$1" | wc -l)
+
+  if [ $container_qtd -ge 2 ]; then
+    docker start -a $1
+  else
+    ($2)
+  fi
+}
+
+configure() {
+  git config pull.rebase true
+  git config branch.master.mergeoptions "--ff-only"
+}
+
+test() {
+  docker run \
+    --name flare-test \
+    -t \
+    -v "$PWD":/go/src/github.com/diegobernardes/flare \
+    -w /go/src/github.com/diegobernardes/flare \
+    diegobernardes/flare:$CONTAINER_VERSION \
+    gotest -v -race ./...
+}
+
+lint-fast() {
+  docker run \
+    --name flare-lint-fast \
+    -t \
+    -v "$PWD":/go/src/github.com/diegobernardes/flare \
+    -w /go/src/github.com/diegobernardes/flare \
+    diegobernardes/flare:$CONTAINER_VERSION \
+    gometalinter ./... \
+      --disable-all \
+      --enable=gas \
+      --enable=goconst \
+      --enable=gocyclo \
+      --enable=gofmt \
+      --enable=goimports \
+      --enable=golint \
+      --enable=ineffassign \
+      --enable=lll \
+      --enable=misspell \
+      --enable=vet \
+      --enable=vetshadow \
+      --deadline=30s \
+      --aggregate \
+      --line-length=100 \
+      --min-confidence=.9 \
+      --linter='gas:gas -exclude=G104 -fmt=csv {path}/*.go:^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)' \
+      --tests \
+      --vendor
+}
+
+lint-slow() {
+  docker run \
+    --name flare-lint-slow \
+    -t \
+    -v "$PWD":/go/src/github.com/diegobernardes/flare \
+    -w /go/src/github.com/diegobernardes/flare \
+    diegobernardes/flare:$CONTAINER_VERSION \
+    gometalinter ./... \
+      --disable-all \
+      --enable=megacheck \
+      --enable=aligncheck \
+      --enable=deadcode \
+      --enable=interfacer \
+      --enable=structcheck \
+      --enable=test \
+      --enable=testify \
+      --enable=unconvert \
+      --enable=varcheck \
+      --deadline=20m \
+      --aggregate \
+      --line-length=100 \
+      --min-confidence=.9 \
+      --enable-gc \
+      --tests \
+      --vendor
+}
+
+git-clean() {
+  git gc
+	git fetch --all --prune
+}
+
+coveralls() {
+  docker run \
+    --name flare-coveralls \
+    -t \
+    -v "$PWD":/go/src/github.com/diegobernardes/flare \
+    -w /go/src/github.com/diegobernardes/flare \
+    -e TRAVIS_BRANCH=$TRAVIS_BRANCH \
+    -e COVERALLS_TOKEN=$COVERALLS_TOKEN \
+    diegobernardes/flare:$CONTAINER_VERSION goveralls -race
+}
+
+flare-build() {
+  docker run \
+    --name flare-build \
+    -t \
+    -v "$PWD":/go/src/github.com/diegobernardes/flare \
+    -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:$CONTAINER_VERSION \
+    go build services/flare/cmd/flare.go
+}
+
+docker-build() {
+  docker build -t diegobernardes/flare:latest -t diegobernardes/flare:$CONTAINER_VERSION devstuff/docker
+}
+
+docker-push() {
+  docker push diegobernardes/flare:latest
+	docker push diegobernardes/flare:$CONTAINER_VERSION
+}
+
+case $1 in
+  "configure") configure;;
+  "git-clean") git-clean;;
+  "docker-build") docker-build;;
+  "docker-push") docker-push;;
+  "flare-build") exec-docker "flare-build" flare-build;;
+  "test") exec-docker "flare-test" test;;
+  "lint-fast") exec-docker "flare-lint-fast" lint-fast;;
+  "lint-slow") exec-docker "flare-lint-slow" lint-slow;;
+  "coveralls") exec-docker "flare-coveralls" coveralls;;
+  *) echo "undefined task '$1'"; exit -1;;
+esac
+
+exit $?
