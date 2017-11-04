@@ -56,6 +56,16 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if r.URL.Fragment != "" {
+		s.writeError(
+			w,
+			fmt.Errorf("fragment not allowed '%s'", r.URL.Fragment),
+			"error during document search",
+			http.StatusBadRequest,
+		)
+		return
+	}
+
 	document, ok := s.parseHandleUpdateDocument(w, r)
 	if !ok {
 		return
