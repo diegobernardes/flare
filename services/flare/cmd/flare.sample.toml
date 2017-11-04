@@ -39,6 +39,34 @@ username = "flare"
 password = "flare"
 
 # --------------------------------------------------------------------------------------------------
+# - job.engine
+#   The engine used to enqueue jobs. If the 'sqs' is chosen, the 'aws' config block must be
+#   configured. Possible values: "sqs" or "memory". Default value: "memory".
+#
+# - job.queue-document
+#   If the SQS is used as engine, there is a option to set the queue name. Default value is
+#   "flare-document-queue".
+#
+[job]
+engine         = "sqs"
+queue-document = "flare-document-queue"
+
+# --------------------------------------------------------------------------------------------------
+# - aws.key
+#   Key used to connect to AWS. Default value is unset.
+#
+# - aws.secret
+#   Secret used to connect to AWS. Default value is unset.
+#
+# - aws.region
+#   Region used to connect to AWS. Default value is unset.
+#
+[aws]
+key    = "key"
+secret = "region"
+region = "us-east-1"
+
+# --------------------------------------------------------------------------------------------------
 # - log.level
 #   The minimum log level to be displayed. Default value: "debug". Possible values: "debug", "info",
 #   "warn" and "error".

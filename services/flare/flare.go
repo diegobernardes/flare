@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-kit/kit/log"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/diegobernardes/flare"
 	"github.com/diegobernardes/flare/document"
+	"github.com/diegobernardes/flare/infra/task"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
 )
@@ -59,7 +61,6 @@ func (c *Client) Start() error {
 		return err
 	}
 
-	// subscriptionRepository := memory.NewSubscription()
 	resourceService, resourceRepository, err := c.initResourceService(subscriptionRepository)
 	if err != nil {
 		level.Debug(c.logger).Log(
@@ -180,8 +181,6 @@ func (c *Client) initResourceService(
 		panic(err)
 	}
 
-	// repository := memory.NewResource(memory.ResourceSubscriptionRepository(subscriptionRepository))
-
 	resourceService, err := resource.NewService(
 		resource.ServiceDefaultLimit(c.config.getInt("http.default-limit")),
 		resource.ServiceGetResourceId(func(r *http.Request) string { return chi.URLParam(r, "id") }),
@@ -237,16 +236,42 @@ func (c *Client) initDocumentService(
 		return nil, errors.Wrap(err, "error during subscription.Trigger initialization")
 	}
 
+	pusher, puller, err := c.config.queue()
+	if err != nil {
+		return nil, errors.Wrap(err, "error during queue initialization")
+	}
+
+	documentWorker := &document.Worker{}
+	jobWorker, err := task.NewWorker(
+		task.WorkerGoroutines(1),
+		task.WorkerProcesser(documentWorker),
+		task.WorkerPuller(puller),
+		task.WorkerPusher(pusher),
+		task.WorkerTimeoutProcess(10*time.Second),
+		task.WorkerTimeoutPush(10*time.Second),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during worker initialization")
+	}
+
+	err = documentWorker.Init(
+		document.WorkerDocumentRepository(dr),
+		document.WorkerResourceRepository(rr),
+		document.WorkerSubscriptionRepository(sr),
+		document.WorkerSubscriptionTrigger(subscriptionTrigger),
+		document.WorkerPusher(jobWorker),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during worker initialization")
+	}
+	jobWorker.Start()
+
 	documentService, err := document.NewService(
-		document.ServiceSubscriptionTrigger(subscriptionTrigger),
 		document.ServiceDocumentRepository(dr),
 		document.ServiceResourceRepository(rr),
-		document.ServiceSubscriptionRepository(sr),
 		document.ServiceGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
-		document.ServiceGetDocumentURI(func(id string) string {
-			return fmt.Sprintf("/documents/%s", id)
-		}),
 		document.ServiceLogger(c.logger),
+		document.ServiceWorker(documentWorker),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during document.Service initialization")

@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/aws"
+	"github.com/diegobernardes/flare/infra/task"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/repository/mongodb"
 )
@@ -104,6 +106,32 @@ func (c *config) mongodb() (*mongodb.Client, error) {
 		mongodb.ClientPassword(c.getString("repository.password")),
 	)
 	return client, errors.Wrap(err, "error during MongoDB connection")
+}
+
+func (c *config) queue() (task.Pusher, task.Puller, error) {
+	engine := c.getString("task.engine")
+	if engine != "sqs" {
+		return nil, nil, fmt.Errorf("invalid task.engine '%s'", engine)
+	}
+
+	session, err := aws.NewSession(
+		aws.SessionKey(c.getString("aws.key")),
+		aws.SessionSecret(c.getString("aws.secret")),
+		aws.SessionRegion(c.getString("aws.region")),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error during AWS session initialization")
+	}
+
+	sqs, err := aws.NewSQS(
+		aws.SQSQueueName(c.getString("task.queue-document")),
+		aws.SQSSession(session),
+	)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "error during AWS SQS initialization")
+	}
+
+	return sqs, sqs, nil
 }
 
 func newConfig(options ...func(*config)) (*config, error) {
