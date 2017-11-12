@@ -23,8 +23,9 @@ test() {
     -t \
     -v "$PWD":/go/src/github.com/diegobernardes/flare \
     -w /go/src/github.com/diegobernardes/flare \
+    -e "TERM=xterm-256color" \
     diegobernardes/flare:$CONTAINER_VERSION \
-    gotest -v -race ./...
+    go test -v -race ./...
 }
 
 lint-fast() {
@@ -33,6 +34,7 @@ lint-fast() {
     -t \
     -v "$PWD":/go/src/github.com/diegobernardes/flare \
     -w /go/src/github.com/diegobernardes/flare \
+    -e "TERM=xterm-256color" \
     diegobernardes/flare:$CONTAINER_VERSION \
     gometalinter ./... \
       --disable-all \
@@ -62,6 +64,7 @@ lint-slow() {
     -t \
     -v "$PWD":/go/src/github.com/diegobernardes/flare \
     -w /go/src/github.com/diegobernardes/flare \
+    -e "TERM=xterm-256color" \
     diegobernardes/flare:$CONTAINER_VERSION \
     gometalinter ./... \
       --disable-all \
@@ -96,6 +99,7 @@ coveralls() {
     -w /go/src/github.com/diegobernardes/flare \
     -e TRAVIS_BRANCH=$TRAVIS_BRANCH \
     -e COVERALLS_TOKEN=$COVERALLS_TOKEN \
+    -e "TERM=xterm-256color" \
     diegobernardes/flare:$CONTAINER_VERSION goveralls -race
 }
 
@@ -104,6 +108,7 @@ flare-build() {
     --name flare-build \
     -t \
     -v "$PWD":/go/src/github.com/diegobernardes/flare \
+    -e "TERM=xterm-256color" \
     -w /go/src/github.com/diegobernardes/flare diegobernardes/flare:$CONTAINER_VERSION \
     go build services/flare/cmd/flare.go
 }
@@ -127,7 +132,7 @@ case $1 in
   "lint-fast") exec-docker "flare-lint-fast" lint-fast;;
   "lint-slow") exec-docker "flare-lint-slow" lint-slow;;
   "coveralls") exec-docker "flare-coveralls" coveralls;;
-  *) echo "undefined task '$1'"; exit -1;;
+  *) echo "undefined task '$1'"; exit 1;;
 esac
 
 exit $?
