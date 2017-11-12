@@ -1,7 +1,6 @@
 {
   "error": {
-    "status": 400,
     "title": "invalid pagination",
-    "detail": "invalid offset '-1'"
+    "detail": "invalid limit '-1'"
   }
 }

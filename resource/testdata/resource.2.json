@@ -1,0 +1,14 @@
+{
+  "id": "id",
+  "addresses": [
+    "http://flare.io",
+    "https://flare.com"
+  ],
+  "path": "/resources/{*}",
+  "change": {
+    "field": "updatedAt",
+    "kind": "date",
+    "dateFormat": "2006-01-02"
+  },
+  "createdAt": "2009-11-10T23:00:00Z"
+}

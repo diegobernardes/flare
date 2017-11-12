@@ -1,0 +1,13 @@
+{
+  "id": "123",
+  "addresses": [
+    "http://address1",
+    "https://address2"
+  ],
+  "path": "/products/{*}",
+  "change": {
+    "field": "version",
+    "kind": "integer"
+  },
+  "createdAt": "2009-11-10T23:00:00Z"
+}

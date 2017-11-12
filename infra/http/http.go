@@ -80,7 +80,7 @@ func WriteResponse(logger log.Logger) func(http.ResponseWriter, interface{}, int
 
 		writed, err := w.Write(content)
 		if err != nil {
-			logger.Log("error", err.Error(), "message", "error write at http.ResponseWriter")
+			logger.Log("error", err.Error(), "message", "error during write at http.ResponseWriter")
 		}
 		if writed != len(content) {
 			logger.Log(

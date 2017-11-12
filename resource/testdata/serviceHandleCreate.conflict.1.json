@@ -1,7 +1,6 @@
 {
   "error": {
-    "status": 409,
-    "title": "error during save",
+    "title": "error during resource create",
     "detail": "address+path already associated to another resource '123'"
   }
 }

@@ -6,62 +6,57 @@ package resource
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
-	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
-	infraHTTP "github.com/diegobernardes/flare/infra/http"
 )
 
 // Service implements the HTTP handler to manage resources.
 type Service struct {
-	logger          log.Logger
 	repository      flare.ResourceRepositorier
-	getResourceId   func(*http.Request) string
+	getResourceID   func(*http.Request) string
 	getResourceURI  func(string) string
 	writeResponse   func(http.ResponseWriter, interface{}, int, http.Header)
 	parsePagination func(r *http.Request) (*flare.Pagination, error)
-	defaultLimit    int
 }
 
 // HandleIndex receive the request to list the resources.
 func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
-	pagination, err := s.parsePagination(r)
+	pag, err := s.parsePagination(r)
 	if err != nil {
 		s.writeError(w, err, "error during pagination parse", http.StatusBadRequest)
 		return
 	}
 
-	if err = pagination.Valid(); err != nil {
+	if err = pag.Valid(); err != nil {
 		s.writeError(w, err, "invalid pagination", http.StatusBadRequest)
 		return
 	}
 
-	resources, paginationResponse, err := s.repository.FindAll(r.Context(), pagination)
+	re, rep, err := s.repository.FindAll(r.Context(), pag)
 	if err != nil {
-		s.writeError(w, err, "error during search", http.StatusInternalServerError)
+		s.writeError(w, err, "error during resources search", http.StatusInternalServerError)
 		return
 	}
 
 	s.writeResponse(w, &response{
-		Pagination: transformPagination(paginationResponse),
-		Resources:  transformResources(resources),
+		Resources:  transformResources(re),
+		Pagination: transformPagination(rep),
 	}, http.StatusOK, nil)
 }
 
-// HandleShow receive the request to show a given resource.
+// HandleShow receive the request to show a resource.
 func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
-	re, err := s.repository.FindOne(r.Context(), s.getResourceId(r))
+	re, err := s.repository.FindOne(r.Context(), s.getResourceID(r))
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during search", status)
+		s.writeError(w, err, "error during resource search", status)
 		return
 	}
 
@@ -76,12 +71,12 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err := d.Decode(content); err != nil {
-		s.writeError(w, err, "error during content parse", http.StatusBadRequest)
+		s.writeError(w, err, "error during body parse", http.StatusBadRequest)
 		return
 	}
 
 	if err := content.valid(); err != nil {
-		s.writeError(w, err, "invalid content", http.StatusBadRequest)
+		s.writeError(w, err, "invalid body content", http.StatusBadRequest)
 		return
 	}
 
@@ -94,7 +89,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		s.writeError(w, err, "error during save", status)
+		s.writeError(w, err, "error during resource create", status)
 		return
 	}
 
@@ -105,13 +100,13 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 
 // HandleDelete receive the request to delete a resource.
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	if err := s.repository.Delete(r.Context(), s.getResourceId(r)); err != nil {
+	if err := s.repository.Delete(r.Context(), s.getResourceID(r)); err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during delete", status)
+		s.writeError(w, err, "error during resource delete", status)
 		return
 	}
 
@@ -126,31 +121,43 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		option(service)
 	}
 
-	if service.defaultLimit < 0 {
-		return nil, fmt.Errorf("invalid defaultLimit '%d'", service.defaultLimit)
-	} else if service.defaultLimit == 0 {
-		service.defaultLimit = 30
-	}
-
-	if service.logger == nil {
-		return nil, errors.New("logger not found")
-	}
-
 	if service.repository == nil {
 		return nil, errors.New("repository not found")
 	}
 
-	if service.getResourceId == nil {
-		return nil, errors.New("getResourceId not found")
+	if service.getResourceID == nil {
+		return nil, errors.New("getResourceID not found")
 	}
 
 	if service.getResourceURI == nil {
 		return nil, errors.New("getResourceURI not found")
 	}
 
-	service.parsePagination = infraHTTP.ParsePagination(service.defaultLimit)
-	service.writeResponse = infraHTTP.WriteResponse(service.logger)
+	if service.parsePagination == nil {
+		return nil, errors.New("parsePagination not found")
+	}
+
+	if service.writeResponse == nil {
+		return nil, errors.New("writeResponse not found")
+	}
+
 	return service, nil
+}
+
+// ServiceParsePagination set the function used to parse the pagination.
+func ServiceParsePagination(fn func(r *http.Request) (*flare.Pagination, error)) func(*Service) {
+	return func(s *Service) {
+		s.parsePagination = fn
+	}
+}
+
+// ServiceWriteResponse set the function that return the content to client.
+func ServiceWriteResponse(
+	fn func(http.ResponseWriter, interface{}, int, http.Header),
+) func(*Service) {
+	return func(s *Service) {
+		s.writeResponse = fn
+	}
 }
 
 // ServiceRepository set the repository to access the resources.
@@ -158,22 +165,12 @@ func ServiceRepository(repo flare.ResourceRepositorier) func(*Service) {
 	return func(s *Service) { s.repository = repo }
 }
 
-// ServiceGetResourceId the function to fetch the resourceId from the URL.
-func ServiceGetResourceId(fn func(*http.Request) string) func(*Service) {
-	return func(s *Service) { s.getResourceId = fn }
+// ServiceGetResourceID set the function used to fetch the resourceID from the URL.
+func ServiceGetResourceID(fn func(*http.Request) string) func(*Service) {
+	return func(s *Service) { s.getResourceID = fn }
 }
 
-// ServiceDefaultLimit set the default value of limit.
-func ServiceDefaultLimit(limit int) func(*Service) {
-	return func(s *Service) { s.defaultLimit = limit }
-}
-
-// ServiceLogger set the logger.
-func ServiceLogger(logger log.Logger) func(*Service) {
-	return func(s *Service) { s.logger = logger }
-}
-
-// ServiceGetResourceURI set the function to generate the URI or a given resource.
+// ServiceGetResourceURI set the function used to generate the URI for a resource.
 func ServiceGetResourceURI(fn func(string) string) func(*Service) {
 	return func(s *Service) { s.getResourceURI = fn }
 }

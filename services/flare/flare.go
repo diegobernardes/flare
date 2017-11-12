@@ -18,6 +18,7 @@ import (
 
 	"github.com/diegobernardes/flare"
 	"github.com/diegobernardes/flare/document"
+	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/infra/task"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
@@ -182,12 +183,12 @@ func (c *Client) initResourceService(
 	}
 
 	resourceService, err := resource.NewService(
-		resource.ServiceDefaultLimit(c.config.getInt("http.default-limit")),
-		resource.ServiceGetResourceId(func(r *http.Request) string { return chi.URLParam(r, "id") }),
+		resource.ServiceGetResourceID(func(r *http.Request) string { return chi.URLParam(r, "id") }),
 		resource.ServiceGetResourceURI(func(id string) string {
 			return fmt.Sprintf("/resources/%s", id)
 		}),
-		resource.ServiceLogger(c.logger),
+		resource.ServiceParsePagination(infraHTTP.ParsePagination(c.config.getInt("http.default-limit"))),
+		resource.ServiceWriteResponse(infraHTTP.WriteResponse(c.logger)),
 		resource.ServiceRepository(repository),
 	)
 	if err != nil {

@@ -233,21 +233,19 @@ func (r *response) MarshalJSON() ([]byte, error) {
 }
 
 type responseError struct {
-	Status int    `json:"status"`
 	Title  string `json:"title"`
 	Detail string `json:"detail,omitempty"`
 }
 
 func (s *Service) writeError(w http.ResponseWriter, err error, title string, status int) {
-	resp := &response{Error: &responseError{Status: status}}
-
+	resp := responseError{}
 	if err != nil {
-		resp.Error.Detail = err.Error()
+		resp.Detail = err.Error()
 	}
 
 	if title != "" {
-		resp.Error.Title = title
+		resp.Title = title
 	}
 
-	s.writeResponse(w, resp, status, nil)
+	s.writeResponse(w, &response{Error: &resp}, status, nil)
 }

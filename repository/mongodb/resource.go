@@ -103,7 +103,7 @@ func (r *Resource) FindOne(_ context.Context, id string) (*flare.Resource, error
 		if err == mgo.ErrNotFound {
 			return nil, &errMemory{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
 		}
-		return nil, errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", id))
+		return nil, errors.Wrap(err, fmt.Sprintf("could not find resource '%s'", id))
 	}
 
 	return r.resourceEntityToFlareResource(result), nil
