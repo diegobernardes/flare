@@ -54,7 +54,7 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	subscriptions, paginationResponse, err := s.subscriptionRepository.FindAll(
-		r.Context(), pagination, resource.Id,
+		r.Context(), pagination, resource.ID,
 	)
 	if err != nil {
 		s.writeError(w, err, "error during subscription search", http.StatusInternalServerError)
@@ -118,7 +118,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 		s.writeError(w, err, "error during resource search", status)
 		return
 	}
-	result.Resource.Id = resource.Id
+	result.Resource.ID = resource.ID
 
 	if err := s.subscriptionRepository.Create(r.Context(), result); err != nil {
 		status := http.StatusInternalServerError
@@ -131,7 +131,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	header := make(http.Header)
-	header.Set("Location", s.getSubscriptionURI(result.Resource.Id, result.Id))
+	header.Set("Location", s.getSubscriptionURI(result.Resource.ID, result.ID))
 	resp := &response{Subscription: transformSubscription(result)}
 	s.writeResponse(w, resp, http.StatusCreated, header)
 }

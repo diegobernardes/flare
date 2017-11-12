@@ -170,7 +170,7 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 	}
 
 	content := bson.M{
-		"id":           res.Id,
+		"id":           res.ID,
 		"addresses":    res.Addresses,
 		"path":         res.Path,
 		"pathSegments": r.pathSegments(res.Path),
@@ -272,7 +272,7 @@ func (r *Resource) Delete(_ context.Context, id string) error {
 
 func (r *Resource) resourceEntityToFlareResource(content *resourceEntity) *flare.Resource {
 	return &flare.Resource{
-		Id:        content.Id,
+		ID:        content.Id,
 		Addresses: content.Addresses,
 		Path:      content.Path,
 		CreatedAt: content.CreatedAt,

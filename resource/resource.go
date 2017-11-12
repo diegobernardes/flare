@@ -51,7 +51,7 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 		Change    map[string]string `json:"change"`
 		CreatedAt string            `json:"createdAt"`
 	}{
-		Id:        r.Id,
+		Id:        r.ID,
 		Addresses: r.Addresses,
 		Path:      r.Path,
 		Change:    change,
@@ -185,7 +185,7 @@ func (r *resourceCreate) validAddresses() error {
 
 func (r *resourceCreate) toFlareResource() *flare.Resource {
 	return &flare.Resource{
-		Id:        uuid.NewV4().String(),
+		ID:        uuid.NewV4().String(),
 		Addresses: r.Addresses,
 		Path:      r.Path,
 		Change: flare.ResourceChange{

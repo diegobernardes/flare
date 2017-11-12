@@ -71,7 +71,7 @@ func (r *Subscription) Create(ctx context.Context, subcr *flare.Subscription) er
 		return r.err
 	}
 	if r.createId != "" {
-		subcr.Id = r.createId
+		subcr.ID = r.createId
 	}
 
 	if err := r.base.Create(ctx, subcr); err != nil {
@@ -185,9 +185,9 @@ func SubscriptionLoadSliceByteSubscription(content []byte) func(*Subscription) {
 			}
 
 			err = s.Create(context.Background(), &flare.Subscription{
-				Id:        rawSubscription.Id,
+				ID:        rawSubscription.Id,
 				CreatedAt: rawSubscription.CreatedAt,
-				Resource:  flare.Resource{Id: rawSubscription.Resource.Id},
+				Resource:  flare.Resource{ID: rawSubscription.Resource.Id},
 				Delivery: flare.SubscriptionDelivery{
 					Discard: rawSubscription.Delivery.Discard,
 					Success: rawSubscription.Delivery.Success,

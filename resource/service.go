@@ -94,7 +94,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	header := make(http.Header)
-	header.Set("Location", s.getResourceURI(result.Id))
+	header.Set("Location", s.getResourceURI(result.ID))
 	s.writeResponse(w, &response{Resource: transformResource(result)}, http.StatusCreated, header)
 }
 

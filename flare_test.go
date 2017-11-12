@@ -6,57 +6,53 @@ package flare
 
 import (
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestPaginationValid(t *testing.T) {
-	tests := []struct {
-		name       string
-		hasErr     bool
-		pagination Pagination
-	}{
-		{
-			"Invalid offset",
-			true,
-			Pagination{Offset: -1},
-		},
-		{
-			"Invalid offset",
-			true,
-			Pagination{Limit: 1, Offset: -1},
-		},
-		{
-			"Invalid limit",
-			true,
-			Pagination{Limit: -1},
-		},
-		{
-			"Invalid limit",
-			true,
-			Pagination{Offset: 1, Limit: -1},
-		},
-		{
-			"Valid",
-			false,
-			Pagination{},
-		},
-		{
-			"Valid",
-			false,
-			Pagination{Limit: 1},
-		},
-		{
-			"Valid",
-			false,
-			Pagination{Offset: 1},
-		},
-	}
+	Convey("Given a list of valid paginations", t, func() {
+		tests := []Pagination{
+			{},
+			{Limit: 1},
+			{Offset: 1},
+			{Limit: 30, Offset: 10},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.pagination.Valid()
-			if tt.hasErr != (err != nil) {
-				t.Errorf("Pagination.valid invalid result, want '%v', got '%v'", tt.hasErr, err)
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.Valid(), ShouldBeNil)
 			}
 		})
-	}
+	})
+
+	Convey("Given a list of invalid paginations", t, func() {
+		tests := []struct {
+			title      string
+			pagination Pagination
+		}{
+			{
+				"Should have a invalid offset 1",
+				Pagination{Offset: -1},
+			},
+			{
+				"Should have a invalid offset 2",
+				Pagination{Limit: 1, Offset: -1},
+			},
+			{
+				"Should have a invalid limit 1",
+				Pagination{Limit: -1},
+			},
+			{
+				"Should have a invalid limit 2",
+				Pagination{Offset: 1, Limit: -1},
+			},
+		}
+
+		for _, tt := range tests {
+			Convey(tt.title, func() {
+				So(tt.pagination.Valid(), ShouldNotBeNil)
+			})
+		}
+	})
 }

@@ -121,7 +121,7 @@ func DocumentLoadSliceByteDocument(content []byte) func(*Document) {
 				Id:               rawDocument.Id,
 				ChangeFieldValue: rawDocument.ChangeFieldValue,
 				Resource: flare.Resource{
-					Id: rawDocument.Resource.Id,
+					ID: rawDocument.Resource.Id,
 				},
 			})
 			if err != nil {

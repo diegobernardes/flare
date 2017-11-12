@@ -92,7 +92,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			"Valid Json",
 			response{
 				Subscription: &subscription{
-					Id: "123",
+					ID: "123",
 					Endpoint: flare.SubscriptionEndpoint{
 						URL:     url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 						Method:  http.MethodPost,
@@ -114,7 +114,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 				Pagination: &pagination{Limit: 10, Offset: 20, Total: 30},
 				Subscriptions: []subscription{
 					{
-						Id: "123",
+						ID: "123",
 						Endpoint: flare.SubscriptionEndpoint{
 							URL:     url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 							Method:  http.MethodPost,
@@ -127,7 +127,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					},
 					{
-						Id: "456",
+						ID: "456",
 						Endpoint: flare.SubscriptionEndpoint{
 							URL:     url.URL{Scheme: "https", Host: "app.com", Path: "/update"},
 							Method:  http.MethodPost,
@@ -282,7 +282,7 @@ func TestSubscriptionToFlareSubscription(t *testing.T) {
 				return
 			}
 
-			result.Id = ""
+			result.ID = ""
 			if !reflect.DeepEqual(result, tt.output) {
 				t.Errorf(
 					"subscriptionCreate.toFlareSubscription invalid result, want '%v', got '%v'",

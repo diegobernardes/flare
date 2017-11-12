@@ -77,7 +77,7 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		CreatedAt string                 `json:"createdAt"`
 		Data      map[string]interface{} `json:"data,omitempty"`
 	}{
-		Id:        s.Id,
+		Id:        s.ID,
 		Endpoint:  endpoint,
 		Delivery:  delivery,
 		CreatedAt: s.CreatedAt.Format(time.RFC3339),
@@ -170,7 +170,7 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 	}
 
 	return &flare.Subscription{
-		Id: uuid.NewV4().String(),
+		ID: uuid.NewV4().String(),
 		Endpoint: flare.SubscriptionEndpoint{
 			URL:     *path,
 			Method:  s.Endpoint.Method,

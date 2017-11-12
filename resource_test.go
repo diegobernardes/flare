@@ -5,98 +5,106 @@
 package flare
 
 import (
-	"reflect"
 	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
 )
 
 func TestResourceChangeValid(t *testing.T) {
-	tests := []struct {
-		name   string
-		hasErr bool
-		rc     ResourceChange
-	}{
-		{
-			"Missing field",
-			true,
-			ResourceChange{},
-		},
-		{
-			"Missing kind",
-			true,
-			ResourceChange{Field: "updatedAt"},
-		},
-		{
-			"Missing dateFormat",
-			true,
-			ResourceChange{Field: "updatedAt", Kind: ResourceChangeDate},
-		},
-		{
-			"Valid",
-			false,
-			ResourceChange{Field: "updatedAt", Kind: ResourceChangeDate, DateFormat: "2006-01-02"},
-		},
-		{
-			"Valid",
-			false,
-			ResourceChange{Field: "revision", Kind: ResourceChangeInteger},
-		},
-	}
+	Convey("Given a list of valid resource changes", t, func() {
+		tests := []ResourceChange{
+			{Field: "updatedAt", Kind: ResourceChangeDate, DateFormat: "2006-01-02"},
+			{Field: "revision", Kind: ResourceChangeInteger},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := tt.rc.Valid()
-			if tt.hasErr != (err != nil) {
-				t.Errorf("ResourceChange.valid invalid result, want '%v', got '%v'", tt.hasErr, err)
+		Convey("The validation should not return a error", func() {
+			for _, tt := range tests {
+				So(tt.Valid(), ShouldBeNil)
 			}
 		})
-	}
+	})
+
+	Convey("Given a list of invalid resource changes", t, func() {
+		tests := []struct {
+			title string
+			rc    ResourceChange
+		}{
+			{
+				"Should be missing the field",
+				ResourceChange{},
+			},
+			{
+				"Should be missing the kind",
+				ResourceChange{Field: "updatedAt"},
+			},
+			{
+				"Should be missing the format",
+				ResourceChange{Field: "updatedAt", Kind: ResourceChangeDate},
+			},
+		}
+
+		for _, tt := range tests {
+			Convey(tt.title, func() {
+				So(tt.rc.Valid(), ShouldNotBeNil)
+			})
+		}
+	})
 }
 
 func TestResourceWildcardReplace(t *testing.T) {
-	tests := []struct {
-		name       string
-		resource   Resource
-		id         string
-		rawContent []string
-		expected   []string
-		hasErr     bool
-	}{
-		{
-			"Valid",
-			Resource{Path: "/resource/{id}"},
-			"/resource/123",
-			[]string{"{id}", `{"id":"{id}"}`},
-			[]string{"123", `{"id":"123"}`},
-			false,
-		},
-		{
-			"Invalid",
-			Resource{},
-			"%zzzzz",
-			nil,
-			nil,
-			true,
-		},
-	}
+	Convey("Given a list of valid wildcards to be replaced", t, func() {
+		tests := []struct {
+			resource   Resource
+			id         string
+			rawContent []string
+			expected   []string
+			hasErr     bool
+		}{
+			{
+				Resource{Path: "/resource/{id}"},
+				"/resource/123",
+				[]string{"{id}", `{"id":"{id}"}`},
+				[]string{"123", `{"id":"123"}`},
+				false,
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			fn, err := tt.resource.WildcardReplace(tt.id)
-			if tt.hasErr != (err != nil) {
-				t.Errorf("Resource.WildcardReplace invalid result, want '%v', got '%v'", tt.hasErr, err)
-			}
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				fn, err := tt.resource.WildcardReplace(tt.id)
+				So(err, ShouldBeNil)
 
-			for i, value := range tt.rawContent {
-				tt.rawContent[i] = fn(value)
-			}
+				for i, value := range tt.rawContent {
+					tt.rawContent[i] = fn(value)
+				}
 
-			if !reflect.DeepEqual(tt.rawContent, tt.expected) {
-				t.Errorf(
-					"ResourceChange.WildcardReplace invalid result, want '%v', got '%v'",
-					tt.expected,
-					tt.rawContent,
-				)
+				So(tt.rawContent, ShouldResemble, tt.expected)
 			}
 		})
-	}
+	})
+
+	Convey("Given a list of invalid wildcards to be replaced", t, func() {
+		tests := []struct {
+			resource   Resource
+			id         string
+			rawContent []string
+			expected   []string
+			hasErr     bool
+		}{
+			{
+				Resource{},
+				"%zzzzz",
+				nil,
+				nil,
+				true,
+			},
+		}
+
+		Convey("It's expected to have a error", func() {
+			for _, tt := range tests {
+				_, err := tt.resource.WildcardReplace(tt.id)
+				So(err, ShouldNotBeNil)
+			}
+		})
+	})
 }

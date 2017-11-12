@@ -120,7 +120,7 @@ func (w *Worker) processUpdate(ctx context.Context, id, action string, body []by
 		}
 	}
 
-	hasSubscr, err := w.subscriptionRepository.HasSubscription(ctx, document.Resource.Id)
+	hasSubscr, err := w.subscriptionRepository.HasSubscription(ctx, document.Resource.ID)
 	if err != nil {
 		return errors.Wrap(err, "error during check if the document resource has subscriptions")
 	}

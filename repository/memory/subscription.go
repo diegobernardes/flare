@@ -72,7 +72,7 @@ func (s *Subscription) FindOne(
 	}
 
 	for _, subscription := range subscriptions {
-		if subscription.Id == id {
+		if subscription.ID == id {
 			return &subscription, nil
 		}
 	}
@@ -84,9 +84,9 @@ func (s *Subscription) Create(_ context.Context, subscription *flare.Subscriptio
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	subscriptions, ok := s.subscriptions[subscription.Resource.Id]
+	subscriptions, ok := s.subscriptions[subscription.Resource.ID]
 	if !ok {
-		s.subscriptions[subscription.Resource.Id] = make([]flare.Subscription, 0)
+		s.subscriptions[subscription.Resource.ID] = make([]flare.Subscription, 0)
 	}
 
 	for _, subs := range subscriptions {
@@ -95,7 +95,7 @@ func (s *Subscription) Create(_ context.Context, subscription *flare.Subscriptio
 				alreadyExists: true,
 				message: fmt.Sprintf(
 					"already exists a subscription '%s' with the endpoint.URL '%s'",
-					subscription.Id,
+					subscription.ID,
 					subscription.Endpoint.URL.String(),
 				),
 			}
@@ -103,7 +103,7 @@ func (s *Subscription) Create(_ context.Context, subscription *flare.Subscriptio
 	}
 
 	subscription.CreatedAt = time.Now()
-	s.subscriptions[subscription.Resource.Id] = append(subscriptions, *subscription)
+	s.subscriptions[subscription.Resource.ID] = append(subscriptions, *subscription)
 	return nil
 }
 
@@ -126,7 +126,7 @@ func (s *Subscription) Delete(_ context.Context, resourceId, id string) error {
 
 	subscriptions := s.subscriptions[resourceId]
 	for i, subscription := range subscriptions {
-		if subscription.Id == id {
+		if subscription.ID == id {
 			s.subscriptions[resourceId] = append(subscriptions[:i], subscriptions[i+1:]...)
 			return nil
 		}
@@ -148,7 +148,7 @@ func (s *Subscription) Trigger(
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	subscriptions, ok := s.subscriptions[doc.Resource.Id]
+	subscriptions, ok := s.subscriptions[doc.Resource.ID]
 	if !ok {
 		subscriptions = make([]flare.Subscription, 0)
 	}
@@ -170,10 +170,10 @@ func (s *Subscription) triggerProcess(
 	fn func(context.Context, flare.Subscription, string) error,
 ) func() error {
 	return func() error {
-		documents, ok := s.changes[subs.Id]
+		documents, ok := s.changes[subs.ID]
 		if !ok {
 			documents = make(map[string]flare.Document)
-			s.changes[subs.Id] = documents
+			s.changes[subs.ID] = documents
 		}
 
 		referenceDocument, ok := documents[doc.Id]

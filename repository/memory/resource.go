@@ -55,7 +55,7 @@ func (r *Resource) FindOne(_ context.Context, id string) (*flare.Resource, error
 	defer r.mutex.RUnlock()
 
 	for _, resource := range r.resources {
-		if resource.Id == id {
+		if resource.ID == id {
 			return &resource, nil
 		}
 	}
@@ -68,16 +68,16 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 	defer r.mutex.Unlock()
 
 	for _, resource := range r.resources {
-		if resource.Id == res.Id {
+		if resource.ID == res.ID {
 			return &errMemory{
-				alreadyExists: true, message: fmt.Sprintf("already exists a resource with id '%s'", res.Id),
+				alreadyExists: true, message: fmt.Sprintf("already exists a resource with id '%s'", res.ID),
 			}
 		}
 
 		if sliceIntersection(resource.Addresses, res.Addresses, resource.Path, res.Path) {
 			return &errMemory{
 				message: fmt.Sprintf(
-					"address+path already associated to another resource '%s'", resource.Id,
+					"address+path already associated to another resource '%s'", resource.ID,
 				),
 				pathConflict: true,
 			}
@@ -106,7 +106,7 @@ func (r *Resource) Delete(ctx context.Context, id string) error {
 	}
 
 	for i, res := range r.resources {
-		if res.Id == id {
+		if res.ID == id {
 			r.resources = append(r.resources[:i], r.resources[i+1:]...)
 			return nil
 		}
@@ -182,7 +182,7 @@ outer:
 		}
 
 		for _, resource := range resources {
-			if resource.Id == resourceSegment[0] {
+			if resource.ID == resourceSegment[0] {
 				return &resource, nil
 			}
 		}
@@ -199,7 +199,7 @@ func (r *Resource) genResourceSegments(resources []flare.Resource, qtySegments i
 		if len(segments) != qtySegments {
 			continue
 		}
-		result = append(result, append([]string{resource.Id}, segments...))
+		result = append(result, append([]string{resource.ID}, segments...))
 	}
 
 	if len(result) > 1 {

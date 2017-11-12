@@ -30,7 +30,7 @@ func TestPaginationMarshalJSON(t *testing.T) {
 			},
 		}
 
-		Convey("Output should be valid", func() {
+		Convey("The output should be valid", func() {
 			for _, tt := range tests {
 				content, err := tt.input.MarshalJSON()
 				So(err, ShouldBeNil)
@@ -48,7 +48,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 		}{
 			{
 				resource{
-					Id:        "id",
+					ID:        "id",
 					CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					Addresses: []string{"http://flare.io", "https://flare.com"},
 					Path:      "/resources/{*}",
@@ -61,7 +61,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 			},
 			{
 				resource{
-					Id:        "id",
+					ID:        "id",
 					CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					Addresses: []string{"http://flare.io", "https://flare.com"},
 					Path:      "/resources/{*}",
@@ -75,7 +75,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 			},
 		}
 
-		Convey("Output should be valid", func() {
+		Convey("The output should be valid", func() {
 			for _, tt := range tests {
 				content, err := tt.input.MarshalJSON()
 				So(err, ShouldBeNil)
@@ -111,7 +111,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			{
 				response{
 					Resource: &resource{
-						Id:        "123",
+						ID:        "123",
 						Addresses: []string{"http://address1", "https://address2"},
 						Path:      "/products/{*}",
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -128,7 +128,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					Pagination: (*pagination)(&flare.Pagination{Limit: 10, Total: 30, Offset: 20}),
 					Resources: []resource{
 						{
-							Id:        "123",
+							ID:        "123",
 							Addresses: []string{"http://address1", "https://address2"},
 							Path:      "/products/{*}",
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
@@ -143,7 +143,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 			},
 		}
 
-		Convey("Output should be valid", func() {
+		Convey("The output should be valid", func() {
 			for _, tt := range tests {
 				content, err := tt.input.MarshalJSON()
 				So(err, ShouldBeNil)

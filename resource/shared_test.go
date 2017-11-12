@@ -71,7 +71,7 @@ func (r *resourceRepository) Create(ctx context.Context, resource *flare.Resourc
 	}
 	err := r.base.Create(ctx, resource)
 	resource.CreatedAt = r.date
-	resource.Id = r.createId
+	resource.ID = r.createId
 	return err
 }
 

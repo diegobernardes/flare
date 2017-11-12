@@ -125,7 +125,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					[]flare.Resource{
 						{
-							Id:        "1",
+							ID:        "1",
 							Addresses: []string{"http://app1.com", "https://app1.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -149,7 +149,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					[]flare.Resource{
 						{
-							Id:        "1",
+							ID:        "1",
 							Addresses: []string{"http://app1.com", "https://app1.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -160,7 +160,7 @@ func TestServiceHandleIndex(t *testing.T) {
 							},
 						},
 						{
-							Id:        "2",
+							ID:        "2",
 							Addresses: []string{"http://app2.com", "https://app2.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -184,7 +184,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					[]flare.Resource{
 						{
-							Id:        "1",
+							ID:        "1",
 							Addresses: []string{"http://app1.com", "https://app1.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -195,7 +195,7 @@ func TestServiceHandleIndex(t *testing.T) {
 							},
 						},
 						{
-							Id:        "2",
+							ID:        "2",
 							Addresses: []string{"http://app2.com", "https://app2.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -273,7 +273,7 @@ func TestServiceHandleShow(t *testing.T) {
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					[]flare.Resource{
 						{
-							Id:        "123",
+							ID:        "123",
 							Addresses: []string{"http://app1.com", "https://app1.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -351,7 +351,7 @@ func TestServiceHandleDelete(t *testing.T) {
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					[]flare.Resource{
 						{
-							Id:        "123",
+							ID:        "123",
 							Addresses: []string{"http://app1.com", "https://app1.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",
@@ -428,7 +428,7 @@ func TestServiceHandleCreate(t *testing.T) {
 					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					[]flare.Resource{
 						{
-							Id:        "123",
+							ID:        "123",
 							Addresses: []string{"http://app1.com", "https://app1.io"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Path:      "/resources/{*}",

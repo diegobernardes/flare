@@ -13,7 +13,7 @@ import (
 
 // Subscription is used to notify the clients about changes on documents.
 type Subscription struct {
-	Id        string
+	ID        string
 	Endpoint  SubscriptionEndpoint
 	Delivery  SubscriptionDelivery
 	Resource  Resource

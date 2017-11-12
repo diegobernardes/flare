@@ -104,7 +104,7 @@ func (s *Subscription) Create(_ context.Context, subscription *flare.Subscriptio
 
 	resourceEntity := &resourceEntity{}
 	err := session.DB(s.database).C(s.collection).Find(bson.M{
-		"resource.id":  subscription.Resource.Id,
+		"resource.id":  subscription.Resource.ID,
 		"endpoint.url": subscription.Endpoint.URL.String(),
 	}).One(resourceEntity)
 	if err == nil {
@@ -176,15 +176,15 @@ func (s *Subscription) Trigger(
 	err := session.
 		DB(s.database).
 		C(s.collection).
-		Find(bson.M{"resource.id": doc.Resource.Id}).
+		Find(bson.M{"resource.id": doc.Resource.ID}).
 		All(&subscriptions)
 	if err != nil {
 		return errors.Wrap(err, "error while subscription search")
 	}
 
-	resource, err := s.resourceRepository.FindOne(ctx, doc.Resource.Id)
+	resource, err := s.resourceRepository.FindOne(ctx, doc.Resource.ID)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", doc.Resource.Id))
+		return errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", doc.Resource.ID))
 	}
 
 	group, groupCtx := errgroup.WithContext(ctx)
@@ -205,7 +205,7 @@ func (s *Subscription) loadReferenceDocument(
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
-		Find(bson.M{"subscriptionId": subs.Id, "document.id": doc.Id}).
+		Find(bson.M{"subscriptionId": subs.ID, "document.id": doc.Id}).
 		One(&content)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -254,7 +254,7 @@ func (s *Subscription) triggerProcessDelete(
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
-		Remove(bson.M{"subscriptionId": subs.Id, "document.id": doc.Id})
+		Remove(bson.M{"subscriptionId": subs.ID, "document.id": doc.Id})
 	if err != nil {
 		return errors.Wrap(err, "error during subscriptionTriggers delete")
 	}
@@ -274,8 +274,8 @@ func (s *Subscription) upsertSubscriptionTrigger(
 		DB(s.database).
 		C(s.collectionTrigger).
 		Upsert(
-			bson.M{"subscriptionId": subs.Id, "document.id": doc.Id},
-			bson.M{"subscriptionId": subs.Id, "document": bson.M{
+			bson.M{"subscriptionId": subs.ID, "document.id": doc.Id},
+			bson.M{"subscriptionId": subs.ID, "document": bson.M{
 				"id":               doc.Id,
 				"changeFieldValue": doc.ChangeFieldValue,
 				"updatedAt":        time.Now(),

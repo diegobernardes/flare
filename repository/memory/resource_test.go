@@ -35,9 +35,9 @@ func TestResourceGenResourceSegments(t *testing.T) {
 			`The result should contain a list of list of strings with the flare.Resource id and each
 path segment`,
 			[]flare.Resource{
-				{Id: "1", Path: "/product/123/stock/{*}"},
-				{Id: "2", Path: "/product/{*}/stock/{*}"},
-				{Id: "3", Path: "/product/456/stock/{*}"},
+				{ID: "1", Path: "/product/123/stock/{*}"},
+				{ID: "2", Path: "/product/{*}/stock/{*}"},
+				{ID: "3", Path: "/product/456/stock/{*}"},
 			},
 			5,
 			[][]string{
@@ -76,7 +76,7 @@ func TestResourceFindOne(t *testing.T) {
 
 		Convey("When a list of flare.Resource is inserted", func() {
 			for i := (int64)(0); i < 10; i++ {
-				r.Create(context.Background(), &flare.Resource{Id: strconv.FormatInt(i, 10)})
+				r.Create(context.Background(), &flare.Resource{ID: strconv.FormatInt(i, 10)})
 			}
 
 			Convey("It should find the each flare.Resource by id", func() {
@@ -85,7 +85,7 @@ func TestResourceFindOne(t *testing.T) {
 					resource, err := r.FindOne(context.Background(), id)
 					So(resource, ShouldNotBeNil)
 					So(err, ShouldBeNil)
-					So(resource.Id, ShouldEqual, id)
+					So(resource.ID, ShouldEqual, id)
 				}
 			})
 		})
@@ -97,11 +97,11 @@ func TestResourceCreate(t *testing.T) {
 		r := NewResource()
 
 		Convey("It should be possible to insert a flare.Resource with id 1", func() {
-			err := r.Create(context.Background(), &flare.Resource{Id: "1"})
+			err := r.Create(context.Background(), &flare.Resource{ID: "1"})
 			So(err, ShouldBeNil)
 
 			Convey("It should not be possible to insert another flare.Resource with id 1", func() {
-				err := r.Create(context.Background(), &flare.Resource{Id: "1"})
+				err := r.Create(context.Background(), &flare.Resource{ID: "1"})
 				So(err, ShouldNotBeNil)
 
 				nErr, ok := err.(flare.ResourceRepositoryError)
@@ -112,7 +112,7 @@ func TestResourceCreate(t *testing.T) {
 
 		Convey("It should be possible to insert a flare.Resource with app.com address", func() {
 			err := r.Create(context.Background(), &flare.Resource{
-				Id:        "1",
+				ID:        "1",
 				Addresses: []string{"http://app.com"},
 			})
 			So(err, ShouldBeNil)
@@ -120,7 +120,7 @@ func TestResourceCreate(t *testing.T) {
 			msg := "It should not be possible to insert another flare.Resource at the same address"
 			Convey(msg, func() {
 				err := r.Create(context.Background(), &flare.Resource{
-					Id:        "2",
+					ID:        "2",
 					Addresses: []string{"http://app.com"},
 				})
 				So(err, ShouldNotBeNil)

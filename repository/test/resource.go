@@ -115,7 +115,7 @@ func ResourceLoadSliceByteResource(content []byte) func(*Resource) {
 
 		for _, rawResource := range resources {
 			err := r.Create(context.Background(), &flare.Resource{
-				Id:        rawResource.Id,
+				ID:        rawResource.Id,
 				Addresses: rawResource.Addresses,
 				Path:      rawResource.Path,
 				CreatedAt: rawResource.CreatedAt,
