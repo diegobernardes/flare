@@ -15,7 +15,7 @@ import (
 type Worker struct {
 	pusher         Pusher
 	puller         Puller
-	processer      Processer
+	processor      Processor
 	timeoutProcess time.Duration
 	timeoutPush    time.Duration
 	goroutines     int
@@ -50,7 +50,7 @@ func (w *Worker) process() {
 	defer ctxCancel()
 
 	w.puller.Pull(ctx, func(ctx context.Context, content []byte) error {
-		return w.processer.Process(ctx, content)
+		return w.processor.Process(ctx, content)
 	})
 }
 
@@ -70,8 +70,8 @@ func NewWorker(options ...func(*Worker)) (*Worker, error) {
 		return nil, errors.New("puller not found")
 	}
 
-	if w.processer == nil {
-		return nil, errors.New("processer not found")
+	if w.processor == nil {
+		return nil, errors.New("processor not found")
 	}
 
 	if w.timeoutProcess == 0 {
@@ -107,10 +107,10 @@ func WorkerPuller(puller Puller) func(*Worker) {
 	}
 }
 
-// WorkerProcesser set the processer at Worker.
-func WorkerProcesser(processer Processer) func(*Worker) {
+// WorkerProcessor set the processor at Worker.
+func WorkerProcessor(processor Processor) func(*Worker) {
 	return func(w *Worker) {
-		w.processer = processer
+		w.processor = processor
 	}
 }
 

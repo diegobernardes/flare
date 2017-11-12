@@ -39,17 +39,22 @@ username = "flare"
 password = "flare"
 
 # --------------------------------------------------------------------------------------------------
-# - job.engine
+# - task.engine
 #   The engine used to enqueue jobs. If the 'sqs' is chosen, the 'aws' config block must be
 #   configured. Possible values: "sqs" or "memory". Default value: "memory".
 #
-# - job.queue-document
+# - task.queue-document
 #   If the SQS is used as engine, there is a option to set the queue name. Default value is
 #   "flare-document-queue".
 #
-[job]
-engine         = "sqs"
-queue-document = "flare-document-queue"
+# - task.queue-subscription
+#   If the SQS is used as engine, there is a option to set the queue name. Default value is
+#   "flare-document-queue".
+#
+[task]
+engine             = "sqs"
+queue-document     = "flare-document-queue"
+queue-subscription = "flare-subscription-queue"
 
 # --------------------------------------------------------------------------------------------------
 # - aws.key
@@ -63,7 +68,7 @@ queue-document = "flare-document-queue"
 #
 [aws]
 key    = "key"
-secret = "region"
+secret = "secret"
 region = "us-east-1"
 
 # --------------------------------------------------------------------------------------------------

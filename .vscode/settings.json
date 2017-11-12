@@ -54,8 +54,7 @@
     "--tests",
     "--vendor",
     "--linter=gofmt:gofmt -s -w {path}/*.go:^(?P<path>.*?\\.go)$",
-    "--linter=gas:gas -exclude=G104 -fmt=csv {path}/*.go:^(?P<path>.*?\\.go),(?P<line>\\d+),(?P<message>[^,]+,[^,]+,[^,]+)",
-    "--linter=misspell:misspell -j 0 -i processer,Processer {path}/*.go:PATH:LINE:COL:MESSAGE"
+    "--linter=gas:gas -exclude=G104 -fmt=csv {path}/*.go:^(?P<path>.*?\\.go),(?P<line>\\d+),(?P<message>[^,]+,[^,]+,[^,]+)"
   ],
   "go.vetFlags": [
     "-all",

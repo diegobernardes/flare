@@ -13,24 +13,88 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/infra/task"
 )
 
 // Trigger is used to process the signals on documents change.
 type Trigger struct {
+	document   flare.DocumentRepositorier
 	repository flare.SubscriptionRepositorier
 	httpClient *http.Client
+	pusher     task.Pusher
+}
+
+func (t *Trigger) marshal(documentId string, action string) ([]byte, error) {
+	content, err := json.Marshal(map[string]string{
+		"documentId": documentId,
+		"action":     action,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "error during message marshal")
+	}
+	return content, nil
+}
+
+func (t *Trigger) unmarshal(rawContent []byte) (map[string]string, error) {
+	content := make(map[string]string)
+	if err := json.Unmarshal(rawContent, &content); err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal message")
+	}
+	return content, nil
 }
 
 // Update the document change signal.
 func (t *Trigger) Update(ctx context.Context, document *flare.Document) error {
-	err := t.repository.Trigger(ctx, flare.SubscriptionTriggerUpdate, document, t.exec(document))
-	return errors.Wrap(err, "error during trigger")
+	content, err := t.marshal(document.Id, flare.SubscriptionTriggerUpdate)
+	if err != nil {
+		return errors.Wrap(err, "error during trigger")
+	}
+
+	if err = t.pusher.Push(ctx, content); err != nil {
+		return errors.Wrap(err, "error during message delivery")
+	}
+	return nil
 }
 
 // Delete the document change signal.
 func (t *Trigger) Delete(ctx context.Context, document *flare.Document) error {
-	err := t.repository.Trigger(ctx, flare.SubscriptionTriggerDelete, document, t.exec(document))
-	return errors.Wrap(err, "error during trigger")
+	content, err := t.marshal(document.Id, flare.SubscriptionTriggerDelete)
+	if err != nil {
+		return errors.Wrap(err, "error during trigger")
+	}
+
+	if err = t.pusher.Push(ctx, content); err != nil {
+		return errors.Wrap(err, "error during message delivery")
+	}
+	return nil
+}
+
+// Process is used to consume the tasks.
+func (t *Trigger) Process(ctx context.Context, rawContent []byte) error {
+	content, err := t.unmarshal(rawContent)
+	if err != nil {
+		return errors.Wrap(err, "could not unmarshal the message")
+	}
+
+	documentId, ok := content["documentId"]
+	if !ok {
+		return errors.New("missing documentId")
+	}
+
+	action, ok := content["action"]
+	if !ok {
+		return errors.New("missing action")
+	}
+
+	document, err := t.document.FindOne(ctx, documentId)
+	if err != nil {
+		return errors.Wrap(err, "error during document find")
+	}
+
+	if err = t.repository.Trigger(ctx, action, document, t.exec(document)); err != nil {
+		return errors.Wrap(err, "error during message process")
+	}
+	return nil
 }
 
 func (t *Trigger) exec(
@@ -109,23 +173,29 @@ func (t *Trigger) buildContent(
 	return content, nil
 }
 
-// NewTrigger initialize the Trigger.
-func NewTrigger(options ...func(*Trigger)) (*Trigger, error) {
-	trigger := &Trigger{}
-
+// Init initialize the Trigger.
+func (t *Trigger) Init(options ...func(*Trigger)) error {
 	for _, option := range options {
-		option(trigger)
+		option(t)
 	}
 
-	if trigger.repository == nil {
-		return nil, errors.New("repository not found")
+	if t.document == nil {
+		return errors.New("document repository not found")
 	}
 
-	if trigger.httpClient == nil {
-		return nil, errors.New("httpClient not found")
+	if t.pusher == nil {
+		return errors.New("pusher not found")
 	}
 
-	return trigger, nil
+	if t.repository == nil {
+		return errors.New("repository not found")
+	}
+
+	if t.httpClient == nil {
+		return errors.New("httpClient not found")
+	}
+
+	return nil
 }
 
 // TriggerRepository set the repository on Trigger.
@@ -139,5 +209,19 @@ func TriggerRepository(repository flare.SubscriptionRepositorier) func(*Trigger)
 func TriggerHTTPClient(httpClient *http.Client) func(*Trigger) {
 	return func(t *Trigger) {
 		t.httpClient = httpClient
+	}
+}
+
+// TriggerPusher set the pusher that gonna receive the trigger notifications.
+func TriggerPusher(pusher task.Pusher) func(*Trigger) {
+	return func(t *Trigger) {
+		t.pusher = pusher
+	}
+}
+
+// TriggerDocumentRepository set the document repository.
+func TriggerDocumentRepository(repo flare.DocumentRepositorier) func(*Trigger) {
+	return func(t *Trigger) {
+		t.document = repo
 	}
 }

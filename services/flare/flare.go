@@ -228,25 +228,46 @@ func (c *Client) initDocumentService(
 	rr flare.ResourceRepositorier,
 	sr flare.SubscriptionRepositorier,
 ) (*document.Service, error) {
-	subscriptionTrigger, err := subscription.NewTrigger(
-		subscription.TriggerRepository(sr),
-		subscription.TriggerHTTPClient(http.DefaultClient),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during subscription.Trigger initialization")
-	}
-
-	pusher, puller, err := c.config.queue()
+	documentPusher, documentPuller, err := c.config.queue("document")
 	if err != nil {
 		return nil, errors.Wrap(err, "error during queue initialization")
 	}
 
+	subscriptionPusher, subscriptionPuller, err := c.config.queue("subscription")
+	if err != nil {
+		return nil, errors.Wrap(err, "error during queue initialization")
+	}
+
+	trigger := &subscription.Trigger{}
+	triggerWorker, err := task.NewWorker(
+		task.WorkerGoroutines(1),
+		task.WorkerProcessor(trigger),
+		task.WorkerPuller(subscriptionPuller),
+		task.WorkerPusher(subscriptionPusher),
+		task.WorkerTimeoutProcess(10*time.Second),
+		task.WorkerTimeoutPush(10*time.Second),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during worker initialization")
+	}
+
+	err = trigger.Init(
+		subscription.TriggerRepository(sr),
+		subscription.TriggerHTTPClient(http.DefaultClient),
+		subscription.TriggerDocumentRepository(dr),
+		subscription.TriggerPusher(triggerWorker),
+	)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during subscription.Trigger initialization")
+	}
+	triggerWorker.Start()
+
 	documentWorker := &document.Worker{}
 	jobWorker, err := task.NewWorker(
 		task.WorkerGoroutines(1),
-		task.WorkerProcesser(documentWorker),
-		task.WorkerPuller(puller),
-		task.WorkerPusher(pusher),
+		task.WorkerProcessor(documentWorker),
+		task.WorkerPuller(documentPuller),
+		task.WorkerPusher(documentPusher),
 		task.WorkerTimeoutProcess(10*time.Second),
 		task.WorkerTimeoutPush(10*time.Second),
 	)
@@ -258,7 +279,7 @@ func (c *Client) initDocumentService(
 		document.WorkerDocumentRepository(dr),
 		document.WorkerResourceRepository(rr),
 		document.WorkerSubscriptionRepository(sr),
-		document.WorkerSubscriptionTrigger(subscriptionTrigger),
+		document.WorkerSubscriptionTrigger(trigger),
 		document.WorkerPusher(jobWorker),
 	)
 	if err != nil {

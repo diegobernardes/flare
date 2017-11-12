@@ -52,7 +52,6 @@ lint-fast() {
       --line-length=100 \
       --min-confidence=.9 \
       --linter='gas:gas -exclude=G104 -fmt=csv {path}/*.go:^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)' \
-      --linter='misspell:misspell -j 0 -i processer,Processer {path}/*.go:PATH:LINE:COL:MESSAGE' \
       --tests \
       --vendor
 }

@@ -108,7 +108,7 @@ func (c *config) mongodb() (*mongodb.Client, error) {
 	return client, errors.Wrap(err, "error during MongoDB connection")
 }
 
-func (c *config) queue() (task.Pusher, task.Puller, error) {
+func (c *config) queue(name string) (task.Pusher, task.Puller, error) {
 	engine := c.getString("task.engine")
 	if engine != "sqs" {
 		return nil, nil, fmt.Errorf("invalid task.engine '%s'", engine)
@@ -124,7 +124,7 @@ func (c *config) queue() (task.Pusher, task.Puller, error) {
 	}
 
 	sqs, err := aws.NewSQS(
-		aws.SQSQueueName(c.getString("task.queue-document")),
+		aws.SQSQueueName(c.getString(fmt.Sprintf("task.queue-%s", name))),
 		aws.SQSSession(session),
 	)
 	if err != nil {

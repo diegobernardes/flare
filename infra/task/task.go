@@ -16,7 +16,7 @@ type Puller interface {
 	Pull(context.Context, func(context.Context, []byte) error) error
 }
 
-// Processer is used to process the tasks.
-type Processer interface {
+// Processor is used to process the tasks.
+type Processor interface {
 	Process(context.Context, []byte) error
 }
