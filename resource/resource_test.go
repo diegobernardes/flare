@@ -13,46 +13,35 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/diegobernardes/flare"
 )
 
 func TestPaginationMarshalJSON(t *testing.T) {
-	tests := []struct {
-		name   string
-		input  pagination
-		output string
-		hasErr bool
-	}{
-		{
-			"Valid pagination",
-			pagination{Limit: 30, Offset: 0},
-			`{"limit":30,"offset":0,"total":0}`,
-			false,
-		},
-		{
-			"Valid pagination",
-			pagination{Limit: 10, Offset: 30, Total: 120},
-			`{"limit":10,"offset":30,"total":120}`,
-			false,
-		},
-	}
+	Convey("Given a list or valid paginations", t, func() {
+		tests := []struct {
+			input  pagination
+			output string
+		}{
+			{
+				pagination{Limit: 30, Offset: 0},
+				`{"limit":30,"offset":0,"total":0}`,
+			},
+			{
+				pagination{Limit: 10, Offset: 30, Total: 120},
+				`{"limit":10,"offset":30,"total":120}`,
+			},
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			content, err := tt.input.MarshalJSON()
-			if tt.hasErr != (err != nil) {
-				t.Errorf("pagination.MarshalJSON invalid result, want '%v', got '%v'", tt.hasErr, (err != nil))
-				t.FailNow()
-			}
-
-			if string(content) != tt.output {
-				t.Errorf(
-					"pagination.MarshalJSON invalid result, want '%v', got '%v'", string(content), tt.output,
-				)
+		Convey("Output should be valid", func() {
+			for _, tt := range tests {
+				content, err := tt.input.MarshalJSON()
+				So(err, ShouldBeNil)
+				So(string(content), ShouldEqual, tt.output)
 			}
 		})
-	}
+	})
 }
 
 func TestResourceMarshalJSON(t *testing.T) {
