@@ -15,7 +15,7 @@ import (
 )
 
 func TestPaginationMarshalJSON(t *testing.T) {
-	Convey("Given a list or valid paginations", t, func() {
+	Convey("Given a list of valid paginations", t, func() {
 		tests := []struct {
 			input  pagination
 			output string
@@ -41,7 +41,7 @@ func TestPaginationMarshalJSON(t *testing.T) {
 }
 
 func TestResourceMarshalJSON(t *testing.T) {
-	Convey("Given a list or valid resources", t, func() {
+	Convey("Given a list of valid resources", t, func() {
 		tests := []struct {
 			input  resource
 			output []byte
@@ -94,7 +94,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 }
 
 func TestResponseMarshalJSON(t *testing.T) {
-	Convey("Given a list or valid responses", t, func() {
+	Convey("Given a list of valid responses", t, func() {
 		tests := []struct {
 			input  response
 			output []byte
