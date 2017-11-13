@@ -2,18 +2,25 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package resource
+package test
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"runtime"
 
 	"github.com/pkg/errors"
 )
 
-func load(name string) []byte {
-	path := fmt.Sprintf("testdata/%s", name)
+func Load(name string) []byte {
+	_, file, _, ok := runtime.Caller(1)
+	if !ok {
+		panic("could not get the caller that invoked load")
+	}
+
+	path := fmt.Sprintf("%s/testdata/%s", filepath.Dir(file), name)
 	f, err := os.Open(path)
 	if err != nil {
 		panic(errors.Wrap(err, fmt.Sprintf("error during open '%s'", path)))

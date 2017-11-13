@@ -19,6 +19,7 @@ import (
 	"github.com/diegobernardes/flare"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/infra/http/test"
+	infraTest "github.com/diegobernardes/flare/infra/test"
 	"github.com/diegobernardes/flare/repository/memory"
 	repositoryTest "github.com/diegobernardes/flare/repository/test"
 )
@@ -90,7 +91,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources?limit=sample", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.1.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.1.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -98,7 +99,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources?limit=-1", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.2.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.2.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -106,7 +107,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources?offset=-1", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.3.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.3.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -114,7 +115,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.repositoryError.json"),
+				infraTest.Load("serviceHandleIndex.repositoryError.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceError(errors.New("error during repository search")),
 				),
@@ -124,9 +125,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.validSearch.1.json"),
+				infraTest.Load("serviceHandleIndex.validSearch.1.json"),
 				repositoryTest.NewResource(
-					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.1.json")),
+					repositoryTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
@@ -135,9 +136,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources?limit=10", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.validSearch.2.json"),
+				infraTest.Load("serviceHandleIndex.validSearch.2.json"),
 				repositoryTest.NewResource(
-					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.2.json")),
+					repositoryTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.2.json")),
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
@@ -146,9 +147,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources?limit=10&offset=1", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.validSearch.3.json"),
+				infraTest.Load("serviceHandleIndex.validSearch.3.json"),
 				repositoryTest.NewResource(
-					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.2.json")),
+					repositoryTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.2.json")),
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
@@ -191,7 +192,7 @@ func TestServiceHandleShow(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123", nil),
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleShow.notFound.json"),
+				infraTest.Load("serviceHandleShow.notFound.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -199,7 +200,7 @@ func TestServiceHandleShow(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleShow.repositoryError.json"),
+				infraTest.Load("serviceHandleShow.repositoryError.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceError(errors.New("error during repository search")),
 				),
@@ -209,10 +210,10 @@ func TestServiceHandleShow(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleShow.valid.json"),
+				infraTest.Load("serviceHandleShow.valid.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.3.json")),
+					repositoryTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.3.json")),
 				),
 			},
 		}
@@ -254,7 +255,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				httptest.NewRequest(http.MethodDelete, "http://resources/123", nil),
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleDelete.notFound.json"),
+				infraTest.Load("serviceHandleDelete.notFound.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -262,7 +263,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				httptest.NewRequest(http.MethodDelete, "http://resources/123", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleDelete.repositoryError.json"),
+				infraTest.Load("serviceHandleDelete.repositoryError.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceError(errors.New("error during repository delete")),
 				),
@@ -275,7 +276,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				nil,
 				repositoryTest.NewResource(
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.3.json")),
+					repositoryTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.3.json")),
 				),
 			},
 		}
@@ -316,7 +317,7 @@ func TestServiceHandleCreate(t *testing.T) {
 				httptest.NewRequest(http.MethodPost, "http://resources/123", bytes.NewBuffer([]byte{})),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.invalid.1.json"),
+				infraTest.Load("serviceHandleCreate.invalid.1.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -324,7 +325,7 @@ func TestServiceHandleCreate(t *testing.T) {
 				httptest.NewRequest(http.MethodPost, "http://resources/123", bytes.NewBufferString("{}")),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.invalid.2.json"),
+				infraTest.Load("serviceHandleCreate.invalid.2.json"),
 				repositoryTest.NewResource(),
 			},
 			{
@@ -332,14 +333,14 @@ func TestServiceHandleCreate(t *testing.T) {
 				httptest.NewRequest(
 					http.MethodPost,
 					"http://resources/123",
-					bytes.NewBuffer(load("serviceHandleCreate.input.1.json")),
+					bytes.NewBuffer(infraTest.Load("serviceHandleCreate.input.1.json")),
 				),
 				http.StatusConflict,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.conflict.1.json"),
+				infraTest.Load("serviceHandleCreate.conflict.1.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.3.json")),
+					repositoryTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.3.json")),
 				),
 			},
 			{
@@ -347,11 +348,11 @@ func TestServiceHandleCreate(t *testing.T) {
 				httptest.NewRequest(
 					http.MethodPost,
 					"http://resources/123",
-					bytes.NewBuffer(load("serviceHandleCreate.input.1.json")),
+					bytes.NewBuffer(infraTest.Load("serviceHandleCreate.input.1.json")),
 				),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.repositoryError.json"),
+				infraTest.Load("serviceHandleCreate.repositoryError.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceError(errors.New("error during repository save")),
 				),
@@ -361,14 +362,14 @@ func TestServiceHandleCreate(t *testing.T) {
 				httptest.NewRequest(
 					http.MethodPost,
 					"http://resources/123",
-					bytes.NewBuffer(load("serviceHandleCreate.input.1.json")),
+					bytes.NewBuffer(infraTest.Load("serviceHandleCreate.input.1.json")),
 				),
 				http.StatusCreated,
 				http.Header{
 					"Content-Type": []string{"application/json"},
 					"Location":     []string{"http://resources/123"},
 				},
-				load("serviceHandleCreate.valid.json"),
+				infraTest.Load("serviceHandleCreate.valid.json"),
 				repositoryTest.NewResource(
 					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 					repositoryTest.ResourceCreateID("123"),

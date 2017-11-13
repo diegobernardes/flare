@@ -12,6 +12,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/diegobernardes/flare"
+	infraTest "github.com/diegobernardes/flare/infra/test"
 )
 
 func TestPaginationMarshalJSON(t *testing.T) {
@@ -57,7 +58,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 						Kind:  flare.ResourceChangeInteger,
 					},
 				},
-				load("resource.1.json"),
+				infraTest.Load("resource.1.json"),
 			},
 			{
 				resource{
@@ -71,7 +72,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 						DateFormat: "2006-01-02",
 					},
 				},
-				load("resource.2.json"),
+				infraTest.Load("resource.2.json"),
 			},
 		}
 
@@ -106,7 +107,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Detail: "detail from error",
 					},
 				},
-				load("response.1.json"),
+				infraTest.Load("response.1.json"),
 			},
 			{
 				response{
@@ -121,7 +122,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						},
 					},
 				},
-				load("response.2.json"),
+				infraTest.Load("response.2.json"),
 			},
 			{
 				response{
@@ -139,7 +140,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						},
 					},
 				},
-				load("response.3.json"),
+				infraTest.Load("response.3.json"),
 			},
 		}
 
