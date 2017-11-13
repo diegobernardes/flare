@@ -22,13 +22,27 @@ type Resource struct {
 	findByURIErr error
 	base         flare.ResourceRepositorier
 	date         time.Time
+	createID     string
 }
 
 // FindAll mock flare.ResourceRepositorier.FindAll.
-func (r *Resource) FindAll(context.Context, *flare.Pagination) (
+func (r *Resource) FindAll(ctx context.Context, pag *flare.Pagination) (
 	[]flare.Resource, *flare.Pagination, error,
 ) {
-	return nil, nil, nil
+	if r.err != nil {
+		return nil, nil, r.err
+	}
+
+	res, resPag, err := r.base.FindAll(ctx, pag)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range res {
+		res[i].CreatedAt = r.date
+	}
+
+	return res, resPag, nil
 }
 
 // FindOne mock flare.ResourceRepositorier.FindOne.
@@ -58,12 +72,22 @@ func (r *Resource) FindByURI(ctx context.Context, uri string) (*flare.Resource, 
 
 // Create mock flare.ResourceRepositorier.Create.
 func (r *Resource) Create(ctx context.Context, resource *flare.Resource) error {
-	return r.base.Create(ctx, resource)
+	if r.err != nil {
+		return r.err
+	}
+
+	err := r.base.Create(ctx, resource)
+	resource.CreatedAt = r.date
+	resource.ID = r.createID
+	return err
 }
 
 // Delete mock flare.ResourceRepositorier.Delete.
-func (r *Resource) Delete(context.Context, string) error {
-	return nil
+func (r *Resource) Delete(ctx context.Context, id string) error {
+	if r.err != nil {
+		return r.err
+	}
+	return r.base.Delete(ctx, id)
 }
 
 // NewResource return a flare.ResourceRepositorier mock.
@@ -75,6 +99,11 @@ func NewResource(options ...func(*Resource)) *Resource {
 	}
 
 	return r
+}
+
+// ResourceCreateID set id used during resource create.
+func ResourceCreateID(id string) func(*Resource) {
+	return func(r *Resource) { r.createID = id }
 }
 
 // ResourceError set the error to be returned during calls.

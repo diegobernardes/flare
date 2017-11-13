@@ -82,8 +82,8 @@ func Runner(
 	resp := w.Result()
 	body, err := ioutil.ReadAll(resp.Body)
 	convey.So(err, convey.ShouldBeNil)
-	convey.So(status, convey.ShouldEqual, resp.StatusCode)
-	convey.So(header, convey.ShouldResemble, resp.Header)
+	convey.So(resp.StatusCode, convey.ShouldEqual, status)
+	convey.So(resp.Header, convey.ShouldResemble, header)
 
 	if len(body) == 0 && expectedBody == nil {
 		return

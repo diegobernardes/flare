@@ -20,6 +20,7 @@ import (
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/infra/http/test"
 	"github.com/diegobernardes/flare/repository/memory"
+	repositoryTest "github.com/diegobernardes/flare/repository/test"
 )
 
 func TestNewService(t *testing.T) {
@@ -82,7 +83,7 @@ func TestServiceHandleIndex(t *testing.T) {
 			status     int
 			header     http.Header
 			body       []byte
-			repository resourceRepository
+			repository flare.ResourceRepositorier
 		}{
 			{
 				"The request should have a invalid pagination 1",
@@ -90,7 +91,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.invalidPagination.1.json"),
-				resourceRepository{},
+				repositoryTest.NewResource(),
 			},
 			{
 				"The request should have a invalid pagination 2",
@@ -98,7 +99,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.invalidPagination.2.json"),
-				resourceRepository{},
+				repositoryTest.NewResource(),
 			},
 			{
 				"The request should have a invalid pagination 3",
@@ -106,7 +107,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.invalidPagination.3.json"),
-				resourceRepository{},
+				repositoryTest.NewResource(),
 			},
 			{
 				"The response should be a repository error",
@@ -114,7 +115,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.repositoryError.json"),
-				resourceRepository{err: errors.New("error during repository search")},
+				repositoryTest.NewResource(
+					repositoryTest.ResourceError(errors.New("error during repository search")),
+				),
 			},
 			{
 				"The response should be a valid search 1",
@@ -122,22 +125,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.validSearch.1.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{
-						{
-							ID:        "1",
-							Addresses: []string{"http://app1.com", "https://app1.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-					},
-					"",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.1.json")),
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
 			{
@@ -146,33 +136,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.validSearch.2.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{
-						{
-							ID:        "1",
-							Addresses: []string{"http://app1.com", "https://app1.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-						{
-							ID:        "2",
-							Addresses: []string{"http://app2.com", "https://app2.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-					},
-					"",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.2.json")),
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
 			{
@@ -181,33 +147,9 @@ func TestServiceHandleIndex(t *testing.T) {
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleIndex.validSearch.3.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{
-						{
-							ID:        "1",
-							Addresses: []string{"http://app1.com", "https://app1.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-						{
-							ID:        "2",
-							Addresses: []string{"http://app2.com", "https://app2.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-					},
-					"",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.2.json")),
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
 		}
@@ -215,7 +157,7 @@ func TestServiceHandleIndex(t *testing.T) {
 		for _, tt := range tests {
 			Convey(tt.title, func() {
 				service, err := NewService(
-					ServiceRepository(&tt.repository),
+					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
 						return strings.Replace(r.URL.String(), "http://resources/", "", -1)
 					}),
@@ -242,7 +184,7 @@ func TestServiceHandleShow(t *testing.T) {
 			status     int
 			header     http.Header
 			body       []byte
-			repository resourceRepository
+			repository flare.ResourceRepositorier
 		}{
 			{
 				"The response should be a resource not found",
@@ -250,11 +192,7 @@ func TestServiceHandleShow(t *testing.T) {
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleShow.notFound.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{},
-					"",
-				),
+				repositoryTest.NewResource(),
 			},
 			{
 				"The response should be a error during search",
@@ -262,7 +200,9 @@ func TestServiceHandleShow(t *testing.T) {
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleShow.repositoryError.json"),
-				resourceRepository{err: errors.New("error during repository search")},
+				repositoryTest.NewResource(
+					repositoryTest.ResourceError(errors.New("error during repository search")),
+				),
 			},
 			{
 				"The response should be a resource",
@@ -270,22 +210,9 @@ func TestServiceHandleShow(t *testing.T) {
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleShow.valid.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{
-						{
-							ID:        "123",
-							Addresses: []string{"http://app1.com", "https://app1.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-					},
-					"",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.3.json")),
 				),
 			},
 		}
@@ -293,7 +220,7 @@ func TestServiceHandleShow(t *testing.T) {
 		for _, tt := range tests {
 			Convey(tt.title, func() {
 				service, err := NewService(
-					ServiceRepository(&tt.repository),
+					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
 						return strings.Replace(r.URL.String(), "http://resources/", "", -1)
 					}),
@@ -320,7 +247,7 @@ func TestServiceHandleDelete(t *testing.T) {
 			status     int
 			header     http.Header
 			body       []byte
-			repository resourceRepository
+			repository flare.ResourceRepositorier
 		}{
 			{
 				"The response should be a resource not found",
@@ -328,11 +255,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleDelete.notFound.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{},
-					"",
-				),
+				repositoryTest.NewResource(),
 			},
 			{
 				"The response should be a error during search",
@@ -340,7 +263,9 @@ func TestServiceHandleDelete(t *testing.T) {
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleDelete.repositoryError.json"),
-				resourceRepository{err: errors.New("error during repository delete")},
+				repositoryTest.NewResource(
+					repositoryTest.ResourceError(errors.New("error during repository delete")),
+				),
 			},
 			{
 				"The response should be the result of a deleted resource",
@@ -348,22 +273,9 @@ func TestServiceHandleDelete(t *testing.T) {
 				http.StatusNoContent,
 				http.Header{},
 				nil,
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{
-						{
-							ID:        "123",
-							Addresses: []string{"http://app1.com", "https://app1.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-					},
-					"",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.3.json")),
 				),
 			},
 		}
@@ -371,7 +283,7 @@ func TestServiceHandleDelete(t *testing.T) {
 		for _, tt := range tests {
 			Convey(tt.title, func() {
 				service, err := NewService(
-					ServiceRepository(&tt.repository),
+					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
 						return strings.Replace(r.URL.String(), "http://resources/", "", -1)
 					}),
@@ -397,7 +309,7 @@ func TestServiceHandleCreate(t *testing.T) {
 			status     int
 			header     http.Header
 			body       []byte
-			repository resourceRepository
+			repository flare.ResourceRepositorier
 		}{
 			{
 				"The request should have a invalid resource 1",
@@ -405,7 +317,7 @@ func TestServiceHandleCreate(t *testing.T) {
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleCreate.invalid.1.json"),
-				resourceRepository{},
+				repositoryTest.NewResource(),
 			},
 			{
 				"The request should have a invalid pagination 2",
@@ -413,7 +325,7 @@ func TestServiceHandleCreate(t *testing.T) {
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleCreate.invalid.2.json"),
-				resourceRepository{},
+				repositoryTest.NewResource(),
 			},
 			{
 				"The request should be a resource conflict",
@@ -425,22 +337,9 @@ func TestServiceHandleCreate(t *testing.T) {
 				http.StatusConflict,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleCreate.conflict.1.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{
-						{
-							ID:        "123",
-							Addresses: []string{"http://app1.com", "https://app1.io"},
-							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Path:      "/resources/{*}",
-							Change: flare.ResourceChange{
-								Field:      "updatedAt",
-								Kind:       flare.ResourceChangeDate,
-								DateFormat: "2006-01-02T15:04:05Z07:00",
-							},
-						},
-					},
-					"",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					repositoryTest.ResourceLoadSliceByteResource(load("resource.input.3.json")),
 				),
 			},
 			{
@@ -453,7 +352,9 @@ func TestServiceHandleCreate(t *testing.T) {
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
 				load("serviceHandleCreate.repositoryError.json"),
-				resourceRepository{err: errors.New("error during repository save")},
+				repositoryTest.NewResource(
+					repositoryTest.ResourceError(errors.New("error during repository save")),
+				),
 			},
 			{
 				"The response should be the result of a created resource",
@@ -468,10 +369,9 @@ func TestServiceHandleCreate(t *testing.T) {
 					"Location":     []string{"http://resources/123"},
 				},
 				load("serviceHandleCreate.valid.json"),
-				newResourceRepository(
-					time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-					[]flare.Resource{},
-					"123",
+				repositoryTest.NewResource(
+					repositoryTest.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					repositoryTest.ResourceCreateID("123"),
 				),
 			},
 		}
@@ -479,7 +379,7 @@ func TestServiceHandleCreate(t *testing.T) {
 		for _, tt := range tests {
 			Convey(tt.title, func() {
 				service, err := NewService(
-					ServiceRepository(&tt.repository),
+					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
 						return strings.Replace(r.URL.String(), "http://resources/", "", -1)
 					}),
