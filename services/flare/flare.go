@@ -187,7 +187,7 @@ func (c *Client) initResourceService(
 		resource.ServiceGetResourceURI(func(id string) string {
 			return fmt.Sprintf("/resources/%s", id)
 		}),
-		resource.ServiceParsePagination(infraHTTP.ParsePagination(c.config.getInt("http.default-limit"))),
+		resource.ServiceParsePagination(infraHTTP.ParsePagination(c.config.httpDefaultLimit())),
 		resource.ServiceWriteResponse(infraHTTP.WriteResponse(c.logger)),
 		resource.ServiceRepository(repository),
 	)
@@ -203,7 +203,7 @@ func (c *Client) initSubscriptionService(
 	subscriptionRepository flare.SubscriptionRepositorier,
 ) (*subscription.Service, error) {
 	subscriptionService, err := subscription.NewService(
-		subscription.ServiceDefaultLimit(c.config.getInt("http.default-limit")),
+		subscription.ServiceDefaultLimit(c.config.httpDefaultLimit()),
 		subscription.ServiceGetResourceId(func(r *http.Request) string {
 			return chi.URLParam(r, "resourceId")
 		}),

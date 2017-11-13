@@ -134,6 +134,14 @@ func (c *config) queue(name string) (task.Pusher, task.Puller, error) {
 	return sqs, sqs, nil
 }
 
+func (c *config) httpDefaultLimit() int {
+	value := c.getInt("http.default-limit")
+	if value == 0 {
+		return 30
+	}
+	return value
+}
+
 func newConfig(options ...func(*config)) (*config, error) {
 	c := &config{viper: viper.New()}
 	c.viper.SetConfigType("toml")
