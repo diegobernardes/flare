@@ -14,6 +14,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Load is used by tests to load mocks. It used the runtime.Caller to get the request file directory
+// and load all the files from a testdata folder at the same level.
 func Load(name string) []byte {
 	_, file, _, ok := runtime.Caller(1)
 	if !ok {

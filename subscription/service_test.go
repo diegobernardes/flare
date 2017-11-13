@@ -251,7 +251,9 @@ func TestServiceHandleShow(t *testing.T) {
 				infraTest.Load("serviceHandleShow.valid.output.json"),
 				test.NewSubscription(
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					test.SubscriptionLoadSliceByteSubscription(infraTest.Load("serviceHandleShow.valid.input.json")),
+					test.SubscriptionLoadSliceByteSubscription(
+						infraTest.Load("serviceHandleShow.valid.input.json"),
+					),
 				),
 				test.NewResource(),
 			},
@@ -305,7 +307,9 @@ func TestServiceHandleDelete(t *testing.T) {
 				nil,
 				test.NewSubscription(
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					test.SubscriptionLoadSliceByteSubscription(infraTest.Load("serviceHandleShow.valid.input.json")),
+					test.SubscriptionLoadSliceByteSubscription(
+						infraTest.Load("serviceHandleShow.valid.input.json"),
+					),
 				),
 				test.NewResource(),
 			},
@@ -402,7 +406,9 @@ func TestServiceHandleCreate(t *testing.T) {
 				infraTest.Load("serviceHandleCreate.subscriptionRepositoryConflict.json"),
 				test.NewSubscription(
 					test.SubscriptionCreateId("456"),
-					test.SubscriptionLoadSliceByteSubscription(infraTest.Load("serviceHandleCreate.inputArray.json")),
+					test.SubscriptionLoadSliceByteSubscription(
+						infraTest.Load("serviceHandleCreate.inputArray.json"),
+					),
 				),
 				test.NewResource(
 					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleCreate.resourceInput.json")),
