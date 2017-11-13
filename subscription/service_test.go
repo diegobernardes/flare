@@ -18,6 +18,7 @@ import (
 
 	"github.com/diegobernardes/flare"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
+	httpTest "github.com/diegobernardes/flare/infra/http/test"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/repository/test"
 )
@@ -215,7 +216,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
 				)
 				So(err, ShouldBeNil)
-				httpRunner(tt.status, tt.header, service.HandleIndex, tt.req, tt.body)
+				httpTest.Runner(tt.status, tt.header, service.HandleIndex, tt.req, tt.body)
 			})
 		}
 	})
@@ -269,7 +270,7 @@ func TestServiceHandleShow(t *testing.T) {
 					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
 				)
 				So(err, ShouldBeNil)
-				httpRunner(tt.status, tt.header, service.HandleShow, tt.req, tt.body)
+				httpTest.Runner(tt.status, tt.header, service.HandleShow, tt.req, tt.body)
 			})
 		}
 	})
@@ -321,7 +322,7 @@ func TestServiceHandleDelete(t *testing.T) {
 					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
 				)
 				So(err, ShouldBeNil)
-				httpRunner(tt.status, tt.header, service.HandleDelete, tt.req, tt.body)
+				httpTest.Runner(tt.status, tt.header, service.HandleDelete, tt.req, tt.body)
 			})
 		}
 	})
@@ -443,7 +444,7 @@ func TestServiceHandleCreate(t *testing.T) {
 					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
 				)
 				So(err, ShouldBeNil)
-				httpRunner(tt.status, tt.header, service.HandleCreate, tt.req, tt.body)
+				httpTest.Runner(tt.status, tt.header, service.HandleCreate, tt.req, tt.body)
 			})
 		}
 	})
