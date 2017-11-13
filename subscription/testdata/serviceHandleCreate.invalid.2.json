@@ -1,7 +1,6 @@
 {
   "error": {
-    "status": 400,
-    "title": "invalid content",
+    "title": "invalid body content",
     "detail": "missing endpoint.URL"
   }
 }

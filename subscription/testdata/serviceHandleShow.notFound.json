@@ -1,7 +1,6 @@
 {
   "error": {
-    "status": 500,
     "title": "error during subscription search",
-    "detail": "error during repository search"
+    "detail": "subscription '456' at resource '123', not found"
   }
 }

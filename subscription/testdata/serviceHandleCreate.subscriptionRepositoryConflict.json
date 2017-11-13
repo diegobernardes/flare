@@ -1,7 +1,6 @@
 {
   "error": {
-    "status": 409,
-    "title": "error during subscription save",
+    "title": "error during subscription create",
     "detail": "already exists a subscription '456' with the endpoint.URL 'http://app.com'"
   }
 }

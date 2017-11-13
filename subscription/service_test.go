@@ -9,489 +9,442 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
+	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/diegobernardes/flare"
-	infraHTTP "github.com/diegobernardes/flare/infra/http/test"
+	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/repository/test"
 )
 
 func TestNewService(t *testing.T) {
-	tests := []struct {
-		name     string
-		options  []func(*Service)
-		hasError bool
-	}{
-		{
-			"Fail",
-			[]func(*Service){},
-			true,
-		},
-		{
-			"Fail",
-			[]func(*Service){
-				ServiceDefaultLimit(-1),
-			},
-			true,
-		},
-		{
-			"Fail",
-			[]func(*Service){
-				ServiceDefaultLimit(1),
-				ServiceLogger(log.NewNopLogger()),
-			},
-			true,
-		},
-		{
-			"Fail",
-			[]func(*Service){
-				ServiceDefaultLimit(1),
-				ServiceLogger(log.NewNopLogger()),
-				ServiceSubscriptionRepository(memory.NewSubscription()),
-			},
-			true,
-		},
-		{
-			"Fail",
-			[]func(*Service){
-				ServiceDefaultLimit(1),
-				ServiceLogger(log.NewNopLogger()),
+	Convey("Given a list of valid service options", t, func() {
+		tests := [][]func(*Service){
+			{
 				ServiceSubscriptionRepository(memory.NewSubscription()),
 				ServiceResourceRepository(memory.NewResource()),
-			},
-			true,
-		},
-		{
-			"Fail",
-			[]func(*Service){
-				ServiceDefaultLimit(1),
-				ServiceLogger(log.NewNopLogger()),
-				ServiceSubscriptionRepository(memory.NewSubscription()),
-				ServiceResourceRepository(memory.NewResource()),
-				ServiceGetResourceId(func(*http.Request) string { return "" }),
-			},
-			true,
-		},
-		{
-			"Fail",
-			[]func(*Service){
-				ServiceDefaultLimit(1),
-				ServiceLogger(log.NewNopLogger()),
-				ServiceSubscriptionRepository(memory.NewSubscription()),
-				ServiceResourceRepository(memory.NewResource()),
-				ServiceGetResourceId(func(*http.Request) string { return "" }),
-				ServiceGetSubscriptionId(func(*http.Request) string { return "" }),
-			},
-			true,
-		},
-		{
-			"Success",
-			[]func(*Service){
-				ServiceDefaultLimit(1),
-				ServiceLogger(log.NewNopLogger()),
-				ServiceSubscriptionRepository(memory.NewSubscription()),
-				ServiceResourceRepository(memory.NewResource()),
-				ServiceGetResourceId(func(*http.Request) string { return "" }),
-				ServiceGetSubscriptionId(func(*http.Request) string { return "" }),
+				ServiceGetResourceID(func(*http.Request) string { return "" }),
+				ServiceGetSubscriptionID(func(*http.Request) string { return "" }),
 				ServiceGetSubscriptionURI(func(string, string) string { return "" }),
+				ServiceParsePagination(infraHTTP.ParsePagination(30)),
+				ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
 			},
-			false,
-		},
-		{
-			"Success",
-			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
-				ServiceSubscriptionRepository(memory.NewSubscription()),
-				ServiceResourceRepository(memory.NewResource()),
-				ServiceGetResourceId(func(*http.Request) string { return "" }),
-				ServiceGetSubscriptionId(func(*http.Request) string { return "" }),
-				ServiceGetSubscriptionURI(func(string, string) string { return "" }),
-			},
-			false,
-		},
-	}
+		}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewService(tt.options...)
-			if tt.hasError != (err != nil) {
-				t.Errorf("NewService invalid result, want '%v', got '%v'", tt.hasError, err)
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				_, err := NewService(tt...)
+				So(err, ShouldBeNil)
 			}
 		})
-	}
+	})
+
+	Convey("Given a list of invalid service options", t, func() {
+		tests := [][]func(*Service){
+			{},
+			{
+				ServiceSubscriptionRepository(memory.NewSubscription()),
+			},
+			{
+				ServiceSubscriptionRepository(memory.NewSubscription()),
+				ServiceResourceRepository(memory.NewResource()),
+			},
+			{
+				ServiceSubscriptionRepository(memory.NewSubscription()),
+				ServiceResourceRepository(memory.NewResource()),
+				ServiceGetResourceID(func(*http.Request) string { return "" }),
+			},
+			{
+				ServiceSubscriptionRepository(memory.NewSubscription()),
+				ServiceResourceRepository(memory.NewResource()),
+				ServiceGetResourceID(func(*http.Request) string { return "" }),
+				ServiceGetSubscriptionID(func(*http.Request) string { return "" }),
+			},
+			{
+				ServiceSubscriptionRepository(memory.NewSubscription()),
+				ServiceResourceRepository(memory.NewResource()),
+				ServiceGetResourceID(func(*http.Request) string { return "" }),
+				ServiceGetSubscriptionID(func(*http.Request) string { return "" }),
+				ServiceGetSubscriptionURI(func(string, string) string { return "" }),
+			},
+			{
+				ServiceSubscriptionRepository(memory.NewSubscription()),
+				ServiceResourceRepository(memory.NewResource()),
+				ServiceGetResourceID(func(*http.Request) string { return "" }),
+				ServiceGetSubscriptionID(func(*http.Request) string { return "" }),
+				ServiceGetSubscriptionURI(func(string, string) string { return "" }),
+				ServiceParsePagination(infraHTTP.ParsePagination(30)),
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				_, err := NewService(tt...)
+				So(err, ShouldNotBeNil)
+			}
+		})
+	})
 }
 
 func TestServiceHandleIndex(t *testing.T) {
-	tests := []struct {
-		name                   string
-		req                    *http.Request
-		status                 int
-		header                 http.Header
-		body                   []byte
-		subscriptionRepository flare.SubscriptionRepositorier
-		resourceRepository     flare.ResourceRepositorier
-	}{
-		{
-			"Invalid pagination",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions?limit=sample", nil),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.invalidPaginationType1.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Invalid pagination",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=sample", nil),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.invalidPaginationType2.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Invalid pagination",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions?limit=-1", nil),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.invalidPaginationValue1.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Invalid pagination",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=-1", nil),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.invalidPaginationValue2.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Error during resource search",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
-			http.StatusInternalServerError,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.resourceErrorSearch.json"),
-			test.NewSubscription(),
-			test.NewResource(test.ResourceError(errors.New("error during repository search"))),
-		},
-		{
-			"Resource not found",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
-			http.StatusNotFound,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.resourceNotFound.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Error during subscription search",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
-			http.StatusInternalServerError,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.subscriptionErrorSearch.json"),
-			test.NewSubscription(test.SubscriptionError(
-				errors.New("error during repository search"),
-			)),
-			test.NewResource(
-				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
-				test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-			),
-		},
-		{
-			"Empty search",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
-			http.StatusOK,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.emptySearch.json"),
-			test.NewSubscription(
-				test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-			),
-			test.NewResource(
-				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
-				test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-			),
-		},
-		{
-			"Results with pagination",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=1", nil),
-			http.StatusOK,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleIndex.resultsWithPagination.json"),
-			test.NewSubscription(
-				test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-				test.SubscriptionLoadSliceByteSubscription(load("handleIndex.input.json")),
-			),
-			test.NewResource(
-				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
-				test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-			),
-		},
-	}
-
-	for _, tt := range tests {
-		service, err := NewService(
-			ServiceDefaultLimit(30),
-			ServiceLogger(log.NewNopLogger()),
-			ServiceSubscriptionRepository(tt.subscriptionRepository),
-			ServiceResourceRepository(tt.resourceRepository),
-			ServiceGetResourceId(func(r *http.Request) string {
-				id := strings.Replace(r.URL.Path, "/subscriptions", "", -1)
-				id = strings.Replace(id, "/", "", -1)
-				return id
-			}),
-			ServiceGetSubscriptionId(func(r *http.Request) string {
-				return strings.Replace(r.URL.String(), "http://resources/", "", -1)
-			}),
-			ServiceGetSubscriptionURI(func(string, string) string { return "" }),
-		)
-		if err != nil {
-			t.Error(errors.Wrap(err, "error during service initialization"))
-			t.FailNow()
+	Convey("Given a list of requests", t, func() {
+		tests := []struct {
+			title                  string
+			req                    *http.Request
+			status                 int
+			header                 http.Header
+			body                   []byte
+			subscriptionRepository flare.SubscriptionRepositorier
+			resourceRepository     flare.ResourceRepositorier
+		}{
+			{
+				"The request should have a invalid pagination 1",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions?limit=sample", nil),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.invalidPagination.1.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The request should have a invalid pagination 2",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=sample", nil),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.invalidPagination.2.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The request should have a invalid pagination 3",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions?limit=-1", nil),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.invalidPagination.3.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The request should have a invalid pagination 4",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=-1", nil),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.invalidPagination.4.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The response should be a resource repository error",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
+				http.StatusInternalServerError,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.resourceRepositoryError.json"),
+				test.NewSubscription(),
+				test.NewResource(test.ResourceError(errors.New("error during repository search"))),
+			},
+			{
+				"The response should be a subscription repository error",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
+				http.StatusInternalServerError,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.subscriptionRepositoryError.json"),
+				test.NewSubscription(test.SubscriptionError(
+					errors.New("error during repository search"),
+				)),
+				test.NewResource(
+					test.ResourceLoadSliceByteResource(load("serviceHandleIndex.inputResource.json")),
+					test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+				),
+			},
+			{
+				"The response should be a subscription not found",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
+				http.StatusNotFound,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.resourceNotFound.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The response should be a empty list of subscriptions",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
+				http.StatusOK,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.emptySearch.json"),
+				test.NewSubscription(
+					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+				),
+				test.NewResource(
+					test.ResourceLoadSliceByteResource(load("serviceHandleIndex.inputResource.json")),
+					test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+				),
+			},
+			{
+				"The result should contains subscriptions and the pagination",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=1", nil),
+				http.StatusOK,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleIndex.valid.json"),
+				test.NewSubscription(
+					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					test.SubscriptionLoadSliceByteSubscription(
+						load("serviceHandleIndex.inputSubscription.json"),
+					),
+				),
+				test.NewResource(
+					test.ResourceLoadSliceByteResource(load("serviceHandleIndex.inputResource.json")),
+					test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+				),
+			},
 		}
 
-		t.Run(tt.name, infraHTTP.Handler(tt.status, tt.header, service.HandleIndex, tt.req, tt.body))
-	}
+		for _, tt := range tests {
+			Convey(tt.title, func() {
+				service, err := NewService(
+					ServiceSubscriptionRepository(tt.subscriptionRepository),
+					ServiceResourceRepository(tt.resourceRepository),
+					ServiceGetResourceID(func(r *http.Request) string { return "123" }),
+					ServiceGetSubscriptionID(func(r *http.Request) string { return "" }),
+					ServiceGetSubscriptionURI(func(reId, subId string) string { return "" }),
+					ServiceParsePagination(infraHTTP.ParsePagination(30)),
+					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+				)
+				So(err, ShouldBeNil)
+				httpRunner(tt.status, tt.header, service.HandleIndex, tt.req, tt.body)
+			})
+		}
+	})
 }
 
 func TestServiceHandleShow(t *testing.T) {
-	tests := []struct {
-		name                   string
-		req                    *http.Request
-		status                 int
-		header                 http.Header
-		body                   []byte
-		subscriptionRepository flare.SubscriptionRepositorier
-		resourceRepository     flare.ResourceRepositorier
-	}{
-		{
-			"Not found",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions/456", nil),
-			http.StatusNotFound,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleShow.notFound.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Found found",
-			httptest.NewRequest("GET", "http://resources/123/subscriptions/456", nil),
-			http.StatusOK,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleShow.foundOutput.json"),
-			test.NewSubscription(
-				test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-				test.SubscriptionLoadSliceByteSubscription(load("handleShow.foundInput.json")),
-			),
-			test.NewResource(),
-		},
-	}
-
-	for _, tt := range tests {
-		service, err := NewService(
-			ServiceLogger(log.NewNopLogger()),
-			ServiceSubscriptionRepository(tt.subscriptionRepository),
-			ServiceResourceRepository(tt.resourceRepository),
-			ServiceGetResourceId(func(r *http.Request) string {
-				return strings.Split(r.URL.Path, "/")[1]
-			}),
-			ServiceGetSubscriptionId(func(r *http.Request) string {
-				return strings.Split(r.URL.Path, "/")[3]
-			}),
-			ServiceGetSubscriptionURI(func(string, string) string { return "" }),
-		)
-		if err != nil {
-			t.Error(errors.Wrap(err, "error during service initialization"))
-			t.FailNow()
+	Convey("Given a list of requests", t, func() {
+		tests := []struct {
+			title                  string
+			req                    *http.Request
+			status                 int
+			header                 http.Header
+			body                   []byte
+			subscriptionRepository flare.SubscriptionRepositorier
+			resourceRepository     flare.ResourceRepositorier
+		}{
+			{
+				"The response should be a subscription not found",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions/456", nil),
+				http.StatusNotFound,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleShow.notFound.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The response should be a subscription",
+				httptest.NewRequest("GET", "http://resources/123/subscriptions/456", nil),
+				http.StatusOK,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleShow.valid.output.json"),
+				test.NewSubscription(
+					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					test.SubscriptionLoadSliceByteSubscription(load("serviceHandleShow.valid.input.json")),
+				),
+				test.NewResource(),
+			},
 		}
 
-		t.Run(tt.name, infraHTTP.Handler(tt.status, tt.header, service.HandleShow, tt.req, tt.body))
-	}
+		for _, tt := range tests {
+			Convey(tt.title, func() {
+				service, err := NewService(
+					ServiceSubscriptionRepository(tt.subscriptionRepository),
+					ServiceResourceRepository(tt.resourceRepository),
+					ServiceGetResourceID(func(r *http.Request) string { return "123" }),
+					ServiceGetSubscriptionID(func(r *http.Request) string { return "456" }),
+					ServiceGetSubscriptionURI(func(reId, subId string) string {
+						return fmt.Sprintf("http://resources/%s/subscriptions/%s", reId, subId)
+					}),
+					ServiceParsePagination(infraHTTP.ParsePagination(30)),
+					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+				)
+				So(err, ShouldBeNil)
+				httpRunner(tt.status, tt.header, service.HandleShow, tt.req, tt.body)
+			})
+		}
+	})
 }
 
 func TestServiceHandleDelete(t *testing.T) {
-	tests := []struct {
-		name                   string
-		req                    *http.Request
-		status                 int
-		header                 http.Header
-		body                   []byte
-		subscriptionRepository flare.SubscriptionRepositorier
-		resourceRepository     flare.ResourceRepositorier
-	}{
-		{
-			"Not found",
-			httptest.NewRequest(http.MethodDelete, "http://resources/123/subscriptions/456", nil),
-			http.StatusNotFound,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleDelete.notFound.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Delete",
-			httptest.NewRequest(http.MethodDelete, "http://resources/123/subscriptions/456", nil),
-			http.StatusNoContent,
-			http.Header{},
-			nil,
-			test.NewSubscription(
-				test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-				test.SubscriptionLoadSliceByteSubscription(load("handleShow.foundInput.json")),
-			),
-			test.NewResource(),
-		},
-	}
-
-	for _, tt := range tests {
-		service, err := NewService(
-			ServiceLogger(log.NewNopLogger()),
-			ServiceSubscriptionRepository(tt.subscriptionRepository),
-			ServiceResourceRepository(tt.resourceRepository),
-			ServiceGetResourceId(func(r *http.Request) string {
-				return strings.Split(r.URL.Path, "/")[1]
-			}),
-			ServiceGetSubscriptionId(func(r *http.Request) string {
-				return strings.Split(r.URL.Path, "/")[3]
-			}),
-			ServiceGetSubscriptionURI(func(string, string) string { return "" }),
-		)
-		if err != nil {
-			t.Error(errors.Wrap(err, "error during service initialization"))
-			t.FailNow()
+	Convey("Given a list of requests", t, func() {
+		tests := []struct {
+			title                  string
+			req                    *http.Request
+			status                 int
+			header                 http.Header
+			body                   []byte
+			subscriptionRepository flare.SubscriptionRepositorier
+			resourceRepository     flare.ResourceRepositorier
+		}{
+			{
+				"The response should be a subscription not found",
+				httptest.NewRequest(http.MethodDelete, "http://resources/123/subscriptions/456", nil),
+				http.StatusNotFound,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleDelete.notFound.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The response should be the result of a deleted subscription",
+				httptest.NewRequest(http.MethodDelete, "http://resources/123/subscriptions/456", nil),
+				http.StatusNoContent,
+				http.Header{},
+				nil,
+				test.NewSubscription(
+					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					test.SubscriptionLoadSliceByteSubscription(load("serviceHandleShow.valid.input.json")),
+				),
+				test.NewResource(),
+			},
 		}
 
-		t.Run(tt.name, infraHTTP.Handler(tt.status, tt.header, service.HandleDelete, tt.req, tt.body))
-	}
+		for _, tt := range tests {
+			Convey(tt.title, func() {
+				service, err := NewService(
+					ServiceSubscriptionRepository(tt.subscriptionRepository),
+					ServiceResourceRepository(tt.resourceRepository),
+					ServiceGetResourceID(func(r *http.Request) string { return "123" }),
+					ServiceGetSubscriptionID(func(r *http.Request) string { return "456" }),
+					ServiceGetSubscriptionURI(func(reId, subId string) string { return "" }),
+					ServiceParsePagination(infraHTTP.ParsePagination(30)),
+					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+				)
+				So(err, ShouldBeNil)
+				httpRunner(tt.status, tt.header, service.HandleDelete, tt.req, tt.body)
+			})
+		}
+	})
 }
 
 func TestServiceHandleCreate(t *testing.T) {
-	tests := []struct {
-		name                   string
-		req                    *http.Request
-		status                 int
-		header                 http.Header
-		body                   []byte
-		subscriptionRepository flare.SubscriptionRepositorier
-		resourceRepository     flare.ResourceRepositorier
-	}{
-		{
-			"Invalid Content",
-			httptest.NewRequest(http.MethodPost, "http://resources/123/subscriptions", nil),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleCreate.invalidContent1.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Invalid Content",
-			httptest.NewRequest(
-				http.MethodPost, "http://resources/123/subscriptions", bytes.NewBufferString("{}"),
-			),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleCreate.invalidContent2.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Invalid Content",
-			httptest.NewRequest(
-				http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-					load("handleCreate.invalidInput.json"),
-				),
-			),
-			http.StatusBadRequest,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleCreate.invalidContent3.json"),
-			test.NewSubscription(),
-			test.NewResource(),
-		},
-		{
-			"Error at repository",
-			httptest.NewRequest(
-				http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-					load("handleCreate.input.json"),
-				),
-			),
-			http.StatusInternalServerError,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleCreate.errorRepository.json"),
-			test.NewSubscription(
-				test.SubscriptionError(errors.New("error at repository")),
-			),
-			test.NewResource(
-				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
-			),
-		},
-		{
-			"Conflict at repository",
-			httptest.NewRequest(
-				http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-					load("handleCreate.input.json"),
-				),
-			),
-			http.StatusConflict,
-			http.Header{"Content-Type": []string{"application/json"}},
-			load("handleCreate.repositoryConflict.json"),
-			test.NewSubscription(
-				test.SubscriptionCreateId("456"),
-				test.SubscriptionLoadSliceByteSubscription(load("handleCreate.inputArray.json")),
-			),
-			test.NewResource(
-				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
-			),
-		},
-		{
-			"Create",
-			httptest.NewRequest(
-				http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-					load("handleCreate.input.json"),
-				),
-			),
-			http.StatusCreated,
-			http.Header{
-				"Content-Type": []string{"application/json"},
-				"Location":     []string{"http://resources/123/subscriptions/456"},
+	Convey("Given a list of requests", t, func() {
+		tests := []struct {
+			title                  string
+			req                    *http.Request
+			status                 int
+			header                 http.Header
+			body                   []byte
+			subscriptionRepository flare.SubscriptionRepositorier
+			resourceRepository     flare.ResourceRepositorier
+		}{
+			{
+				"The response should have a invalid resource 1",
+				httptest.NewRequest(http.MethodPost, "http://resources/123/subscriptions", nil),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleCreate.invalid.1.json"),
+				test.NewSubscription(),
+				test.NewResource(),
 			},
-			load("handleCreate.create.json"),
-			test.NewSubscription(
-				test.SubscriptionCreateId("456"),
-				test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-			),
-			test.NewResource(
-				test.ResourceLoadSliceByteResource(load("handleInput.inputResource.json")),
-			),
-		},
-	}
-
-	for _, tt := range tests {
-		service, err := NewService(
-			ServiceLogger(log.NewNopLogger()),
-			ServiceSubscriptionRepository(tt.subscriptionRepository),
-			ServiceResourceRepository(tt.resourceRepository),
-			ServiceGetResourceId(func(r *http.Request) string {
-				return strings.Split(r.URL.Path, "/")[1]
-			}),
-			ServiceGetSubscriptionId(func(r *http.Request) string {
-				return strings.Split(r.URL.Path, "/")[3]
-			}),
-			ServiceGetSubscriptionURI(func(resourceId string, id string) string {
-				return fmt.Sprintf("http://resources/%s/subscriptions/%s", resourceId, id)
-			}),
-		)
-		if err != nil {
-			t.Error(errors.Wrap(err, "error during service initialization"))
-			t.FailNow()
+			{
+				"The response should have a invalid resource 2",
+				httptest.NewRequest(
+					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBufferString("{}"),
+				),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleCreate.invalid.2.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The response should have a invalid resource 3",
+				httptest.NewRequest(
+					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
+						load("serviceHandleCreate.invalid.input.json"),
+					),
+				),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleCreate.invalid.3.json"),
+				test.NewSubscription(),
+				test.NewResource(),
+			},
+			{
+				"The response should be a subscription repository error",
+				httptest.NewRequest(
+					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
+						load("serviceHandleCreate.input.json"),
+					),
+				),
+				http.StatusInternalServerError,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleCreate.subscriptionRepositoryError.json"),
+				test.NewSubscription(
+					test.SubscriptionError(errors.New("error at repository")),
+				),
+				test.NewResource(
+					test.ResourceLoadSliceByteResource(load("serviceHandleCreate.resourceInput.json")),
+				),
+			},
+			{
+				"The response should be a subscription conflict",
+				httptest.NewRequest(
+					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
+						load("serviceHandleCreate.input.json"),
+					),
+				),
+				http.StatusConflict,
+				http.Header{"Content-Type": []string{"application/json"}},
+				load("serviceHandleCreate.subscriptionRepositoryConflict.json"),
+				test.NewSubscription(
+					test.SubscriptionCreateId("456"),
+					test.SubscriptionLoadSliceByteSubscription(load("serviceHandleCreate.inputArray.json")),
+				),
+				test.NewResource(
+					test.ResourceLoadSliceByteResource(load("serviceHandleCreate.resourceInput.json")),
+				),
+			},
+			{
+				"The response should be the result of a created subscription",
+				httptest.NewRequest(
+					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
+						load("serviceHandleCreate.input.json"),
+					),
+				),
+				http.StatusCreated,
+				http.Header{
+					"Content-Type": []string{"application/json"},
+					"Location":     []string{"http://resources/123/subscriptions/456"},
+				},
+				load("serviceHandleCreate.create.json"),
+				test.NewSubscription(
+					test.SubscriptionCreateId("456"),
+					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+				),
+				test.NewResource(
+					test.ResourceLoadSliceByteResource(load("serviceHandleCreate.resourceInput.json")),
+				),
+			},
 		}
 
-		t.Run(tt.name, infraHTTP.Handler(tt.status, tt.header, service.HandleCreate, tt.req, tt.body))
-	}
+		for _, tt := range tests {
+			Convey(tt.title, func() {
+				service, err := NewService(
+					ServiceSubscriptionRepository(tt.subscriptionRepository),
+					ServiceResourceRepository(tt.resourceRepository),
+					ServiceGetResourceID(func(r *http.Request) string { return "123" }),
+					ServiceGetSubscriptionID(func(r *http.Request) string { return "456" }),
+					ServiceGetSubscriptionURI(func(reId, subId string) string {
+						return fmt.Sprintf("http://resources/%s/subscriptions/%s", reId, subId)
+					}),
+					ServiceParsePagination(infraHTTP.ParsePagination(30)),
+					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+				)
+				So(err, ShouldBeNil)
+				httpRunner(tt.status, tt.header, service.HandleCreate, tt.req, tt.body)
+			})
+		}
+	})
 }

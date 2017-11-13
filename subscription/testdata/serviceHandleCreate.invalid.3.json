@@ -1,7 +1,6 @@
 {
   "error": {
-    "status": 400,
-    "title": "invalid content",
+    "title": "invalid subscription",
     "detail": "error during parse '%zzzzz' to url.URL: parse %zzzzz: invalid URL escape \"%zz\""
   }
 }

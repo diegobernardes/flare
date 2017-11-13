@@ -18,6 +18,7 @@ import (
 
 	"github.com/diegobernardes/flare"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
+	"github.com/diegobernardes/flare/infra/http/test"
 	"github.com/diegobernardes/flare/repository/memory"
 )
 
@@ -227,7 +228,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					t.FailNow()
 				}
 
-				httpRunner(tt.status, tt.header, service.HandleIndex, tt.req, tt.body)
+				test.Runner(tt.status, tt.header, service.HandleIndex, tt.req, tt.body)
 			})
 		}
 	})
@@ -305,7 +306,7 @@ func TestServiceHandleShow(t *testing.T) {
 					t.FailNow()
 				}
 
-				httpRunner(tt.status, tt.header, service.HandleShow, tt.req, tt.body)
+				test.Runner(tt.status, tt.header, service.HandleShow, tt.req, tt.body)
 			})
 		}
 	})
@@ -383,7 +384,7 @@ func TestServiceHandleDelete(t *testing.T) {
 					t.FailNow()
 				}
 
-				httpRunner(tt.status, tt.header, service.HandleDelete, tt.req, tt.body)
+				test.Runner(tt.status, tt.header, service.HandleDelete, tt.req, tt.body)
 			})
 		}
 	})
@@ -493,7 +494,7 @@ func TestServiceHandleCreate(t *testing.T) {
 					t.FailNow()
 				}
 
-				httpRunner(tt.status, tt.header, service.HandleCreate, tt.req, tt.body)
+				test.Runner(tt.status, tt.header, service.HandleCreate, tt.req, tt.body)
 			})
 		}
 	})

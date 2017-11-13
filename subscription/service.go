@@ -7,42 +7,36 @@ package subscription
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
-	"github.com/go-kit/kit/log"
-
 	"github.com/diegobernardes/flare"
-	infraHTTP "github.com/diegobernardes/flare/infra/http"
 )
 
 // Service implements the HTTP handler to manage subscriptions.
 type Service struct {
-	logger                 log.Logger
 	resourceRepository     flare.ResourceRepositorier
 	subscriptionRepository flare.SubscriptionRepositorier
-	getResourceId          func(*http.Request) string
-	getSubscriptionId      func(*http.Request) string
+	getResourceID          func(*http.Request) string
+	getSubscriptionID      func(*http.Request) string
 	getSubscriptionURI     func(string, string) string
 	writeResponse          func(http.ResponseWriter, interface{}, int, http.Header)
 	parsePagination        func(r *http.Request) (*flare.Pagination, error)
-	defaultLimit           int
 }
 
-// HandleIndex receive the request to list the resources.
+// HandleIndex receive the request to list the subscriptions.
 func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
-	pagination, err := s.parsePagination(r)
+	pag, err := s.parsePagination(r)
 	if err != nil {
 		s.writeError(w, err, "error during pagination parse", http.StatusBadRequest)
 		return
 	}
 
-	if err = pagination.Valid(); err != nil {
+	if err = pag.Valid(); err != nil {
 		s.writeError(w, err, "invalid pagination", http.StatusBadRequest)
 		return
 	}
 
-	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceId(r))
+	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceID(r))
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
@@ -53,24 +47,24 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	subscriptions, paginationResponse, err := s.subscriptionRepository.FindAll(
-		r.Context(), pagination, resource.ID,
+	subs, subsPag, err := s.subscriptionRepository.FindAll(
+		r.Context(), pag, resource.ID,
 	)
 	if err != nil {
-		s.writeError(w, err, "error during subscription search", http.StatusInternalServerError)
+		s.writeError(w, err, "error during subscriptions search", http.StatusInternalServerError)
 		return
 	}
 
 	s.writeResponse(w, &response{
-		Pagination:    transformPagination(paginationResponse),
-		Subscriptions: transformSubscriptions(subscriptions),
+		Subscriptions: transformSubscriptions(subs),
+		Pagination:    transformPagination(subsPag),
 	}, http.StatusOK, nil)
 }
 
-// HandleShow receive the request to get a resource.
+// HandleShow receive the request to show a subscription.
 func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 	subs, err := s.subscriptionRepository.FindOne(
-		r.Context(), s.getResourceId(r), s.getSubscriptionId(r),
+		r.Context(), s.getResourceID(r), s.getSubscriptionID(r),
 	)
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -85,7 +79,7 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 	s.writeResponse(w, transformSubscription(subs), http.StatusOK, nil)
 }
 
-// HandleCreate receive the request to create a resource.
+// HandleCreate receive the request to create a subscription.
 func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	var (
 		d       = json.NewDecoder(r.Body)
@@ -93,22 +87,22 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err := d.Decode(content); err != nil {
-		s.writeError(w, err, "error during content parse", http.StatusBadRequest)
+		s.writeError(w, err, "error during body parse", http.StatusBadRequest)
 		return
 	}
 
 	if err := content.valid(); err != nil {
-		s.writeError(w, err, "invalid content", http.StatusBadRequest)
+		s.writeError(w, err, "invalid body content", http.StatusBadRequest)
 		return
 	}
 
 	result, err := content.toFlareSubscription()
 	if err != nil {
-		s.writeError(w, err, "invalid content", http.StatusBadRequest)
+		s.writeError(w, err, "invalid subscription", http.StatusBadRequest)
 		return
 	}
 
-	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceId(r))
+	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceID(r))
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
@@ -126,7 +120,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusConflict
 		}
 
-		s.writeError(w, err, "error during subscription save", status)
+		s.writeError(w, err, "error during subscription create", status)
 		return
 	}
 
@@ -136,9 +130,9 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	s.writeResponse(w, resp, http.StatusCreated, header)
 }
 
-// HandleDelete receive the request to delete a resource.
+// HandleDelete receive the request to delete a subscription.
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	err := s.subscriptionRepository.Delete(r.Context(), s.getResourceId(r), s.getSubscriptionId(r))
+	err := s.subscriptionRepository.Delete(r.Context(), s.getResourceID(r), s.getSubscriptionID(r))
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.SubscriptionRepositoryError); ok && errRepo.NotFound() {
@@ -160,16 +154,6 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		option(service)
 	}
 
-	if service.defaultLimit < 0 {
-		return nil, fmt.Errorf("invalid defaultLimit '%d'", service.defaultLimit)
-	} else if service.defaultLimit == 0 {
-		service.defaultLimit = 30
-	}
-
-	if service.logger == nil {
-		return nil, errors.New("logger not found")
-	}
-
 	if service.subscriptionRepository == nil {
 		return nil, errors.New("subscriptionRepository not found")
 	}
@@ -178,26 +162,27 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		return nil, errors.New("resourceRepository not found")
 	}
 
-	if service.getResourceId == nil {
-		return nil, errors.New("getResourceId not found")
+	if service.getResourceID == nil {
+		return nil, errors.New("getResourceID not found")
 	}
 
-	if service.getSubscriptionId == nil {
-		return nil, errors.New("getSubscriptionId not found")
+	if service.getSubscriptionID == nil {
+		return nil, errors.New("getSubscriptionID not found")
 	}
 
 	if service.getSubscriptionURI == nil {
 		return nil, errors.New("getSubscriptionURI not found")
 	}
 
-	service.parsePagination = infraHTTP.ParsePagination(service.defaultLimit)
-	service.writeResponse = infraHTTP.WriteResponse(service.logger)
-	return service, nil
-}
+	if service.parsePagination == nil {
+		return nil, errors.New("parsePagination not found")
+	}
 
-// ServiceLogger set the logger.
-func ServiceLogger(logger log.Logger) func(*Service) {
-	return func(s *Service) { s.logger = logger }
+	if service.writeResponse == nil {
+		return nil, errors.New("writeResponse not found")
+	}
+
+	return service, nil
 }
 
 // ServiceResourceRepository set the repository to access the resources.
@@ -210,14 +195,14 @@ func ServiceSubscriptionRepository(repo flare.SubscriptionRepositorier) func(*Se
 	return func(s *Service) { s.subscriptionRepository = repo }
 }
 
-// ServiceGetResourceId the function to fetch the resourceId from the URL.
-func ServiceGetResourceId(fn func(*http.Request) string) func(*Service) {
-	return func(s *Service) { s.getResourceId = fn }
+// ServiceGetResourceID the function to fetch the resourceId from the URL.
+func ServiceGetResourceID(fn func(*http.Request) string) func(*Service) {
+	return func(s *Service) { s.getResourceID = fn }
 }
 
-// ServiceGetSubscriptionId the function to fetch the subscriptionId from the URL.
-func ServiceGetSubscriptionId(fn func(*http.Request) string) func(*Service) {
-	return func(s *Service) { s.getSubscriptionId = fn }
+// ServiceGetSubscriptionID the function to fetch the subscriptionId from the URL.
+func ServiceGetSubscriptionID(fn func(*http.Request) string) func(*Service) {
+	return func(s *Service) { s.getSubscriptionID = fn }
 }
 
 // ServiceGetSubscriptionURI set the function to generate the URI or a given subscription.
@@ -225,7 +210,18 @@ func ServiceGetSubscriptionURI(fn func(string, string) string) func(*Service) {
 	return func(s *Service) { s.getSubscriptionURI = fn }
 }
 
-// ServiceDefaultLimit set the default value of limit.
-func ServiceDefaultLimit(limit int) func(*Service) {
-	return func(s *Service) { s.defaultLimit = limit }
+// ServiceParsePagination set the function used to parse the pagination.
+func ServiceParsePagination(fn func(r *http.Request) (*flare.Pagination, error)) func(*Service) {
+	return func(s *Service) {
+		s.parsePagination = fn
+	}
+}
+
+// ServiceWriteResponse set the function that return the content to client.
+func ServiceWriteResponse(
+	fn func(http.ResponseWriter, interface{}, int, http.Header),
+) func(*Service) {
+	return func(s *Service) {
+		s.writeResponse = fn
+	}
 }

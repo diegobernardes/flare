@@ -203,17 +203,19 @@ func (c *Client) initSubscriptionService(
 	subscriptionRepository flare.SubscriptionRepositorier,
 ) (*subscription.Service, error) {
 	subscriptionService, err := subscription.NewService(
-		subscription.ServiceDefaultLimit(c.config.httpDefaultLimit()),
-		subscription.ServiceGetResourceId(func(r *http.Request) string {
+		subscription.ServiceParsePagination(
+			infraHTTP.ParsePagination(c.config.httpDefaultLimit()),
+		),
+		subscription.ServiceWriteResponse(infraHTTP.WriteResponse(c.logger)),
+		subscription.ServiceGetResourceID(func(r *http.Request) string {
 			return chi.URLParam(r, "resourceId")
 		}),
-		subscription.ServiceGetSubscriptionId(func(r *http.Request) string {
+		subscription.ServiceGetSubscriptionID(func(r *http.Request) string {
 			return chi.URLParam(r, "id")
 		}),
 		subscription.ServiceGetSubscriptionURI(func(resourceId, id string) string {
 			return fmt.Sprintf("/resources/%s/subscriptions/%s", resourceId, id)
 		}),
-		subscription.ServiceLogger(c.logger),
 		subscription.ServiceResourceRepository(resourceRepository),
 		subscription.ServiceSubscriptionRepository(subscriptionRepository),
 	)

@@ -6,16 +6,12 @@ package resource
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"time"
 
 	"github.com/pkg/errors"
-	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/diegobernardes/flare"
 	"github.com/diegobernardes/flare/repository/memory"
@@ -110,34 +106,4 @@ func load(name string) []byte {
 		panic(errors.Wrap(err, fmt.Sprintf("error during read '%s'", path)))
 	}
 	return content
-}
-
-func httpRunner(
-	status int,
-	header http.Header,
-	handler func(w http.ResponseWriter, r *http.Request),
-	req *http.Request,
-	expectedBody []byte,
-) {
-	w := httptest.NewRecorder()
-	handler(w, req)
-
-	resp := w.Result()
-	body, err := ioutil.ReadAll(resp.Body)
-	So(err, ShouldBeNil)
-	So(status, ShouldEqual, resp.StatusCode)
-	So(header, ShouldResemble, resp.Header)
-
-	if len(body) == 0 && expectedBody == nil {
-		return
-	}
-
-	b1, b2 := make(map[string]interface{}), make(map[string]interface{})
-	err = json.Unmarshal(body, &b1)
-	So(err, ShouldBeNil)
-
-	err = json.Unmarshal(expectedBody, &b2)
-	So(err, ShouldBeNil)
-
-	So(b1, ShouldResemble, b2)
 }

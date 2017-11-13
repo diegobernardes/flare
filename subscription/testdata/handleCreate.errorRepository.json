@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 500,
-    "title": "error during subscription save",
-    "detail": "error at repository"
-  }
-}
