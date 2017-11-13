@@ -19,6 +19,7 @@ import (
 	"github.com/diegobernardes/flare"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	httpTest "github.com/diegobernardes/flare/infra/http/test"
+	infraTest "github.com/diegobernardes/flare/infra/test"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/repository/test"
 )
@@ -108,7 +109,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions?limit=sample", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.1.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.1.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -117,7 +118,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=sample", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.2.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.2.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -126,7 +127,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions?limit=-1", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.3.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.3.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -135,7 +136,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=-1", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.invalidPagination.4.json"),
+				infraTest.Load("serviceHandleIndex.invalidPagination.4.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -144,7 +145,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.resourceRepositoryError.json"),
+				infraTest.Load("serviceHandleIndex.resourceRepositoryError.json"),
 				test.NewSubscription(),
 				test.NewResource(test.ResourceError(errors.New("error during repository search"))),
 			},
@@ -153,12 +154,12 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.subscriptionRepositoryError.json"),
+				infraTest.Load("serviceHandleIndex.subscriptionRepositoryError.json"),
 				test.NewSubscription(test.SubscriptionError(
 					errors.New("error during repository search"),
 				)),
 				test.NewResource(
-					test.ResourceLoadSliceByteResource(load("serviceHandleIndex.inputResource.json")),
+					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleIndex.inputResource.json")),
 					test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
@@ -167,7 +168,7 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.resourceNotFound.json"),
+				infraTest.Load("serviceHandleIndex.resourceNotFound.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -176,12 +177,12 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.emptySearch.json"),
+				infraTest.Load("serviceHandleIndex.emptySearch.json"),
 				test.NewSubscription(
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 				test.NewResource(
-					test.ResourceLoadSliceByteResource(load("serviceHandleIndex.inputResource.json")),
+					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleIndex.inputResource.json")),
 					test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
@@ -190,15 +191,15 @@ func TestServiceHandleIndex(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions?offset=1", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleIndex.valid.json"),
+				infraTest.Load("serviceHandleIndex.valid.json"),
 				test.NewSubscription(
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 					test.SubscriptionLoadSliceByteSubscription(
-						load("serviceHandleIndex.inputSubscription.json"),
+						infraTest.Load("serviceHandleIndex.inputSubscription.json"),
 					),
 				),
 				test.NewResource(
-					test.ResourceLoadSliceByteResource(load("serviceHandleIndex.inputResource.json")),
+					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleIndex.inputResource.json")),
 					test.ResourceDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 			},
@@ -238,7 +239,7 @@ func TestServiceHandleShow(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions/456", nil),
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleShow.notFound.json"),
+				infraTest.Load("serviceHandleShow.notFound.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -247,10 +248,10 @@ func TestServiceHandleShow(t *testing.T) {
 				httptest.NewRequest("GET", "http://resources/123/subscriptions/456", nil),
 				http.StatusOK,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleShow.valid.output.json"),
+				infraTest.Load("serviceHandleShow.valid.output.json"),
 				test.NewSubscription(
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					test.SubscriptionLoadSliceByteSubscription(load("serviceHandleShow.valid.input.json")),
+					test.SubscriptionLoadSliceByteSubscription(infraTest.Load("serviceHandleShow.valid.input.json")),
 				),
 				test.NewResource(),
 			},
@@ -292,7 +293,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				httptest.NewRequest(http.MethodDelete, "http://resources/123/subscriptions/456", nil),
 				http.StatusNotFound,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleDelete.notFound.json"),
+				infraTest.Load("serviceHandleDelete.notFound.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -304,7 +305,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				nil,
 				test.NewSubscription(
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
-					test.SubscriptionLoadSliceByteSubscription(load("serviceHandleShow.valid.input.json")),
+					test.SubscriptionLoadSliceByteSubscription(infraTest.Load("serviceHandleShow.valid.input.json")),
 				),
 				test.NewResource(),
 			},
@@ -344,7 +345,7 @@ func TestServiceHandleCreate(t *testing.T) {
 				httptest.NewRequest(http.MethodPost, "http://resources/123/subscriptions", nil),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.invalid.1.json"),
+				infraTest.Load("serviceHandleCreate.invalid.1.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -355,7 +356,7 @@ func TestServiceHandleCreate(t *testing.T) {
 				),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.invalid.2.json"),
+				infraTest.Load("serviceHandleCreate.invalid.2.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -363,12 +364,12 @@ func TestServiceHandleCreate(t *testing.T) {
 				"The response should have a invalid resource 3",
 				httptest.NewRequest(
 					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-						load("serviceHandleCreate.invalid.input.json"),
+						infraTest.Load("serviceHandleCreate.invalid.input.json"),
 					),
 				),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.invalid.3.json"),
+				infraTest.Load("serviceHandleCreate.invalid.3.json"),
 				test.NewSubscription(),
 				test.NewResource(),
 			},
@@ -376,42 +377,42 @@ func TestServiceHandleCreate(t *testing.T) {
 				"The response should be a subscription repository error",
 				httptest.NewRequest(
 					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-						load("serviceHandleCreate.input.json"),
+						infraTest.Load("serviceHandleCreate.input.json"),
 					),
 				),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.subscriptionRepositoryError.json"),
+				infraTest.Load("serviceHandleCreate.subscriptionRepositoryError.json"),
 				test.NewSubscription(
 					test.SubscriptionError(errors.New("error at repository")),
 				),
 				test.NewResource(
-					test.ResourceLoadSliceByteResource(load("serviceHandleCreate.resourceInput.json")),
+					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleCreate.resourceInput.json")),
 				),
 			},
 			{
 				"The response should be a subscription conflict",
 				httptest.NewRequest(
 					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-						load("serviceHandleCreate.input.json"),
+						infraTest.Load("serviceHandleCreate.input.json"),
 					),
 				),
 				http.StatusConflict,
 				http.Header{"Content-Type": []string{"application/json"}},
-				load("serviceHandleCreate.subscriptionRepositoryConflict.json"),
+				infraTest.Load("serviceHandleCreate.subscriptionRepositoryConflict.json"),
 				test.NewSubscription(
 					test.SubscriptionCreateId("456"),
-					test.SubscriptionLoadSliceByteSubscription(load("serviceHandleCreate.inputArray.json")),
+					test.SubscriptionLoadSliceByteSubscription(infraTest.Load("serviceHandleCreate.inputArray.json")),
 				),
 				test.NewResource(
-					test.ResourceLoadSliceByteResource(load("serviceHandleCreate.resourceInput.json")),
+					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleCreate.resourceInput.json")),
 				),
 			},
 			{
 				"The response should be the result of a created subscription",
 				httptest.NewRequest(
 					http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
-						load("serviceHandleCreate.input.json"),
+						infraTest.Load("serviceHandleCreate.input.json"),
 					),
 				),
 				http.StatusCreated,
@@ -419,13 +420,13 @@ func TestServiceHandleCreate(t *testing.T) {
 					"Content-Type": []string{"application/json"},
 					"Location":     []string{"http://resources/123/subscriptions/456"},
 				},
-				load("serviceHandleCreate.create.json"),
+				infraTest.Load("serviceHandleCreate.create.json"),
 				test.NewSubscription(
 					test.SubscriptionCreateId("456"),
 					test.SubscriptionDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
 				),
 				test.NewResource(
-					test.ResourceLoadSliceByteResource(load("serviceHandleCreate.resourceInput.json")),
+					test.ResourceLoadSliceByteResource(infraTest.Load("serviceHandleCreate.resourceInput.json")),
 				),
 			},
 		}

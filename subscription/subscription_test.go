@@ -14,6 +14,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/diegobernardes/flare"
+	infraTest "github.com/diegobernardes/flare/infra/test"
 )
 
 func TestPaginationMarshalJSON(t *testing.T) {
@@ -55,7 +56,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Detail: "detail from error",
 					},
 				},
-				load("responseMarshalJSON.invalid.1.json"),
+				infraTest.Load("responseMarshalJSON.invalid.1.json"),
 			},
 			{
 				response{
@@ -63,7 +64,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Title: "service unavailable",
 					},
 				},
-				load("responseMarshalJSON.invalid.2.json"),
+				infraTest.Load("responseMarshalJSON.invalid.2.json"),
 			},
 			{
 				response{
@@ -81,7 +82,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					},
 				},
-				load("responseMarshalJSON.valid.1.json"),
+				infraTest.Load("responseMarshalJSON.valid.1.json"),
 			},
 			{
 				response{
@@ -115,7 +116,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						},
 					},
 				},
-				load("responseMarshalJSON.valid.2.json"),
+				infraTest.Load("responseMarshalJSON.valid.2.json"),
 			},
 		}
 
@@ -140,7 +141,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 func TestSubscriptionCreateValid(t *testing.T) {
 	Convey("Given a list of valid subscriptionCreate", t, func() {
 		tests := [][]byte{
-			load("subscriptionCreateValid.valid.json"),
+			infraTest.Load("subscriptionCreateValid.valid.json"),
 		}
 
 		Convey("The output should be valid", func() {
@@ -162,19 +163,19 @@ func TestSubscriptionCreateValid(t *testing.T) {
 		}{
 			{
 				"Should be missing the URL",
-				load("subscriptionCreateValid.invalid.1.json"),
+				infraTest.Load("subscriptionCreateValid.invalid.1.json"),
 			},
 			{
 				"Should have a invalid HTTP method",
-				load("subscriptionCreateValid.invalid.2.json"),
+				infraTest.Load("subscriptionCreateValid.invalid.2.json"),
 			},
 			{
 				"Should be missing delivery success",
-				load("subscriptionCreateValid.invalid.3.json"),
+				infraTest.Load("subscriptionCreateValid.invalid.3.json"),
 			},
 			{
 				"Should be missing delivery discard",
-				load("subscriptionCreateValid.invalid.4.json"),
+				infraTest.Load("subscriptionCreateValid.invalid.4.json"),
 			},
 		}
 
@@ -198,7 +199,7 @@ func TestSubscriptionToFlareSubscription(t *testing.T) {
 			output *flare.Subscription
 		}{
 			{
-				load("subscriptionToFlareSubscription.valid.json"),
+				infraTest.Load("subscriptionToFlareSubscription.valid.json"),
 				&flare.Subscription{
 					Delivery: flare.SubscriptionDelivery{
 						Discard: []int{500},
@@ -233,7 +234,7 @@ func TestSubscriptionToFlareSubscription(t *testing.T) {
 			output *flare.Subscription
 		}{
 			{
-				load("subscriptionToFlareSubscription.invalid.json"),
+				infraTest.Load("subscriptionToFlareSubscription.invalid.json"),
 				nil,
 			},
 		}
