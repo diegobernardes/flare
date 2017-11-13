@@ -249,6 +249,7 @@ func (c *Client) initDocumentService(
 		task.WorkerPusher(subscriptionPusher),
 		task.WorkerTimeoutProcess(10*time.Second),
 		task.WorkerTimeoutPush(10*time.Second),
+		task.WorkerLogger(c.logger),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during worker initialization")
@@ -273,6 +274,7 @@ func (c *Client) initDocumentService(
 		task.WorkerPusher(documentPusher),
 		task.WorkerTimeoutProcess(10*time.Second),
 		task.WorkerTimeoutPush(10*time.Second),
+		task.WorkerLogger(c.logger),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during worker initialization")

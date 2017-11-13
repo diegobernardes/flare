@@ -8,6 +8,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/go-kit/kit/log"
+
 	"github.com/pkg/errors"
 )
 
@@ -21,6 +23,7 @@ type Worker struct {
 	goroutines     int
 	ctx            context.Context
 	ctxCancel      func()
+	logger         log.Logger
 }
 
 // Push the task to be processed.
@@ -50,7 +53,13 @@ func (w *Worker) process() {
 	defer ctxCancel()
 
 	w.puller.Pull(ctx, func(ctx context.Context, content []byte) error {
-		return w.processor.Process(ctx, content)
+		w.logger.Log("message", "new message received to be processed")
+		err := w.processor.Process(ctx, content)
+		if err != nil {
+			w.logger.Log("message", err.Error())
+			return err
+		}
+		return nil
 	})
 }
 
@@ -84,6 +93,10 @@ func NewWorker(options ...func(*Worker)) (*Worker, error) {
 
 	if w.goroutines <= 0 {
 		return nil, errors.New("invalid goroutines count")
+	}
+
+	if w.logger == nil {
+		return nil, errors.New("logger not found")
 	}
 
 	ctx, ctxCancel := context.WithCancel(context.Background())
@@ -132,5 +145,12 @@ func WorkerTimeoutPush(timeout time.Duration) func(*Worker) {
 func WorkerGoroutines(goroutines int) func(*Worker) {
 	return func(w *Worker) {
 		w.goroutines = goroutines
+	}
+}
+
+// WorkerLogger set the worker logger.
+func WorkerLogger(logger log.Logger) func(*Worker) {
+	return func(w *Worker) {
+		w.logger = logger
 	}
 }
