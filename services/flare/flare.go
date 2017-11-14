@@ -311,7 +311,7 @@ func (c *Client) initDocumentService(
 		document.ServiceDocumentRepository(dr),
 		document.ServiceResourceRepository(rr),
 		document.ServiceGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
-		document.ServiceWorker(documentWorker),
+		document.ServicePusher(documentWorker),
 		document.ServiceWriter(writer),
 	)
 	if err != nil {

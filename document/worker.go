@@ -24,8 +24,7 @@ type Worker struct {
 	subscriptionTrigger    flare.SubscriptionTrigger
 }
 
-// Push send a document to be processed later.
-func (w *Worker) Push(ctx context.Context, id, action string, body []byte) error {
+func (w *Worker) push(ctx context.Context, id, action string, body []byte) error {
 	content, err := w.marshal(id, action, body)
 	if err != nil {
 		return errors.Wrap(err, "error during message compress")

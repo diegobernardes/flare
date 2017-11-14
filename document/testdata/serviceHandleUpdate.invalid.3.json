@@ -1,0 +1,6 @@
+{
+  "error": {
+    "title": "error during document process",
+    "detail": "could not push the document to worker: error during push"
+  }
+}

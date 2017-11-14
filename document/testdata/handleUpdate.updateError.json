@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 500,
-    "title": "error during document persistence",
-    "detail": "error on repository"
-  }
-}

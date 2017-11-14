@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 500,
-    "title": "error during delete",
-    "detail": "repository error"
-  }
-}

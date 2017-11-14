@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 500,
-    "title": "error during resource search",
-    "detail": "error on repository"
-  }
-}

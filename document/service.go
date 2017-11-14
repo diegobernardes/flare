@@ -20,7 +20,7 @@ type Service struct {
 	documentRepository flare.DocumentRepositorier
 	resourceRepository flare.ResourceRepositorier
 	getDocumentId      func(*http.Request) string
-	worker             *Worker
+	pusher             pusher
 	writer             *infraHTTP.Writer
 }
 
@@ -52,16 +52,6 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL.Fragment != "" {
-		s.writer.Error(
-			w,
-			"error during document search",
-			fmt.Errorf("fragment not allowed '%s'", r.URL.Fragment),
-			http.StatusBadRequest,
-		)
-		return
-	}
-
 	content, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		s.writer.Error(
@@ -73,7 +63,12 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = s.worker.Push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerUpdate, content)
+	if len(content) == 0 {
+		s.writer.Error(w, "missing document body", nil, http.StatusBadRequest)
+		return
+	}
+
+	err = s.pusher.push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerUpdate, content)
 	if err != nil {
 		s.writer.Error(
 			w,
@@ -89,9 +84,24 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 
 // HandleDelete receive the request to delete a document.
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
-	err := s.worker.Push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerDelete, nil)
+	if r.URL.RawQuery != "" {
+		s.writer.Error(
+			w,
+			"error during document search",
+			fmt.Errorf("query string not allowed '%s'", r.URL.RawQuery),
+			http.StatusBadRequest,
+		)
+		return
+	}
+
+	err := s.pusher.push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerDelete, nil)
 	if err != nil {
-		s.writer.Error(w, "error during document delete", err, http.StatusInternalServerError)
+		s.writer.Error(
+			w,
+			"error during document process",
+			errors.Wrap(err, "could not push the document to worker"),
+			http.StatusInternalServerError,
+		)
 		return
 	}
 
@@ -118,8 +128,8 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		return nil, errors.New("getDocumentId not found")
 	}
 
-	if s.worker == nil {
-		return nil, errors.New("worker not found")
+	if s.pusher == nil {
+		return nil, errors.New("pusher not found")
 	}
 
 	if s.writer == nil {
@@ -144,9 +154,9 @@ func ServiceGetDocumentId(fn func(*http.Request) string) func(*Service) {
 	return func(s *Service) { s.getDocumentId = fn }
 }
 
-// ServiceWorker set the worker to enqueue the messages to be processed async.
-func ServiceWorker(worker *Worker) func(*Service) {
-	return func(s *Service) { s.worker = worker }
+// ServicePusher set the pusher to enqueue the messages to be processed async.
+func ServicePusher(p pusher) func(*Service) {
+	return func(s *Service) { s.pusher = p }
 }
 
 // ServiceWriter set the writer to send the content to client.

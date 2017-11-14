@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 500,
-    "title": "error during check if the document resource has subscriptions",
-    "detail": "error on repository"
-  }
-}

@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 400,
-    "title": "document is not valid",
-    "detail": "missing ChangeField"
-  }
-}

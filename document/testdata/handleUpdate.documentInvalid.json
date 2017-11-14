@@ -1,7 +1,0 @@
-{
-  "error": {
-    "status": 400,
-    "title": "invalid body content",
-    "detail": "EOF"
-  }
-}
