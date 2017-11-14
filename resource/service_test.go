@@ -26,13 +26,16 @@ import (
 
 func TestNewService(t *testing.T) {
 	Convey("Given a list of valid service options", t, func() {
+		writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+		So(err, ShouldBeNil)
+
 		tests := [][]func(*Service){
 			{
 				ServiceRepository(memory.NewResource()),
 				ServiceGetResourceID(func(*http.Request) string { return "" }),
 				ServiceGetResourceURI(func(string) string { return "" }),
 				ServiceParsePagination(infraHTTP.ParsePagination(0)),
-				ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+				ServiceWriter(writer),
 			},
 		}
 
@@ -157,6 +160,9 @@ func TestServiceHandleIndex(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
@@ -164,7 +170,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					}),
 					ServiceGetResourceURI(func(string) string { return "" }),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				if err != nil {
 					t.Error(errors.Wrap(err, "error during service initialization"))
@@ -220,6 +226,9 @@ func TestServiceHandleShow(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
@@ -227,7 +236,7 @@ func TestServiceHandleShow(t *testing.T) {
 					}),
 					ServiceGetResourceURI(func(string) string { return "" }),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				if err != nil {
 					t.Error(errors.Wrap(err, "error during service initialization"))
@@ -283,6 +292,9 @@ func TestServiceHandleDelete(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
@@ -290,7 +302,7 @@ func TestServiceHandleDelete(t *testing.T) {
 					}),
 					ServiceGetResourceURI(func(string) string { return "" }),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				if err != nil {
 					t.Error(errors.Wrap(err, "error during service initialization"))
@@ -379,6 +391,9 @@ func TestServiceHandleCreate(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceRepository(tt.repository),
 					ServiceGetResourceID(func(r *http.Request) string {
@@ -388,7 +403,7 @@ func TestServiceHandleCreate(t *testing.T) {
 						return "http://resources/" + id
 					}),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				if err != nil {
 					t.Error(errors.Wrap(err, "error during service initialization"))

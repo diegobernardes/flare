@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/diegobernardes/flare"
+	infraHTTP "github.com/diegobernardes/flare/infra/http"
 )
 
 // Service implements the HTTP handler to manage subscriptions.
@@ -19,7 +20,7 @@ type Service struct {
 	getResourceID          func(*http.Request) string
 	getSubscriptionID      func(*http.Request) string
 	getSubscriptionURI     func(string, string) string
-	writeResponse          func(http.ResponseWriter, interface{}, int, http.Header)
+	writer                 *infraHTTP.Writer
 	parsePagination        func(r *http.Request) (*flare.Pagination, error)
 }
 
@@ -27,12 +28,12 @@ type Service struct {
 func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 	pag, err := s.parsePagination(r)
 	if err != nil {
-		s.writeError(w, err, "error during pagination parse", http.StatusBadRequest)
+		s.writer.Error(w, "error during pagination parse", err, http.StatusBadRequest)
 		return
 	}
 
 	if err = pag.Valid(); err != nil {
-		s.writeError(w, err, "invalid pagination", http.StatusBadRequest)
+		s.writer.Error(w, "invalid pagination", err, http.StatusBadRequest)
 		return
 	}
 
@@ -43,7 +44,7 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during resource search", status)
+		s.writer.Error(w, "error during resource search", err, status)
 		return
 	}
 
@@ -51,11 +52,11 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		r.Context(), pag, resource.ID,
 	)
 	if err != nil {
-		s.writeError(w, err, "error during subscriptions search", http.StatusInternalServerError)
+		s.writer.Error(w, "error during subscriptions search", err, http.StatusInternalServerError)
 		return
 	}
 
-	s.writeResponse(w, &response{
+	s.writer.Response(w, &response{
 		Subscriptions: transformSubscriptions(subs),
 		Pagination:    transformPagination(subsPag),
 	}, http.StatusOK, nil)
@@ -72,11 +73,11 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during subscription search", status)
+		s.writer.Error(w, "error during subscription search", err, status)
 		return
 	}
 
-	s.writeResponse(w, transformSubscription(subs), http.StatusOK, nil)
+	s.writer.Response(w, transformSubscription(subs), http.StatusOK, nil)
 }
 
 // HandleCreate receive the request to create a subscription.
@@ -87,18 +88,18 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err := d.Decode(content); err != nil {
-		s.writeError(w, err, "error during body parse", http.StatusBadRequest)
+		s.writer.Error(w, "error during body parse", err, http.StatusBadRequest)
 		return
 	}
 
 	if err := content.valid(); err != nil {
-		s.writeError(w, err, "invalid body content", http.StatusBadRequest)
+		s.writer.Error(w, "invalid body content", err, http.StatusBadRequest)
 		return
 	}
 
 	result, err := content.toFlareSubscription()
 	if err != nil {
-		s.writeError(w, err, "invalid subscription", http.StatusBadRequest)
+		s.writer.Error(w, "invalid subscription", err, http.StatusBadRequest)
 		return
 	}
 
@@ -109,7 +110,7 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during resource search", status)
+		s.writer.Error(w, "error during resource search", err, status)
 		return
 	}
 	result.Resource.ID = resource.ID
@@ -120,14 +121,14 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusConflict
 		}
 
-		s.writeError(w, err, "error during subscription create", status)
+		s.writer.Error(w, "error during subscription create", err, status)
 		return
 	}
 
 	header := make(http.Header)
 	header.Set("Location", s.getSubscriptionURI(result.Resource.ID, result.ID))
 	resp := &response{Subscription: transformSubscription(result)}
-	s.writeResponse(w, resp, http.StatusCreated, header)
+	s.writer.Response(w, resp, http.StatusCreated, header)
 }
 
 // HandleDelete receive the request to delete a subscription.
@@ -139,11 +140,11 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during subscription delete", status)
+		s.writer.Error(w, "error during subscription delete", err, status)
 		return
 	}
 
-	s.writeResponse(w, nil, http.StatusNoContent, nil)
+	s.writer.Response(w, nil, http.StatusNoContent, nil)
 }
 
 // NewService initialize the service to handle HTTP Requests.
@@ -178,8 +179,8 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		return nil, errors.New("parsePagination not found")
 	}
 
-	if service.writeResponse == nil {
-		return nil, errors.New("writeResponse not found")
+	if service.writer == nil {
+		return nil, errors.New("writer not found")
 	}
 
 	return service, nil
@@ -217,11 +218,9 @@ func ServiceParsePagination(fn func(r *http.Request) (*flare.Pagination, error))
 	}
 }
 
-// ServiceWriteResponse set the function that return the content to client.
-func ServiceWriteResponse(
-	fn func(http.ResponseWriter, interface{}, int, http.Header),
-) func(*Service) {
+// ServiceWriter set the function that return the content to client.
+func ServiceWriter(writer *infraHTTP.Writer) func(*Service) {
 	return func(s *Service) {
-		s.writeResponse = fn
+		s.writer = writer
 	}
 }

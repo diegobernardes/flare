@@ -26,6 +26,9 @@ import (
 
 func TestNewService(t *testing.T) {
 	Convey("Given a list of valid service options", t, func() {
+		writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+		So(err, ShouldBeNil)
+
 		tests := [][]func(*Service){
 			{
 				ServiceSubscriptionRepository(memory.NewSubscription()),
@@ -34,7 +37,7 @@ func TestNewService(t *testing.T) {
 				ServiceGetSubscriptionID(func(*http.Request) string { return "" }),
 				ServiceGetSubscriptionURI(func(string, string) string { return "" }),
 				ServiceParsePagination(infraHTTP.ParsePagination(30)),
-				ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+				ServiceWriter(writer),
 			},
 		}
 
@@ -207,6 +210,9 @@ func TestServiceHandleIndex(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceSubscriptionRepository(tt.subscriptionRepository),
 					ServiceResourceRepository(tt.resourceRepository),
@@ -214,7 +220,7 @@ func TestServiceHandleIndex(t *testing.T) {
 					ServiceGetSubscriptionID(func(r *http.Request) string { return "" }),
 					ServiceGetSubscriptionURI(func(reId, subId string) string { return "" }),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)
 				httpTest.Runner(tt.status, tt.header, service.HandleIndex, tt.req, tt.body)
@@ -261,6 +267,9 @@ func TestServiceHandleShow(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceSubscriptionRepository(tt.subscriptionRepository),
 					ServiceResourceRepository(tt.resourceRepository),
@@ -270,7 +279,7 @@ func TestServiceHandleShow(t *testing.T) {
 						return fmt.Sprintf("http://resources/%s/subscriptions/%s", reId, subId)
 					}),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)
 				httpTest.Runner(tt.status, tt.header, service.HandleShow, tt.req, tt.body)
@@ -317,6 +326,9 @@ func TestServiceHandleDelete(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceSubscriptionRepository(tt.subscriptionRepository),
 					ServiceResourceRepository(tt.resourceRepository),
@@ -324,7 +336,7 @@ func TestServiceHandleDelete(t *testing.T) {
 					ServiceGetSubscriptionID(func(r *http.Request) string { return "456" }),
 					ServiceGetSubscriptionURI(func(reId, subId string) string { return "" }),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)
 				httpTest.Runner(tt.status, tt.header, service.HandleDelete, tt.req, tt.body)
@@ -439,6 +451,9 @@ func TestServiceHandleCreate(t *testing.T) {
 
 		for _, tt := range tests {
 			Convey(tt.title, func() {
+				writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+				So(err, ShouldBeNil)
+
 				service, err := NewService(
 					ServiceSubscriptionRepository(tt.subscriptionRepository),
 					ServiceResourceRepository(tt.resourceRepository),
@@ -448,7 +463,7 @@ func TestServiceHandleCreate(t *testing.T) {
 						return fmt.Sprintf("http://resources/%s/subscriptions/%s", reId, subId)
 					}),
 					ServiceParsePagination(infraHTTP.ParsePagination(30)),
-					ServiceWriteResponse(infraHTTP.WriteResponse(log.NewNopLogger())),
+					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)
 				httpTest.Runner(tt.status, tt.header, service.HandleCreate, tt.req, tt.body)

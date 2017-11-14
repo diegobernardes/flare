@@ -34,7 +34,6 @@ func (p *pagination) MarshalJSON() ([]byte, error) {
 
 type response struct {
 	Pagination    *pagination
-	Error         *responseError
 	Subscriptions []subscription
 	Subscription  *subscription
 }
@@ -42,9 +41,7 @@ type response struct {
 func (r *response) MarshalJSON() ([]byte, error) {
 	var result interface{}
 
-	if r.Error != nil {
-		result = map[string]*responseError{"error": r.Error}
-	} else if r.Subscription != nil {
+	if r.Subscription != nil {
 		result = r.Subscription
 	} else {
 		result = map[string]interface{}{"pagination": r.Pagination, "subscriptions": r.Subscriptions}
@@ -83,11 +80,6 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		CreatedAt: s.CreatedAt.Format(time.RFC3339),
 		Data:      s.Data,
 	})
-}
-
-type responseError struct {
-	Title  string `json:"title"`
-	Detail string `json:"detail,omitempty"`
 }
 
 func transformSubscription(s *flare.Subscription) *subscription { return (*subscription)(s) }
@@ -181,17 +173,4 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 		},
 		Data: s.Data,
 	}, nil
-}
-
-func (s *Service) writeError(w http.ResponseWriter, err error, title string, status int) {
-	resp := responseError{}
-	if err != nil {
-		resp.Detail = err.Error()
-	}
-
-	if title != "" {
-		resp.Title = title
-	}
-
-	s.writeResponse(w, &response{Error: &resp}, status, nil)
 }

@@ -182,13 +182,18 @@ func (c *Client) initResourceService(
 		panic(err)
 	}
 
+	writer, err := infraHTTP.NewWriter(c.logger)
+	if err != nil {
+		panic(err)
+	}
+
 	resourceService, err := resource.NewService(
 		resource.ServiceGetResourceID(func(r *http.Request) string { return chi.URLParam(r, "id") }),
 		resource.ServiceGetResourceURI(func(id string) string {
 			return fmt.Sprintf("/resources/%s", id)
 		}),
 		resource.ServiceParsePagination(infraHTTP.ParsePagination(c.config.httpDefaultLimit())),
-		resource.ServiceWriteResponse(infraHTTP.WriteResponse(c.logger)),
+		resource.ServiceWriter(writer),
 		resource.ServiceRepository(repository),
 	)
 	if err != nil {
@@ -202,11 +207,16 @@ func (c *Client) initSubscriptionService(
 	resourceRepository flare.ResourceRepositorier,
 	subscriptionRepository flare.SubscriptionRepositorier,
 ) (*subscription.Service, error) {
+	writer, err := infraHTTP.NewWriter(c.logger)
+	if err != nil {
+		panic(err)
+	}
+
 	subscriptionService, err := subscription.NewService(
 		subscription.ServiceParsePagination(
 			infraHTTP.ParsePagination(c.config.httpDefaultLimit()),
 		),
-		subscription.ServiceWriteResponse(infraHTTP.WriteResponse(c.logger)),
+		subscription.ServiceWriter(writer),
 		subscription.ServiceGetResourceID(func(r *http.Request) string {
 			return chi.URLParam(r, "resourceId")
 		}),

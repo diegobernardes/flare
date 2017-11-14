@@ -7,7 +7,6 @@ package resource
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -210,7 +209,6 @@ func transformPagination(p *flare.Pagination) *pagination { return (*pagination)
 
 type response struct {
 	Pagination *pagination
-	Error      *responseError
 	Resources  []resource
 	Resource   *resource
 }
@@ -218,9 +216,7 @@ type response struct {
 func (r *response) MarshalJSON() ([]byte, error) {
 	var result interface{}
 
-	if r.Error != nil {
-		result = map[string]*responseError{"error": r.Error}
-	} else if r.Resource != nil {
+	if r.Resource != nil {
 		result = r.Resource
 	} else {
 		result = map[string]interface{}{
@@ -230,22 +226,4 @@ func (r *response) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(result)
-}
-
-type responseError struct {
-	Title  string `json:"title"`
-	Detail string `json:"detail,omitempty"`
-}
-
-func (s *Service) writeError(w http.ResponseWriter, err error, title string, status int) {
-	resp := responseError{}
-	if err != nil {
-		resp.Detail = err.Error()
-	}
-
-	if title != "" {
-		resp.Title = title
-	}
-
-	s.writeResponse(w, &response{Error: &resp}, status, nil)
 }

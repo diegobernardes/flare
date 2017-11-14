@@ -51,23 +51,6 @@ func TestResponseMarshalJSON(t *testing.T) {
 		}{
 			{
 				response{
-					Error: &responseError{
-						Title:  "error during query",
-						Detail: "detail from error",
-					},
-				},
-				infraTest.Load("responseMarshalJSON.invalid.1.json"),
-			},
-			{
-				response{
-					Error: &responseError{
-						Title: "service unavailable",
-					},
-				},
-				infraTest.Load("responseMarshalJSON.invalid.2.json"),
-			},
-			{
-				response{
 					Subscription: &subscription{
 						ID: "123",
 						Endpoint: flare.SubscriptionEndpoint{

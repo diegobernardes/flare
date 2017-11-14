@@ -102,15 +102,6 @@ func TestResponseMarshalJSON(t *testing.T) {
 		}{
 			{
 				response{
-					Error: &responseError{
-						Title:  "error during query",
-						Detail: "detail from error",
-					},
-				},
-				infraTest.Load("response.1.json"),
-			},
-			{
-				response{
 					Resource: &resource{
 						ID:        "123",
 						Addresses: []string{"http://address1", "https://address2"},
