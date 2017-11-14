@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
@@ -18,12 +17,11 @@ import (
 
 // Service implements the HTTP handler to manage documents.
 type Service struct {
-	logger             log.Logger
 	documentRepository flare.DocumentRepositorier
 	resourceRepository flare.ResourceRepositorier
 	getDocumentId      func(*http.Request) string
-	writeResponse      func(http.ResponseWriter, interface{}, int, http.Header)
 	worker             *Worker
+	writer             *infraHTTP.Writer
 }
 
 // HandleShow receive the request to show a given document.
@@ -35,30 +33,30 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 			status = http.StatusNotFound
 		}
 
-		s.writeError(w, err, "error during document search", status)
+		s.writer.Error(w, "error during document search", err, status)
 		return
 	}
 
-	s.writeResponse(w, transformDocument(d), http.StatusOK, nil)
+	s.writer.Response(w, transformDocument(d), http.StatusOK, nil)
 }
 
 // HandleUpdate process the request to update a document.
 func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 	if r.URL.RawQuery != "" {
-		s.writeError(
+		s.writer.Error(
 			w,
-			fmt.Errorf("query string not allowed '%s'", r.URL.RawQuery),
 			"error during document search",
+			fmt.Errorf("query string not allowed '%s'", r.URL.RawQuery),
 			http.StatusBadRequest,
 		)
 		return
 	}
 
 	if r.URL.Fragment != "" {
-		s.writeError(
+		s.writer.Error(
 			w,
-			fmt.Errorf("fragment not allowed '%s'", r.URL.Fragment),
 			"error during document search",
+			fmt.Errorf("fragment not allowed '%s'", r.URL.Fragment),
 			http.StatusBadRequest,
 		)
 		return
@@ -66,10 +64,10 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	content, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		s.writeError(
+		s.writer.Error(
 			w,
-			errors.Wrap(err, "could not read the request body"),
 			"error during document process",
+			errors.Wrap(err, "could not read the request body"),
 			http.StatusInternalServerError,
 		)
 		return
@@ -77,27 +75,27 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 
 	err = s.worker.Push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerUpdate, content)
 	if err != nil {
-		s.writeError(
+		s.writer.Error(
 			w,
-			errors.Wrap(err, "could not push the document to worker"),
 			"error during document process",
+			errors.Wrap(err, "could not push the document to worker"),
 			http.StatusInternalServerError,
 		)
 		return
 	}
 
-	s.writeResponse(w, nil, http.StatusAccepted, nil)
+	s.writer.Response(w, nil, http.StatusAccepted, nil)
 }
 
 // HandleDelete receive the request to delete a document.
 func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 	err := s.worker.Push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerDelete, nil)
 	if err != nil {
-		s.writeError(w, err, "error during document delete", http.StatusInternalServerError)
+		s.writer.Error(w, "error during document delete", err, http.StatusInternalServerError)
 		return
 	}
 
-	s.writeResponse(w, nil, http.StatusAccepted, nil)
+	s.writer.Response(w, nil, http.StatusAccepted, nil)
 }
 
 // NewService initialize the service to handle HTTP requests.
@@ -106,10 +104,6 @@ func NewService(options ...func(*Service)) (*Service, error) {
 
 	for _, option := range options {
 		option(s)
-	}
-
-	if s.logger == nil {
-		return nil, errors.New("logger not found")
 	}
 
 	if s.documentRepository == nil {
@@ -128,7 +122,10 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		return nil, errors.New("worker not found")
 	}
 
-	s.writeResponse = infraHTTP.WriteResponse(s.logger)
+	if s.writer == nil {
+		return nil, errors.New("writer not Found")
+	}
+
 	return s, nil
 }
 
@@ -142,11 +139,6 @@ func ServiceResourceRepository(repo flare.ResourceRepositorier) func(*Service) {
 	return func(s *Service) { s.resourceRepository = repo }
 }
 
-// ServiceLogger set the logger.
-func ServiceLogger(logger log.Logger) func(*Service) {
-	return func(s *Service) { s.logger = logger }
-}
-
 // ServiceGetDocumentId set the function to get the document id.
 func ServiceGetDocumentId(fn func(*http.Request) string) func(*Service) {
 	return func(s *Service) { s.getDocumentId = fn }
@@ -155,4 +147,9 @@ func ServiceGetDocumentId(fn func(*http.Request) string) func(*Service) {
 // ServiceWorker set the worker to enqueue the messages to be processed async.
 func ServiceWorker(worker *Worker) func(*Service) {
 	return func(s *Service) { s.worker = worker }
+}
+
+// ServiceWriter set the writer to send the content to client.
+func ServiceWriter(writer *infraHTTP.Writer) func(*Service) {
+	return func(s *Service) { s.writer = writer }
 }

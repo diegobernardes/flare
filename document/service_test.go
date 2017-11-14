@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
+	infraHTTPWriter "github.com/diegobernardes/flare/infra/http"
 	infraHTTP "github.com/diegobernardes/flare/infra/http/test"
 	"github.com/diegobernardes/flare/repository/test"
 )
@@ -58,14 +59,20 @@ func TestServiceHandleShow(t *testing.T) {
 	}
 
 	for _, tt := range tests {
+		writer, err := infraHTTPWriter.NewWriter(log.NewNopLogger())
+		if err != nil {
+			t.Error(err.Error())
+			t.FailNow()
+		}
+
 		service, err := NewService(
-			ServiceLogger(log.NewNopLogger()),
 			ServiceDocumentRepository(tt.repository),
 			ServiceResourceRepository(test.NewResource()),
 			ServiceGetDocumentId(func(r *http.Request) string {
 				return strings.Replace(r.URL.Path, "/", "", -1)
 			}),
 			ServiceWorker(&Worker{}),
+			ServiceWriter(writer),
 		)
 		if err != nil {
 			t.Error(errors.Wrap(err, "error during service initialization"))
@@ -77,34 +84,20 @@ func TestServiceHandleShow(t *testing.T) {
 }
 
 func TestNewService(t *testing.T) {
+	writer, err := infraHTTPWriter.NewWriter(log.NewNopLogger())
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+
 	tests := []struct {
 		name     string
 		options  []func(*Service)
 		hasError bool
 	}{
 		{
-			"Mising logger",
-			[]func(*Service){},
-			true,
-		},
-		{
-			"Mising subscription trigger",
-			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
-			},
-			true,
-		},
-		{
-			"Mising document repository",
-			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
-			},
-			true,
-		},
-		{
 			"Mising resource repository",
 			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
 				ServiceDocumentRepository(test.NewDocument()),
 			},
 			true,
@@ -112,7 +105,6 @@ func TestNewService(t *testing.T) {
 		{
 			"Mising subscription repository",
 			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
 				ServiceDocumentRepository(test.NewDocument()),
 				ServiceResourceRepository(test.NewResource()),
 			},
@@ -121,7 +113,6 @@ func TestNewService(t *testing.T) {
 		{
 			"Mising getDocumentId repository",
 			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
 				ServiceDocumentRepository(test.NewDocument()),
 				ServiceResourceRepository(test.NewResource()),
 			},
@@ -130,7 +121,6 @@ func TestNewService(t *testing.T) {
 		{
 			"Mising getDocumentURI repository",
 			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
 				ServiceDocumentRepository(test.NewDocument()),
 				ServiceResourceRepository(test.NewResource()),
 				ServiceGetDocumentId(func(*http.Request) string { return "" }),
@@ -138,13 +128,23 @@ func TestNewService(t *testing.T) {
 			true,
 		},
 		{
-			"Success",
+			"Missing writer",
 			[]func(*Service){
-				ServiceLogger(log.NewNopLogger()),
 				ServiceDocumentRepository(test.NewDocument()),
 				ServiceResourceRepository(test.NewResource()),
 				ServiceGetDocumentId(func(*http.Request) string { return "" }),
 				ServiceWorker(&Worker{}),
+			},
+			true,
+		},
+		{
+			"Success",
+			[]func(*Service){
+				ServiceDocumentRepository(test.NewDocument()),
+				ServiceResourceRepository(test.NewResource()),
+				ServiceGetDocumentId(func(*http.Request) string { return "" }),
+				ServiceWorker(&Worker{}),
+				ServiceWriter(writer),
 			},
 			false,
 		},

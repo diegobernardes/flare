@@ -1,6 +1,5 @@
 {
   "error": {
-    "status": 404,
     "title": "error during document search",
     "detail": "document '123' not found"
   }

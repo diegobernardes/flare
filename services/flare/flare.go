@@ -302,12 +302,17 @@ func (c *Client) initDocumentService(
 	}
 	jobWorker.Start()
 
+	writer, err := infraHTTP.NewWriter(c.logger)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during writer initialization")
+	}
+
 	documentService, err := document.NewService(
 		document.ServiceDocumentRepository(dr),
 		document.ServiceResourceRepository(rr),
 		document.ServiceGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
-		document.ServiceLogger(c.logger),
 		document.ServiceWorker(documentWorker),
+		document.ServiceWriter(writer),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during document.Service initialization")
