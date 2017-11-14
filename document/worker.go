@@ -24,18 +24,6 @@ type Worker struct {
 	subscriptionTrigger    flare.SubscriptionTrigger
 }
 
-func (w *Worker) push(ctx context.Context, id, action string, body []byte) error {
-	content, err := w.marshal(id, action, body)
-	if err != nil {
-		return errors.Wrap(err, "error during message compress")
-	}
-
-	if err = w.pusher.Push(ctx, content); err != nil {
-		return errors.Wrap(err, "error during job enqueue")
-	}
-	return nil
-}
-
 // Process process the enqueued documents.
 func (w *Worker) Process(ctx context.Context, rawContent []byte) error {
 	content, id, action, err := w.extractContent(rawContent)
@@ -68,6 +56,18 @@ func (w *Worker) Process(ctx context.Context, rawContent []byte) error {
 		return fmt.Errorf("action '%s' not supported", action)
 	}
 
+	return nil
+}
+
+func (w *Worker) push(ctx context.Context, id, action string, body []byte) error {
+	content, err := w.marshal(id, action, body)
+	if err != nil {
+		return errors.Wrap(err, "error during message compress")
+	}
+
+	if err = w.pusher.Push(ctx, content); err != nil {
+		return errors.Wrap(err, "error during job enqueue")
+	}
 	return nil
 }
 
