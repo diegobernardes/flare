@@ -8,6 +8,7 @@ Flare is a service that notify changes of REST APIs. Everytime a resource change
 * Work with any HTTP endpoint.
 * Deliver only new changes, the clients never gonna receive the same notification twice.
 * Play nice with your current infrastructure.
+* Abstract the problems with scale and control of notifications from APIs.
 
 ## How to run
 
@@ -69,4 +70,14 @@ curl -H "Content-Type: application/json" -XPOST http://localhost:8080/documents/
 	"name": "Diego Bernardes",
 }
 EOF
+```
+
+After the document is updated, the client gonna receive this message at `http://localhost:8000/update`:
+```json
+{
+  "action": "create",
+  "changeFieldValue": "2017-09-23T07:08:08.008Z",
+  "id": "http://app.io/users/123",
+  "updatedAt": "2017-11-17 00:00:00 +0000 UTC"
+}
 ```
