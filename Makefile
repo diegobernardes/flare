@@ -13,8 +13,10 @@ coveralls:
 		-v "$(PWD)":/go/src/$(PROJECT_PATH) \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
+		-e TRAVIS_BRANCH=$(TRAVIS_BRANCH) \
+		-e COVERALLS_TOKEN=$(COVERALLS_TOKEN) \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
-    goveralls -race
+    goveralls
 
 test:
 	@docker run \
