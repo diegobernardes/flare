@@ -24,10 +24,15 @@ type Trigger struct {
 	pusher     task.Pusher
 }
 
-func (t *Trigger) marshal(documentId string, action string) ([]byte, error) {
-	content, err := json.Marshal(map[string]string{
-		"documentId": documentId,
-		"action":     action,
+func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, error) {
+	type raw struct {
+		Document flare.Document
+		Action   string
+	}
+
+	content, err := json.Marshal(raw{
+		Document: *document,
+		Action:   action,
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "error during message marshal")
@@ -35,17 +40,26 @@ func (t *Trigger) marshal(documentId string, action string) ([]byte, error) {
 	return content, nil
 }
 
-func (t *Trigger) unmarshal(rawContent []byte) (map[string]string, error) {
-	content := make(map[string]string)
-	if err := json.Unmarshal(rawContent, &content); err != nil {
+func (t *Trigger) unmarshal(rawContent []byte) (map[string]interface{}, error) {
+	type raw struct {
+		Document flare.Document
+		Action   string
+	}
+
+	var r raw
+	if err := json.Unmarshal(rawContent, &r); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal message")
 	}
-	return content, nil
+
+	return map[string]interface{}{
+		"document": r.Document,
+		"action":   r.Action,
+	}, nil
 }
 
 // Update the document change signal.
 func (t *Trigger) Update(ctx context.Context, document *flare.Document) error {
-	content, err := t.marshal(document.Id, flare.SubscriptionTriggerUpdate)
+	content, err := t.marshal(document, flare.SubscriptionTriggerUpdate)
 	if err != nil {
 		return errors.Wrap(err, "error during trigger")
 	}
@@ -58,7 +72,7 @@ func (t *Trigger) Update(ctx context.Context, document *flare.Document) error {
 
 // Delete the document change signal.
 func (t *Trigger) Delete(ctx context.Context, document *flare.Document) error {
-	content, err := t.marshal(document.Id, flare.SubscriptionTriggerDelete)
+	content, err := t.marshal(document, flare.SubscriptionTriggerDelete)
 	if err != nil {
 		return errors.Wrap(err, "error during trigger")
 	}
@@ -76,22 +90,17 @@ func (t *Trigger) Process(ctx context.Context, rawContent []byte) error {
 		return errors.Wrap(err, "could not unmarshal the message")
 	}
 
-	documentId, ok := content["documentId"]
+	document, ok := content["document"].(flare.Document)
 	if !ok {
-		return errors.New("missing documentId")
+		return errors.New("missing document")
 	}
 
-	action, ok := content["action"]
+	action, ok := content["action"].(string)
 	if !ok {
 		return errors.New("missing action")
 	}
 
-	document, err := t.document.FindOne(ctx, documentId)
-	if err != nil {
-		return errors.Wrap(err, "error during document find")
-	}
-
-	if err = t.repository.Trigger(ctx, action, document, t.exec(document)); err != nil {
+	if err = t.repository.Trigger(ctx, action, &document, t.exec(&document)); err != nil {
 		return errors.Wrap(err, "error during message process")
 	}
 	return nil
