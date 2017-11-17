@@ -68,7 +68,6 @@ lint-slow:
     gometalinter ./... \
       --disable-all \
       --enable=megacheck \
-      --enable=aligncheck \
       --enable=deadcode \
       --enable=interfacer \
       --enable=structcheck \
