@@ -13,14 +13,14 @@ stages:
 jobs:
   include:
     - stage: compile
-      script: ./task flare-build
+      script: make flare-build
 
     - stage: quality
-      script: ./task lint-fast
+      script: make lint-fast
 
-    - script: ./task lint-slow
+    - script: make lint-slow
 
-    - script: ./task test
+    - script: make test
 
-    - script: ./task coveralls
+    - script: make coveralls
 
