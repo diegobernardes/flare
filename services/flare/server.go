@@ -130,9 +130,9 @@ func newServer(options ...func(*server)) (*server, error) {
 		return nil, errors.New("missing handler.subscription")
 	}
 
-	// if s.handler.document == nil {
-	// 	return nil, errors.New("missing handler.document")
-	// }
+	if s.handler.document == nil {
+		return nil, errors.New("missing handler.document")
+	}
 
 	if s.logger == nil {
 		return nil, errors.New("missing logger")
