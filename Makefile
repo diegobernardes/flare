@@ -1,4 +1,4 @@
-DOCKER_VERSION = 0.3
+DOCKER_VERSION = 0.4
 DOCKER_IMAGE 	 = diegobernardes/flare
 PROJECT_PATH   = github.com/diegobernardes/flare
 
