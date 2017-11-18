@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 
 	"github.com/pkg/errors"
 )
@@ -52,11 +53,12 @@ func (w *Worker) process() {
 	ctx, ctxCancel := context.WithTimeout(w.ctx, w.timeoutProcess)
 	defer ctxCancel()
 
+	errLogger := level.Error(w.logger)
 	w.puller.Pull(ctx, func(ctx context.Context, content []byte) error {
 		w.logger.Log("message", "new message received to be processed")
 		err := w.processor.Process(ctx, content)
 		if err != nil {
-			w.logger.Log("message", err.Error())
+			errLogger.Log("message", err.Error())
 			return err
 		}
 		return nil
@@ -151,6 +153,6 @@ func WorkerGoroutines(goroutines int) func(*Worker) {
 // WorkerLogger set the worker logger.
 func WorkerLogger(logger log.Logger) func(*Worker) {
 	return func(w *Worker) {
-		w.logger = logger
+		w.logger = log.With(logger, "package", "infra/task")
 	}
 }

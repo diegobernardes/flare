@@ -124,7 +124,7 @@ func (c *Client) initLogger() error {
 		return err
 	}
 
-	c.logger = log.With(logger, "time", log.DefaultTimestampUTC)
+	c.logger = log.With(logger, "time", log.DefaultTimestamp)
 	return nil
 }
 
