@@ -320,14 +320,14 @@ func (s *Subscription) triggerProcess(
 			return nil
 		}
 
-		err = s.upsertSubscriptionTrigger(session, subs, doc)
-		if err != nil {
-			return errors.Wrap(err, "error during update subscriptionTriggers")
-		}
-
 		if err = fn(groupCtx, subs, flare.SubscriptionTriggerUpdate); err != nil {
 			return errors.Wrap(err, "error during document subscription processing")
 		}
+
+		if err = s.upsertSubscriptionTrigger(session, subs, doc); err != nil {
+			return errors.Wrap(err, "error during update subscriptionTriggers")
+		}
+
 		return nil
 	}
 }
