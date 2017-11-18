@@ -10,6 +10,7 @@ import (
 	"net/http"
 
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 )
 
@@ -78,5 +79,7 @@ func NewWriter(logger log.Logger) (*Writer, error) {
 	if logger == nil {
 		return nil, errors.New("logger not found")
 	}
+	logger = log.With(logger, "package", "infra/http")
+	logger = level.Error(logger)
 	return &Writer{logger}, nil
 }

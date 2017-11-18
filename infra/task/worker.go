@@ -58,7 +58,7 @@ func (w *Worker) process() {
 		w.logger.Log("message", "new message received to be processed")
 		err := w.processor.Process(ctx, content)
 		if err != nil {
-			errLogger.Log("message", err.Error())
+			errLogger.Log("error", err.Error(), "message", "error during message process")
 			return err
 		}
 		return nil

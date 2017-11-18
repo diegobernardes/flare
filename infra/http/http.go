@@ -54,6 +54,7 @@ func ParsePagination(defaultLimit int) func(r *http.Request) (*flare.Pagination,
 
 // WriteResponse is used to write the response on http.ResponseWriter.
 func WriteResponse(logger log.Logger) func(http.ResponseWriter, interface{}, int, http.Header) {
+	logger = log.With(logger, "package", "infra/http")
 	logger = level.Error(logger)
 
 	return func(w http.ResponseWriter, r interface{}, status int, headers http.Header) {

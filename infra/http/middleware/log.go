@@ -11,6 +11,7 @@ import (
 
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 )
 
 // Log is a middleware to log the requests.
@@ -59,5 +60,7 @@ func (l *Log) Handler(next http.Handler) http.Handler {
 
 // NewLog return a configured middleware to log the requests.
 func NewLog(logger log.Logger) Log {
+	logger = log.With(logger, "package", "infra/http/middleware")
+	logger = level.Info(logger)
 	return Log{logger}
 }
