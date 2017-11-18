@@ -43,14 +43,14 @@ type Client struct {
 func (c *Client) Start() error {
 	config, err := newConfig(configContent(c.rawConfig))
 	if err != nil {
-		return err
+		return errors.Wrap(err, "error during config load")
 	}
 	c.config = config
 
 	if err = c.initLogger(); err != nil {
 		return errors.Wrap(err, "error during log initialization")
 	}
-	c.logger.Log("message", "starting Flare")
+	level.Info(c.logger).Log("message", "starting Flare")
 
 	documentRepository, err := c.config.documentRepository()
 	if err != nil {
@@ -166,18 +166,21 @@ func (c *Client) initLoggerLevel(logger log.Logger) (log.Logger, error) {
 		logLevel = logLevelDebug
 	}
 
+	var filter level.Option
 	switch logLevel {
 	case logLevelDebug:
-		return level.Debug(logger), nil
+		filter = level.AllowDebug()
 	case logLevelInfo:
-		return level.Info(logger), nil
+		filter = level.AllowInfo()
 	case logLevelWarn:
-		return level.Warn(logger), nil
+		filter = level.AllowWarn()
 	case logLevelError:
-		return level.Error(logger), nil
+		filter = level.AllowError()
 	default:
 		return nil, fmt.Errorf("invalid log.level '%s'", logLevel)
 	}
+
+	return level.NewFilter(logger, filter), nil
 }
 
 func (c *Client) initResourceService(
@@ -263,8 +266,8 @@ func (c *Client) initDocumentService(
 		task.WorkerProcessor(trigger),
 		task.WorkerPuller(subscriptionPuller),
 		task.WorkerPusher(subscriptionPusher),
-		task.WorkerTimeoutProcess(10*time.Second),
-		task.WorkerTimeoutPush(10*time.Second),
+		task.WorkerTimeoutProcess(30*time.Second),
+		task.WorkerTimeoutPush(30*time.Second),
 		task.WorkerLogger(c.logger),
 	)
 	if err != nil {
@@ -288,8 +291,8 @@ func (c *Client) initDocumentService(
 		task.WorkerProcessor(documentWorker),
 		task.WorkerPuller(documentPuller),
 		task.WorkerPusher(documentPusher),
-		task.WorkerTimeoutProcess(10*time.Second),
-		task.WorkerTimeoutPush(10*time.Second),
+		task.WorkerTimeoutProcess(30*time.Second),
+		task.WorkerTimeoutPush(30*time.Second),
 		task.WorkerLogger(c.logger),
 	)
 	if err != nil {

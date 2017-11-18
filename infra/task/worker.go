@@ -53,16 +53,18 @@ func (w *Worker) process() {
 	ctx, ctxCancel := context.WithTimeout(w.ctx, w.timeoutProcess)
 	defer ctxCancel()
 
-	errLogger := level.Error(w.logger)
-	w.puller.Pull(ctx, func(ctx context.Context, content []byte) error {
-		w.logger.Log("message", "new message received to be processed")
-		err := w.processor.Process(ctx, content)
-		if err != nil {
-			errLogger.Log("error", err.Error(), "message", "error during message process")
+	err := w.puller.Pull(ctx, func(ctx context.Context, content []byte) error {
+		level.Info(w.logger).Log("message", "message received to be processed")
+
+		if err := w.processor.Process(ctx, content); err != nil {
+			level.Error(w.logger).Log("error", err.Error(), "message", "error during message process")
 			return err
 		}
 		return nil
 	})
+	if err != nil {
+		level.Error(w.logger).Log("error", err.Error(), "message", "error during message pull")
+	}
 }
 
 // NewWorker returns a configured worker.

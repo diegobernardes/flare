@@ -29,6 +29,7 @@ func (l *Log) Handler(next http.Handler) http.Handler {
 			"method", r.Method,
 			"endpoint", r.RequestURI,
 			"protocol", r.Proto,
+			"message", "request started",
 		)
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)
@@ -51,7 +52,7 @@ func (l *Log) Handler(next http.Handler) http.Handler {
 			message = "request finished"
 		}
 
-		postReqContent = append(postReqContent, []interface{}{"message", message})
+		postReqContent = append(postReqContent, []interface{}{"message", message}...)
 		l.logger.Log(postReqContent...)
 	}
 
