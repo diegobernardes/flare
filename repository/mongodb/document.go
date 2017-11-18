@@ -7,6 +7,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	mgo "gopkg.in/mgo.v2"
@@ -44,12 +45,12 @@ func (d *Document) Update(_ context.Context, document *flare.Document) error {
 	session := d.client.session()
 	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
+	document.UpdatedAt = time.Now()
 
 	_, err := session.DB(d.database).C(d.collection).Upsert(bson.M{"id": document.Id}, document)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error during document '%s' update", document.Id))
 	}
-
 	return nil
 }
 
