@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/go-chi/chi/middleware"
 
 	"github.com/go-chi/chi"
 	"github.com/go-kit/kit/log"
@@ -16,6 +19,7 @@ import (
 
 	"github.com/diegobernardes/flare/document"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
+	infraMiddleware "github.com/diegobernardes/flare/infra/http/middleware"
 	"github.com/diegobernardes/flare/resource"
 	"github.com/diegobernardes/flare/subscription"
 )
@@ -27,6 +31,9 @@ type server struct {
 		resource     *resource.Service
 		subscription *subscription.Service
 		document     *document.Service
+	}
+	middleware struct {
+		timeout time.Duration
 	}
 	logger        log.Logger
 	writeResponse func(http.ResponseWriter, interface{}, int, http.Header)
@@ -67,6 +74,8 @@ func (s *server) stop() error {
 
 func (s *server) router() http.Handler {
 	r := chi.NewRouter()
+	s.initMiddleware(r)
+
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		s.writeResponse(w, map[string]interface{}{
 			"error": map[string]interface{}{
@@ -89,6 +98,18 @@ func (s *server) router() http.Handler {
 	r.Route("/resources/{resourceId}/subscriptions", s.routerSubscription)
 	r.Route("/documents", s.routerDocument)
 	return r
+}
+
+func (s *server) initMiddleware(r chi.Router) {
+	logger := infraMiddleware.NewLog(s.logger)
+
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.DefaultCompress)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.RequestID)
+	r.Use(middleware.StripSlashes)
+	r.Use(middleware.Timeout(s.middleware.timeout))
+	r.Use(logger.Handler)
 }
 
 func (s *server) routerResource(r chi.Router) {
@@ -160,4 +181,8 @@ func serverHandlerDocument(handler *document.Service) func(*server) {
 
 func serverLogger(logger log.Logger) func(*server) {
 	return func(s *server) { s.logger = logger }
+}
+
+func serverMiddlewareTimeout(duration time.Duration) func(*server) {
+	return func(s *server) { s.middleware.timeout = duration }
 }

@@ -7,9 +7,13 @@
 # - http.default-limit
 #   The quantity of entities to be returned by default. Default value: 30.
 #
+# - http.timeout
+#   The max time a request has to process. Default value: 1s.
+#
 [http]
 addr          = ":8080"
 default-limit = 30
+timeout       = "1s"
 
 # --------------------------------------------------------------------------------------------------
 # - repository.engine

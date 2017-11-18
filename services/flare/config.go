@@ -7,6 +7,7 @@ package flare
 import (
 	"bytes"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/viper"
@@ -140,6 +141,14 @@ func (c *config) httpDefaultLimit() int {
 		return 30
 	}
 	return value
+}
+
+func (c *config) serverMiddlewareTimeout() (time.Duration, error) {
+	s := c.getString("http.timeout")
+	if s == "" {
+		s = "1s"
+	}
+	return time.ParseDuration(s)
 }
 
 func newConfig(options ...func(*config)) (*config, error) {

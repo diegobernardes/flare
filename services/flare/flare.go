@@ -50,7 +50,7 @@ func (c *Client) Start() error {
 	if err = c.initLogger(); err != nil {
 		return errors.Wrap(err, "error during log initialization")
 	}
-	c.logger.Log("message", "Starting Flare")
+	c.logger.Log("message", "starting Flare")
 
 	documentRepository, err := c.config.documentRepository()
 	if err != nil {
@@ -84,12 +84,18 @@ func (c *Client) Start() error {
 		return errors.Wrap(err, "error during subscription service initialization")
 	}
 
+	duration, err := c.config.serverMiddlewareTimeout()
+	if err != nil {
+		return errors.Wrap(err, "error during config http.timeout parse")
+	}
+
 	srv, err := newServer(
 		serverAddr(config.getString("http.addr")),
 		serverHandlerResource(resourceService),
 		serverHandlerSubscription(subscriptionService),
 		serverHandlerDocument(documentService),
 		serverLogger(c.logger),
+		serverMiddlewareTimeout(duration),
 	)
 	if err != nil {
 		return errors.Wrap(err, "error during server initialization")
