@@ -6,6 +6,7 @@ package flare
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -22,7 +23,7 @@ func TestDocumentValid(t *testing.T) {
 			},
 			{
 				Id:               "1",
-				ChangeFieldValue: "2006-01-02",
+				ChangeFieldValue: time.Now(),
 				Resource: Resource{
 					Change: ResourceChange{
 						Field:      "revision",
@@ -89,6 +90,33 @@ func TestDocumentValid(t *testing.T) {
 				},
 			},
 			{
+				"Should have a invalid changeFieldValue 3",
+				Document{
+					Id:               "1",
+					ChangeFieldValue: "2006-01-02",
+					Resource: Resource{
+						Change: ResourceChange{
+							Field:      "revision",
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+			},
+			{
+				"Should have a invalid changeFieldValue 4",
+				Document{
+					Id:               "1",
+					ChangeFieldValue: "2006-01-02",
+					Resource: Resource{
+						Change: ResourceChange{
+							Field: "revision",
+							Kind:  ResourceChangeInteger,
+						},
+					},
+				},
+			},
+			{
 				"Should have a invalid date at changeFieldValue",
 				Document{
 					Id:               "1",
@@ -124,7 +152,7 @@ func TestDocumentNewer(t *testing.T) {
 			},
 			{
 				&Document{
-					ChangeFieldValue: float64(0),
+					ChangeFieldValue: 0,
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind: ResourceChangeInteger,
@@ -132,7 +160,7 @@ func TestDocumentNewer(t *testing.T) {
 					},
 				},
 				Document{
-					ChangeFieldValue: float64(1),
+					ChangeFieldValue: 1,
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind: ResourceChangeInteger,
@@ -160,7 +188,7 @@ func TestDocumentNewer(t *testing.T) {
 			},
 			{
 				&Document{
-					ChangeFieldValue: "2007-09-07T07:08:08.008Z",
+					ChangeFieldValue: time.Now(),
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind:       ResourceChangeDate,
@@ -169,7 +197,7 @@ func TestDocumentNewer(t *testing.T) {
 					},
 				},
 				Document{
-					ChangeFieldValue: "2008-09-07T07:08:08.008Z",
+					ChangeFieldValue: time.Now().Add(1 * time.Second),
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind:       ResourceChangeDate,
@@ -196,7 +224,7 @@ func TestDocumentNewer(t *testing.T) {
 		}{
 			{
 				&Document{
-					ChangeFieldValue: float64(1),
+					ChangeFieldValue: 1,
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind: ResourceChangeInteger,
@@ -204,7 +232,7 @@ func TestDocumentNewer(t *testing.T) {
 					},
 				},
 				Document{
-					ChangeFieldValue: float64(0),
+					ChangeFieldValue: 0,
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind: ResourceChangeInteger,
@@ -232,7 +260,7 @@ func TestDocumentNewer(t *testing.T) {
 			},
 			{
 				&Document{
-					ChangeFieldValue: "2008-09-07T07:08:08.008Z",
+					ChangeFieldValue: time.Now().Add(1 * time.Second),
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind:       ResourceChangeDate,
@@ -241,7 +269,7 @@ func TestDocumentNewer(t *testing.T) {
 					},
 				},
 				Document{
-					ChangeFieldValue: "2007-09-07T07:08:08.008Z",
+					ChangeFieldValue: time.Now(),
 					Resource: Resource{
 						Change: ResourceChange{
 							Kind:       ResourceChangeDate,
@@ -310,6 +338,44 @@ func TestDocumentNewer(t *testing.T) {
 					},
 				},
 			},
+			{
+				&Document{
+					ChangeFieldValue: "2006-01-02T15:04:05Z07:00",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02T15:04:05Z07:00",
+						},
+					},
+				},
+				Document{
+					ChangeFieldValue: "2006-01-02T15:04:05Z07:00",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02T15:04:05Z07:00",
+						},
+					},
+				},
+			},
+			{
+				&Document{
+					ChangeFieldValue: float64(0),
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				Document{
+					ChangeFieldValue: float64(1),
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+			},
 		}
 		Convey("The output should be valid", func() {
 			for _, tt := range tests {
@@ -328,14 +394,14 @@ func TestDocumentNewerDate(t *testing.T) {
 		}{
 			{
 				Document{
-					ChangeFieldValue: "2007-01-02",
+					ChangeFieldValue: time.Date(2011, time.January, 0, 0, 0, 0, 0, time.UTC),
 					Resource: Resource{
 						Change: ResourceChange{
 							DateFormat: "2006-01-02",
 						},
 					},
 				},
-				"2006-01-02",
+				time.Date(2010, time.January, 0, 0, 0, 0, 0, time.UTC),
 			},
 		}
 
@@ -355,25 +421,14 @@ func TestDocumentNewerDate(t *testing.T) {
 		}{
 			{
 				Document{
-					ChangeFieldValue: "2006-01-02",
+					ChangeFieldValue: time.Date(2010, time.January, 0, 0, 0, 0, 0, time.UTC),
 					Resource: Resource{
 						Change: ResourceChange{
 							DateFormat: "2006-01-02",
 						},
 					},
 				},
-				"2006-01-02",
-			},
-			{
-				Document{
-					ChangeFieldValue: "2005-01-02",
-					Resource: Resource{
-						Change: ResourceChange{
-							DateFormat: "2006-01-02",
-						},
-					},
-				},
-				"2006-01-02",
+				time.Date(2011, time.January, 0, 0, 0, 0, 0, time.UTC),
 			},
 		}
 
@@ -414,6 +469,17 @@ func TestDocumentNewerDate(t *testing.T) {
 				},
 				"",
 			},
+			{
+				Document{
+					ChangeFieldValue: time.Date(2010, time.January, 0, 0, 0, 0, 0, time.UTC),
+					Resource: Resource{
+						Change: ResourceChange{
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				"2006-01-02",
+			},
 		}
 
 		Convey("The output should be valid", func() {
@@ -432,8 +498,8 @@ func TestDocumentNewerInteger(t *testing.T) {
 			value    interface{}
 		}{
 			{
-				Document{ChangeFieldValue: float64(2)},
-				float64(1),
+				Document{ChangeFieldValue: 2},
+				1,
 			},
 		}
 
@@ -452,12 +518,12 @@ func TestDocumentNewerInteger(t *testing.T) {
 			value    interface{}
 		}{
 			{
-				Document{ChangeFieldValue: float64(1)},
-				float64(1),
+				Document{ChangeFieldValue: 1},
+				1,
 			},
 			{
-				Document{ChangeFieldValue: float64(0)},
-				float64(1),
+				Document{ChangeFieldValue: 0},
+				1,
 			},
 		}
 
@@ -566,6 +632,334 @@ func TestDocumentNewerString(t *testing.T) {
 			for _, tt := range tests {
 				_, err := tt.document.newerString(tt.value)
 				So(err, ShouldNotBeNil)
+			}
+		})
+	})
+}
+
+func TestDocumentTransformRevisionDate(t *testing.T) {
+	Convey("Given a list of documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "2010-10-01",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				time.Date(2010, time.October, 1, 0, 0, 0, 0, time.UTC),
+			},
+			{
+				Document{
+					ChangeFieldValue: time.Date(2010, time.October, 1, 0, 0, 0, 0, time.UTC),
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				time.Date(2010, time.October, 1, 0, 0, 0, 0, time.UTC),
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.transformRevisionDate(), ShouldBeNil)
+				So(tt.revision, ShouldEqual, tt.document.ChangeFieldValue)
+			}
+		})
+	})
+
+	Convey("Given a list of invalid documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "sample",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				nil,
+			},
+			{
+				Document{
+					ChangeFieldValue: float64(0),
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				nil,
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.transformRevisionDate(), ShouldNotBeNil)
+			}
+		})
+	})
+}
+
+func TestDocumentTransformRevisionInt(t *testing.T) {
+	Convey("Given a list of documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "1",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				1,
+			},
+			{
+				Document{
+					ChangeFieldValue: 2,
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				2,
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.transformRevisionInt(), ShouldBeNil)
+				So(tt.revision, ShouldEqual, tt.document.ChangeFieldValue)
+			}
+		})
+	})
+
+	Convey("Given a list of invalid documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				nil,
+			},
+			{
+				Document{
+					ChangeFieldValue: "sample",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				nil,
+			},
+			{
+				Document{
+					ChangeFieldValue: float64(0),
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				nil,
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.transformRevisionInt(), ShouldNotBeNil)
+			}
+		})
+	})
+}
+
+func TestDocumentTransformRevisionString(t *testing.T) {
+	Convey("Given a list of documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "1",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeString,
+						},
+					},
+				},
+				"1",
+			},
+			{
+				Document{
+					ChangeFieldValue: "",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeString,
+						},
+					},
+				},
+				"",
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.transformRevisionString(), ShouldBeNil)
+				So(tt.revision, ShouldEqual, tt.document.ChangeFieldValue)
+			}
+		})
+	})
+
+	Convey("Given a list of invalid documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: 1,
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeString,
+						},
+					},
+				},
+				nil,
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.transformRevisionString(), ShouldNotBeNil)
+			}
+		})
+	})
+}
+
+func TestDocumentTransformRevision(t *testing.T) {
+	Convey("Given a list of documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "2010-10-01",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				time.Date(2010, time.October, 1, 0, 0, 0, 0, time.UTC),
+			},
+			{
+				Document{
+					ChangeFieldValue: 2,
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				2,
+			},
+			{
+				Document{
+					ChangeFieldValue: "1",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeString,
+						},
+					},
+				},
+				"1",
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.TransformRevision(), ShouldBeNil)
+				So(tt.revision, ShouldEqual, tt.document.ChangeFieldValue)
+			}
+		})
+	})
+
+	Convey("Given a list of invalid documents", t, func() {
+		tests := []struct {
+			document Document
+			revision interface{}
+		}{
+			{
+				Document{
+					ChangeFieldValue: "sample",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind:       ResourceChangeDate,
+							DateFormat: "2006-01-02",
+						},
+					},
+				},
+				nil,
+			},
+			{
+				Document{
+					ChangeFieldValue: "sample",
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeInteger,
+						},
+					},
+				},
+				nil,
+			},
+			{
+				Document{
+					ChangeFieldValue: 1,
+					Resource: Resource{
+						Change: ResourceChange{
+							Kind: ResourceChangeString,
+						},
+					},
+				},
+				nil,
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.document.TransformRevision(), ShouldNotBeNil)
 			}
 		})
 	})

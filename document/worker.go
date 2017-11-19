@@ -93,15 +93,20 @@ func (w *Worker) extractContent(rawContent []byte) (map[string]interface{}, stri
 func (w *Worker) processDelete(ctx context.Context, id string) error {
 	document, err := w.documentRepository.FindOne(ctx, id)
 	if err != nil {
+		if errDoc, ok := err.(flare.DocumentRepositoryError); ok && errDoc.NotFound() {
+			return nil
+		}
 		return errors.Wrap(err, "error during the check if the document exists")
 	}
 
+	resource, err := w.resourceRepository.FindOne(ctx, document.Resource.ID)
+	if err != nil {
+		return errors.Wrap(err, "error during the check if the resource exists")
+	}
+	document.Resource = *resource
+
 	if err = w.subscriptionTrigger.Delete(ctx, document); err != nil {
 		return errors.Wrap(err, "error during document change trigger")
-	}
-
-	if err = w.documentRepository.Delete(ctx, id); err != nil {
-		return errors.Wrap(err, "error during delete")
 	}
 	return nil
 }
@@ -112,13 +117,6 @@ func (w *Worker) processUpdate(ctx context.Context, id, action string, body []by
 		return errors.Wrap(err, "could not parse the document")
 	}
 
-	referenceDocument, err := w.documentRepository.FindOne(ctx, document.Id)
-	if err != nil {
-		if _, ok := err.(flare.DocumentRepositoryError); !ok {
-			return errors.Wrap(err, "error during document search")
-		}
-	}
-
 	hasSubscr, err := w.subscriptionRepository.HasSubscription(ctx, document.Resource.ID)
 	if err != nil {
 		return errors.Wrap(err, "error during check if the document resource has subscriptions")
@@ -127,7 +125,11 @@ func (w *Worker) processUpdate(ctx context.Context, id, action string, body []by
 		return nil
 	}
 
-	if err = w.updateAndTriggerDocumentChange(ctx, document, referenceDocument, action); err != nil {
+	if err = w.documentRepository.Update(ctx, document); err != nil {
+		return errors.Wrap(err, "error during document persistence")
+	}
+
+	if err := w.subscriptionTrigger.Update(ctx, document); err != nil {
 		return errors.Wrap(err, "error during document change trigger")
 	}
 	return nil
@@ -168,45 +170,19 @@ func (w *Worker) parseHandleUpdateDocument(
 
 	document := &flare.Document{
 		Id:               id,
-		ChangeFieldValue: content[resource.Change.Field],
 		Resource:         *resource,
+		ChangeFieldValue: content[resource.Change.Field],
 	}
+
+	if err = document.TransformRevision(); err != nil {
+		return nil, errors.Wrap(err, "error during document revision parse")
+	}
+
 	if err = document.Valid(); err != nil {
 		return nil, errors.Wrap(err, "document is not valid")
 	}
 
 	return document, nil
-}
-
-func (w *Worker) updateAndTriggerDocumentChange(
-	ctx context.Context, document, referenceDocument *flare.Document, action string,
-) error {
-	var (
-		newer bool
-		err   error
-	)
-
-	if referenceDocument != nil {
-		newer, err = document.Newer(referenceDocument)
-		if err != nil {
-			return errors.Wrap(err, "error during comparing the document with the latest one on datastorage")
-		}
-	}
-
-	if newer ||
-		action == flare.SubscriptionTriggerCreate ||
-		action == flare.SubscriptionTriggerUpdate {
-		if err = w.documentRepository.Update(ctx, document); err != nil {
-			return errors.Wrap(err, "error during document persistence")
-		}
-	}
-
-	if action == flare.SubscriptionTriggerCreate || action == flare.SubscriptionTriggerUpdate {
-		if err = w.subscriptionTrigger.Update(ctx, document); err != nil {
-			return errors.Wrap(err, "error during document change trigger")
-		}
-	}
-	return nil
 }
 
 // Init initialize the worker.

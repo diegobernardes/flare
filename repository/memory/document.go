@@ -10,6 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/diegobernardes/flare"
 )
 
@@ -29,6 +31,13 @@ func (d *Document) FindOne(ctx context.Context, id string) (*flare.Document, err
 		return nil, &errMemory{message: fmt.Sprintf("document '%s' not found", id), notFound: true}
 	}
 	return &document, nil
+}
+
+// FindOneWithRevision return the document that match the id and the revision.
+func (d *Document) FindOneWithRevision(
+	context.Context, string, interface{},
+) (*flare.Document, error) {
+	return nil, errors.New("not implemented")
 }
 
 // Update a document.

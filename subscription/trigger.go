@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -25,36 +26,61 @@ type Trigger struct {
 }
 
 func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, error) {
-	type raw struct {
-		Document flare.Document
-		Action   string
+	rawContent := map[string]interface{}{
+		"action":                   action,
+		"documentID":               document.Id,
+		"resourceID":               document.Resource.ID,
+		"changeKind":               document.Resource.Change.Kind,
+		"updatedAt":                time.Now().Format(time.RFC3339),
+		"documentChangeFieldValue": document.ChangeFieldValue,
 	}
 
-	content, err := json.Marshal(raw{
-		Document: *document,
-		Action:   action,
-	})
+	if document.Resource.Change.Kind == flare.ResourceChangeDate {
+		rawContent["changeDateFormat"] = document.Resource.Change.DateFormat
+	}
+
+	content, err := json.Marshal(rawContent)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during message marshal")
 	}
 	return content, nil
 }
 
-func (t *Trigger) unmarshal(rawContent []byte) (map[string]interface{}, error) {
-	type raw struct {
-		Document flare.Document
-		Action   string
+func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) {
+	type content struct {
+		Action           string      `json:"action"`
+		DocumentID       string      `json:"documentID"`
+		ResourceID       string      `json:"resourceID"`
+		ChangeKind       string      `json:"changeKind"`
+		ChangeKindFormat string      `json:"changeDateFormat"`
+		UpdateAt         time.Time   `json:"updatedAt"`
+		Revision         interface{} `json:"documentChangeFieldValue"`
 	}
 
-	var r raw
-	if err := json.Unmarshal(rawContent, &r); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal message")
+	var value content
+	if err := json.Unmarshal(rawContent, &value); err != nil {
+		panic(err)
 	}
 
-	return map[string]interface{}{
-		"document": r.Document,
-		"action":   r.Action,
-	}, nil
+	resource := flare.Resource{
+		ID: value.ResourceID,
+		Change: flare.ResourceChange{
+			Kind:       value.ChangeKind,
+			DateFormat: value.ChangeKindFormat,
+		},
+	}
+
+	document := &flare.Document{
+		Id:               value.DocumentID,
+		ChangeFieldValue: value.Revision,
+		UpdatedAt:        value.UpdateAt,
+		Resource:         resource,
+	}
+	if err := document.TransformRevision(); err != nil {
+		return nil, "", errors.Wrap(err, "error during revison transformation")
+	}
+
+	return document, value.Action, nil
 }
 
 // Update the document change signal.
@@ -85,22 +111,17 @@ func (t *Trigger) Delete(ctx context.Context, document *flare.Document) error {
 
 // Process is used to consume the tasks.
 func (t *Trigger) Process(ctx context.Context, rawContent []byte) error {
-	content, err := t.unmarshal(rawContent)
+	rawDocument, action, err := t.unmarshal(rawContent)
 	if err != nil {
 		return errors.Wrap(err, "could not unmarshal the message")
 	}
 
-	document, ok := content["document"].(flare.Document)
-	if !ok {
-		return errors.New("missing document")
+	document, err := t.document.FindOneWithRevision(ctx, rawDocument.Id, rawDocument.ChangeFieldValue)
+	if err != nil {
+		return errors.Wrap(err, "error during document find")
 	}
 
-	action, ok := content["action"].(string)
-	if !ok {
-		return errors.New("missing action")
-	}
-
-	if err = t.repository.Trigger(ctx, action, &document, t.exec(&document)); err != nil {
+	if err = t.repository.Trigger(ctx, action, document, t.exec(document)); err != nil {
 		return errors.Wrap(err, "error during message process")
 	}
 	return nil

@@ -188,12 +188,12 @@ func (c *Client) initResourceService(
 ) (*resource.Service, flare.ResourceRepositorier, error) {
 	repository, err := c.config.resourceRepository()
 	if err != nil {
-		panic(err)
+		return nil, nil, errors.Wrap(err, "error during resource repository initialization")
 	}
 
 	writer, err := infraHTTP.NewWriter(c.logger)
 	if err != nil {
-		panic(err)
+		return nil, nil, errors.Wrap(err, "error during http.Writer initialization")
 	}
 
 	resourceService, err := resource.NewService(
@@ -218,7 +218,7 @@ func (c *Client) initSubscriptionService(
 ) (*subscription.Service, error) {
 	writer, err := infraHTTP.NewWriter(c.logger)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "error during http.Writer initialization")
 	}
 
 	subscriptionService, err := subscription.NewService(

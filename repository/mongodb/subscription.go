@@ -186,6 +186,7 @@ func (s *Subscription) Trigger(
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", doc.Resource.ID))
 	}
+	doc.Resource = *resource
 
 	group, groupCtx := errgroup.WithContext(ctx)
 	for i := range subscriptions {
@@ -308,6 +309,7 @@ func (s *Subscription) triggerProcess(
 		if referenceDocument == nil {
 			return s.newEntry(groupCtx, kind, session, subs, doc, fn)
 		}
+		referenceDocument.Resource = subs.Resource
 
 		if kind == flare.SubscriptionTriggerDelete {
 			return s.triggerProcessDelete(groupCtx, kind, session, subs, doc, fn)

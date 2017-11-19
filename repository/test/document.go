@@ -41,6 +41,13 @@ func (d *Document) FindOne(ctx context.Context, id string) (*flare.Document, err
 	return document, err
 }
 
+// FindOneWithRevision mock flare.DocumentRepositorier.FindOneWithRevision.
+func (d *Document) FindOneWithRevision(
+	ctx context.Context, id string, revision interface{},
+) (*flare.Document, error) {
+	return d.base.FindOneWithRevision(ctx, id, revision)
+}
+
 // Update mock flare.DocumentRepositorier.Update.
 func (d *Document) Update(ctx context.Context, document *flare.Document) error {
 	if d.updateErr != nil {
