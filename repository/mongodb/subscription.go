@@ -41,7 +41,7 @@ func (s *Subscription) FindAll(
 		session.SetMode(mgo.Monotonic, true)
 		defer session.Close()
 
-		totalResult, err := session.DB(s.database).C(s.collection).Find(bson.M{}).Count()
+		totalResult, err := session.DB(s.database).C(s.collection).Find(bson.M{"resource.id": id}).Count()
 		if err != nil {
 			return err
 		}
@@ -57,7 +57,7 @@ func (s *Subscription) FindAll(
 		q := session.
 			DB(s.database).
 			C(s.collection).
-			Find(bson.M{}).
+			Find(bson.M{"resource.id": id}).
 			Sort("createdAt").
 			Limit(pagination.Limit)
 		if pagination.Offset != 0 {
