@@ -251,6 +251,10 @@ func (s *Subscription) triggerProcessDelete(
 	doc *flare.Document,
 	fn func(context.Context, flare.Subscription, string) error,
 ) error {
+	if err := fn(groupCtx, subs, flare.SubscriptionTriggerDelete); err != nil {
+		return errors.Wrap(err, "error during document subscription processing")
+	}
+
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
@@ -259,9 +263,6 @@ func (s *Subscription) triggerProcessDelete(
 		return errors.Wrap(err, "error during subscriptionTriggers delete")
 	}
 
-	if err = fn(groupCtx, subs, flare.SubscriptionTriggerDelete); err != nil {
-		return errors.Wrap(err, "error during document subscription processing")
-	}
 	return nil
 }
 
