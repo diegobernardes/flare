@@ -65,7 +65,7 @@
   "terraform.formatOnSave": true,
   "terraform.formatVarsOnSave": true,
   "[makefile]": {
-    "editor.insertSpaces": true,
+    "editor.insertSpaces": false,
     "editor.tabSize": 2
   }
 }
