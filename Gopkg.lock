@@ -15,7 +15,7 @@
 
 [[projects]]
   name = "github.com/go-chi/chi"
-  packages = ["."]
+  packages = [".","middleware"]
   revision = "04ec7fc4179604b2390947258f9143eaae23b596"
   version = "v3.2.1"
 
@@ -199,12 +199,6 @@
   revision = "bd91bbf73e9a4a801adbfb97133c992678533126"
 
 [[projects]]
-  name = "gopkg.in/h2non/gock.v1"
-  packages = ["."]
-  revision = "84d599244901620fb3eb96473eb9e50619f69b47"
-  version = "v1.0.6"
-
-[[projects]]
   branch = "v2"
   name = "gopkg.in/mgo.v2"
   packages = [".","bson","internal/json","internal/sasl","internal/scram"]
@@ -219,6 +213,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "c50fa6ef9ac72f1d835c04897518f9979d147e49f84c8997c07ba1104505b905"
+  inputs-digest = "b13052db0ff265a45247af94d074c438a01f730fd3d34612ac59713f81d65270"
   solver-name = "gps-cdcl"
   solver-version = 1
