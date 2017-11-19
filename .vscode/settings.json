@@ -63,5 +63,9 @@
   "go.autocompleteUnimportedPackages": true,
   "go.docsTool": "gogetdoc",
   "terraform.formatOnSave": true,
-  "terraform.formatVarsOnSave": true
+  "terraform.formatVarsOnSave": true,
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 2
+  }
 }
