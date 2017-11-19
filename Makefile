@@ -1,6 +1,6 @@
-DOCKER_VERSION	= 0.4
-DOCKER_IMAGE		= diegobernardes/flare
-PROJECT_PATH		= github.com/diegobernardes/flare
+DOCKER_VERSION = 0.4
+DOCKER_IMAGE = diegobernardes/flare
+PROJECT_PATH = github.com/diegobernardes/flare
 
 configure:
 	@git config pull.rebase true
