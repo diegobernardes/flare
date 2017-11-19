@@ -64,10 +64,10 @@ EOF
 Update a given document at Flare.
 
 ```bash
-curl -H "Content-Type: application/json" -XPOST http://localhost:8080/documents/http://app.io/users/123 -d @- << EOF
+curl -H "Content-Type: application/json" -XPUT http://localhost:8080/documents/http://app.io/users/123 -d @- << EOF
 {
 	"updatedAt": "2017-09-23T07:08:08.008Z",
-	"name": "Diego Bernardes",
+	"name": "Diego Bernardes"
 }
 EOF
 ```
@@ -81,3 +81,5 @@ After the document is updated, the client gonna receive this message at `http://
   "updatedAt": "2017-11-17 00:00:00 +0000 UTC"
 }
 ```
+
+[![asciicast](https://asciinema.org/a/148193.png)](https://asciinema.org/a/148193)
