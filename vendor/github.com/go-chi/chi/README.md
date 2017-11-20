@@ -109,7 +109,7 @@ func main() {
 
     // Regexp url parameters:
     r.Get("/{articleSlug:[a-z-]+}", getArticleBySlug)                // GET /articles/home-is-toronto
-    
+
     // Subrouters:
     r.Route("/{articleID}", func(r chi.Router) {
       r.Use(ArticleCtx)
@@ -320,6 +320,7 @@ with `net/http` can be used with chi's mux.
 -----------------------------------------------------------------------------------------------------------
 | chi/middlware Handler | description                                                                     |
 |:----------------------|:---------------------------------------------------------------------------------
+| AllowContentType      | Explicit whitelist of accepted request Content-Types                            |
 | Compress              | Gzip compression for clients that accept compressed responses                   |
 | GetHead               | Automatically route undefined HEAD requests to GET handlers                     |
 | Heartbeat             | Monitoring endpoint to check the servers pulse                                  |
@@ -330,6 +331,7 @@ with `net/http` can be used with chi's mux.
 | Recoverer             | Gracefully absorb panics and prints the stack trace                             |
 | RequestID             | Injects a request ID into the context of each request                           |
 | RedirectSlashes       | Redirect slashes on routing paths                                               |
+| SetHeader             | Short-hand middleware to set a response header key/value                        |
 | StripSlashes          | Strip slashes on routing paths                                                  |
 | Throttle              | Puts a ceiling on the number of concurrent requests                             |
 | Timeout               | Signals to the request context when the timeout deadline is reached             |
@@ -337,16 +339,20 @@ with `net/http` can be used with chi's mux.
 | WithValue             | Short-hand middleware to set a key/value on the request context                 |
 -----------------------------------------------------------------------------------------------------------
 
-### Auxiliary middlewares
+### Auxiliary middlewares & packages
 
------------------------------------------------------------------------------------------------------------
-| package                                          | description                                          |
-|:-------------------------------------------------|:------------------------------------------------------
-| [cors](https://github.com/go-chi/cors)           | Cross-origin resource sharing (CORS)                 |
-| [jwtauth](https://github.com/go-chi/jwtauth)     | JWT authentication                                   |
-| [httpcoala](https://github.com/go-chi/httpcoala) | HTTP request coalescer                               |
-| [chi-authz](https://github.com/casbin/chi-authz) | Request ACL via https://github.com/hsluoyz/casbin    | 
------------------------------------------------------------------------------------------------------------
+Please see https://github.com/go-chi for additional packages.
+
+--------------------------------------------------------------------------------------------------------------------
+| package                                            | description                                                 |
+|:---------------------------------------------------|:-------------------------------------------------------------
+| [cors](https://github.com/go-chi/cors)             | Cross-origin resource sharing (CORS)                        |
+| [jwtauth](https://github.com/go-chi/jwtauth)       | JWT authentication                                          |
+| [hostrouter](https://github.com/go-chi/hostrouter) | Domain/host based request routing                           |
+| [httpcoala](https://github.com/go-chi/httpcoala)   | HTTP request coalescer                                      |
+| [chi-authz](https://github.com/casbin/chi-authz)   | Request ACL via https://github.com/hsluoyz/casbin           |
+| [phi](https://github.com/fate-lovely/phi)          | Port chi to [fasthttp](https://github.com/valyala/fasthttp) |
+--------------------------------------------------------------------------------------------------------------------
 
 please [submit a PR](./CONTRIBUTING.md) if you'd like to include a link to a chi-compatible middleware
 

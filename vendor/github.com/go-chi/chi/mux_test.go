@@ -583,6 +583,26 @@ func TestMuxWith(t *testing.T) {
 	}
 }
 
+func TestRouterFromMuxWith(t *testing.T) {
+	t.Parallel()
+
+	r := NewRouter()
+
+	with := r.With(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			next.ServeHTTP(w, r)
+		})
+	})
+
+	with.Get("/with_middleware", func(w http.ResponseWriter, r *http.Request) {})
+
+	ts := httptest.NewServer(with)
+	defer ts.Close()
+
+	// Without the fix this test was committed with, this causes a panic.
+	testRequest(t, ts, http.MethodGet, "/with_middleware", nil)
+}
+
 func TestMuxMiddlewareStack(t *testing.T) {
 	var stdmwInit, stdmwHandler uint64
 	stdmw := func(next http.Handler) http.Handler {
@@ -1333,6 +1353,26 @@ func TestMountingSimilarPattern(t *testing.T) {
 	defer ts.Close()
 
 	if _, body := testRequest(t, ts, "GET", "/hi", nil); body != "bye" {
+		t.Fatalf(body)
+	}
+}
+
+func TestMuxEmptyParams(t *testing.T) {
+	r := NewRouter()
+	r.Get(`/users/{x}/{y}/{z}`, func(w http.ResponseWriter, r *http.Request) {
+		x := URLParam(r, "x")
+		y := URLParam(r, "y")
+		z := URLParam(r, "z")
+		w.Write([]byte(fmt.Sprintf("%s-%s-%s", x, y, z)))
+	})
+
+	ts := httptest.NewServer(r)
+	defer ts.Close()
+
+	if _, body := testRequest(t, ts, "GET", "/users/a/b/c", nil); body != "a-b-c" {
+		t.Fatalf(body)
+	}
+	if _, body := testRequest(t, ts, "GET", "/users///c", nil); body != "--c" {
 		t.Fatalf(body)
 	}
 }

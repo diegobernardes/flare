@@ -6,44 +6,61 @@ package chi
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 type methodTyp int
 
 const (
-	mCONNECT methodTyp = 1 << iota
+	mSTUB methodTyp = 1 << iota
+	mCONNECT
 	mDELETE
 	mGET
 	mHEAD
-	mLINK
 	mOPTIONS
 	mPATCH
 	mPOST
 	mPUT
 	mTRACE
-	mUNLINK
-	mSTUB
-
-	mALL methodTyp = mCONNECT | mDELETE | mGET | mHEAD | mLINK |
-		mOPTIONS | mPATCH | mPOST | mPUT | mTRACE | mUNLINK
 )
+
+var mALL = mCONNECT | mDELETE | mGET | mHEAD |
+	mOPTIONS | mPATCH | mPOST | mPUT | mTRACE
 
 var methodMap = map[string]methodTyp{
 	"CONNECT": mCONNECT,
 	"DELETE":  mDELETE,
 	"GET":     mGET,
 	"HEAD":    mHEAD,
-	"LINK":    mLINK,
 	"OPTIONS": mOPTIONS,
 	"PATCH":   mPATCH,
 	"POST":    mPOST,
 	"PUT":     mPUT,
 	"TRACE":   mTRACE,
-	"UNLINK":  mUNLINK,
+}
+
+// RegisterMethod adds support for custom HTTP method handlers, available
+// via Router#Method and Router#MethodFunc
+func RegisterMethod(method string) {
+	if method == "" {
+		return
+	}
+	method = strings.ToUpper(method)
+	if _, ok := methodMap[method]; ok {
+		return
+	}
+	n := len(methodMap)
+	if n > strconv.IntSize {
+		panic(fmt.Sprintf("chi: max number of methods reached (%d)", strconv.IntSize))
+	}
+	mt := methodTyp(math.Exp2(float64(n)))
+	methodMap[method] = mt
+	mALL |= mt
 }
 
 type nodeTyp uint8
@@ -407,7 +424,7 @@ func (n *node) findRoute(rctx *Context, method methodTyp, path string) *node {
 				// label for param nodes is the delimiter byte
 				p := strings.IndexByte(xsearch, xn.tail)
 
-				if p <= 0 {
+				if p < 0 {
 					if xn.tail == '/' {
 						p = len(xsearch)
 					} else {
@@ -674,6 +691,15 @@ func patNextSegment(pattern string) (nodeTyp, string, string, byte, int, int) {
 			nt = ntRegexp
 			rexpat = key[idx+1:]
 			key = key[:idx]
+		}
+
+		if len(rexpat) > 0 {
+			if rexpat[0] != '^' {
+				rexpat = "^" + rexpat
+			}
+			if rexpat[len(rexpat)-1] != '$' {
+				rexpat = rexpat + "$"
+			}
 		}
 
 		return nt, key, rexpat, tail, ps, pe
