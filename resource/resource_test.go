@@ -193,9 +193,11 @@ func TestResourceCreateValidWildcard(t *testing.T) {
 	Convey("Given a list of valid wildcards", t, func() {
 		tests := []resourceCreate{
 			{Path: "/users/{*}"},
+			{Path: "/users/{ * }"},
 			{Path: "/users/{*}/{wildcard2}"},
 			{Path: "/{wildcard1}/{wildcard2}/{wildcard3}"},
 			{Path: "/{wildcard}/{*}/users"},
+			{Path: "/{ id1 }/{ id2}"},
 		}
 
 		Convey("The validation should not return a error", func() {
@@ -209,6 +211,9 @@ func TestResourceCreateValidWildcard(t *testing.T) {
 	Convey("Given a list of invalid wildcards", t, func() {
 		tests := []resourceCreate{
 			{Path: "/users"},
+			{Path: "/{revision}"},
+			{Path: "/{ id }/{ id}"},
+			{Path: "/{ revision }"},
 			{Path: "/{*}{*}"},
 			{Path: "/{wildcard}}"},
 			{Path: "/{*}/{*}"},

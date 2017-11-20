@@ -128,10 +128,15 @@ func (r *resourceCreate) validWildcard() error {
 		}
 
 		if value[0] == '{' && value[len(value)-1] == '}' {
-			if _, ok := wildcards[value]; ok {
-				return fmt.Errorf("wildcard '%s' is present %d times", value, strings.Count(r.Path, value))
+			wildcard := strings.TrimSpace(value[1 : len(value)-1])
+			if wildcard == "revision" {
+				return fmt.Errorf("revision is a reserved word")
 			}
-			wildcards[value] = struct{}{}
+
+			if _, ok := wildcards[wildcard]; ok {
+				return fmt.Errorf("wildcard '%s' is present more then 1 time", wildcard)
+			}
+			wildcards[wildcard] = struct{}{}
 			hasWildcard = true
 		}
 
