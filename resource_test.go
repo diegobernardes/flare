@@ -6,6 +6,7 @@ package flare
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -56,6 +57,7 @@ func TestResourceWildcardReplace(t *testing.T) {
 		tests := []struct {
 			resource   Resource
 			id         string
+			revision   interface{}
 			rawContent []string
 			expected   []string
 			hasErr     bool
@@ -63,15 +65,40 @@ func TestResourceWildcardReplace(t *testing.T) {
 			{
 				Resource{Path: "/resource/{id}"},
 				"/resource/123",
+				nil,
 				[]string{"{id}", `{"id":"{id}"}`},
 				[]string{"123", `{"id":"123"}`},
+				false,
+			},
+			{
+				Resource{Path: "/resource/{id}"},
+				"/resource/123",
+				1,
+				[]string{"{revision}"},
+				[]string{"1"},
+				false,
+			},
+			{
+				Resource{Path: "/resource/{id}"},
+				"/resource/123",
+				"sample",
+				[]string{"{revision}"},
+				[]string{"sample"},
+				false,
+			},
+			{
+				Resource{Path: "/resource/{id}"},
+				"/resource/123",
+				time.Date(2011, time.January, 0, 0, 0, 0, 0, time.UTC),
+				[]string{"{revision}"},
+				[]string{"2010-12-31T00:00:00Z"},
 				false,
 			},
 		}
 
 		Convey("The output should be valid", func() {
 			for _, tt := range tests {
-				fn, err := tt.resource.WildcardReplace(tt.id)
+				fn, err := tt.resource.WildcardReplace(tt.id, tt.revision)
 				So(err, ShouldBeNil)
 
 				for i, value := range tt.rawContent {
@@ -87,6 +114,7 @@ func TestResourceWildcardReplace(t *testing.T) {
 		tests := []struct {
 			resource   Resource
 			id         string
+			revision   interface{}
 			rawContent []string
 			expected   []string
 			hasErr     bool
@@ -96,13 +124,14 @@ func TestResourceWildcardReplace(t *testing.T) {
 				"%zzzzz",
 				nil,
 				nil,
+				nil,
 				true,
 			},
 		}
 
 		Convey("It's expected to have a error", func() {
 			for _, tt := range tests {
-				_, err := tt.resource.WildcardReplace(tt.id)
+				_, err := tt.resource.WildcardReplace(tt.id, tt.revision)
 				So(err, ShouldNotBeNil)
 			}
 		})

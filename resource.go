@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -24,13 +25,18 @@ type Resource struct {
 }
 
 // WildcardReplace take a string and search of wildcards to replace the value.
-func (r *Resource) WildcardReplace(documentPath string) (func(string) string, error) {
+func (r *Resource) WildcardReplace(
+	documentPath string, revision interface{},
+) (func(string) string, error) {
 	endpoint, err := url.Parse(documentPath)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("error during url parse of '%s'", documentPath))
 	}
 	wildcards := strings.Split(r.Path, "/")
+	wildcards = append(wildcards, "{revision}")
+
 	documentWildcards := strings.Split(endpoint.Path, "/")
+	documentWildcards = append(documentWildcards, r.genRevision(revision))
 
 	return func(value string) string {
 		for i, wildcard := range wildcards {
@@ -44,6 +50,18 @@ func (r *Resource) WildcardReplace(documentPath string) (func(string) string, er
 		}
 		return value
 	}, nil
+}
+
+func (r *Resource) genRevision(revision interface{}) string {
+	switch v := revision.(type) {
+	case time.Time:
+		return v.Format(time.RFC3339)
+	case int:
+		return strconv.FormatInt((int64)(v), 10)
+	case string:
+		return v
+	}
+	return ""
 }
 
 // The types of value Flare support to detect document change.

@@ -176,13 +176,12 @@ func (t *Trigger) buildContent(
 	document *flare.Document, sub flare.Subscription, kind string,
 ) ([]byte, error) {
 	rawContent := map[string]interface{}{
-		"id":               document.Id,
-		"changeFieldValue": document.ChangeFieldValue,
-		"updatedAt":        document.UpdatedAt.String(),
-		"action":           kind,
+		"id":        document.Id,
+		"action":    kind,
+		"updatedAt": document.UpdatedAt.String(),
 	}
 	if sub.Data != nil {
-		replacer, err := sub.Resource.WildcardReplace(document.Id)
+		replacer, err := sub.Resource.WildcardReplace(document.Id, document.ChangeFieldValue)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
 		}
