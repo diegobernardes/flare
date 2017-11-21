@@ -157,10 +157,6 @@ func TestResourceDelete(t *testing.T) {
 		Convey("It is expected to have a error", func() {
 			err := r.Delete(context.Background(), "1")
 			So(err, ShouldNotBeNil)
-
-			// nErr, ok := err.(flare.ResourceRepositoryError)
-			// So(ok, ShouldBeTrue)
-			// So(nErr.NotFound(), ShouldBeTrue)
 		})
 	})
 }

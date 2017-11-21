@@ -37,19 +37,8 @@ func (s *Service) HandleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resource, err := s.resourceRepository.FindOne(r.Context(), s.getResourceID(r))
-	if err != nil {
-		status := http.StatusInternalServerError
-		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
-			status = http.StatusNotFound
-		}
-
-		s.writer.Error(w, "error during resource search", err, status)
-		return
-	}
-
 	subs, subsPag, err := s.subscriptionRepository.FindAll(
-		r.Context(), pag, resource.ID,
+		r.Context(), pag, s.getResourceID(r),
 	)
 	if err != nil {
 		s.writer.Error(w, "error during subscriptions search", err, http.StatusInternalServerError)

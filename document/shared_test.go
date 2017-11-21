@@ -4,13 +4,17 @@
 
 package document
 
-import "context"
+import (
+	"context"
+
+	"github.com/diegobernardes/flare"
+)
 
 type pushMock struct {
 	err error
 }
 
-func (pm *pushMock) push(ctx context.Context, id, action string, body []byte) error {
+func (pm *pushMock) push(ctx context.Context, action string, doc *flare.Document) error {
 	if pm.err != nil {
 		return pm.err
 	}
@@ -19,4 +23,19 @@ func (pm *pushMock) push(ctx context.Context, id, action string, body []byte) er
 
 func newPushMock(err error) *pushMock {
 	return &pushMock{err}
+}
+
+type pushWorkerMock struct {
+	err error
+}
+
+func (pm *pushWorkerMock) Push(context.Context, []byte) error {
+	if pm.err != nil {
+		return pm.err
+	}
+	return nil
+}
+
+func newPushWorkerMock(err error) *pushWorkerMock {
+	return &pushWorkerMock{err}
 }

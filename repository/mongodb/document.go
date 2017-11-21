@@ -30,9 +30,9 @@ func (d *Document) FindOne(ctx context.Context, id string) (*flare.Document, err
 
 // FindOneWithRevision return the document that match the id and the revision.
 func (d *Document) FindOneWithRevision(
-	ctx context.Context, id string, revision interface{},
+	ctx context.Context, id string, revision int64,
 ) (*flare.Document, error) {
-	return d.findOne(ctx, id, revision)
+	return d.findOne(ctx, id, &revision)
 }
 
 // Update a given document.
@@ -40,15 +40,14 @@ func (d *Document) Update(_ context.Context, document *flare.Document) error {
 	session := d.client.session()
 	session.SetMode(mgo.Monotonic, true)
 	defer session.Close()
-	document.UpdatedAt = time.Now()
 
 	content := d.marshal(document)
 	_, err := session.DB(d.database).C(d.collection).Upsert(bson.M{
-		"id":       document.Id,
-		"revision": document.ChangeFieldValue,
+		"id":       document.ID,
+		"revision": document.Revision,
 	}, content)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error during document '%s' update", document.Id))
+		return errors.Wrap(err, fmt.Sprintf("error during document '%s' update", document.ID))
 	}
 	return nil
 }
@@ -59,7 +58,7 @@ func (d *Document) Delete(_ context.Context, id string) error {
 }
 
 func (d *Document) findOne(
-	ctx context.Context, id string, revision interface{},
+	ctx context.Context, id string, revision *int64,
 ) (*flare.Document, error) {
 	session := d.client.session()
 	session.SetMode(mgo.Monotonic, true)
@@ -67,7 +66,7 @@ func (d *Document) findOne(
 
 	query := bson.M{"id": id}
 	if revision != nil {
-		query["revision"] = revision
+		query["revision"] = *revision
 	}
 
 	rawResult := make(map[string]interface{})
@@ -93,10 +92,11 @@ func (d *Document) findOne(
 
 func (d *Document) marshal(document *flare.Document) map[string]interface{} {
 	return map[string]interface{}{
-		"id":         document.Id,
-		"revision":   document.ChangeFieldValue,
+		"id":         document.ID,
+		"revision":   document.Revision,
 		"resourceID": document.Resource.ID,
-		"updatedAt":  time.Now(),
+		"updatedAt":  document.UpdatedAt,
+		"content":    document.Content,
 	}
 }
 
@@ -106,7 +106,7 @@ func (d *Document) unmarshal(content map[string]interface{}) (*flare.Document, e
 		return nil, errors.New("missing id")
 	}
 
-	revision, ok := content["revision"]
+	revision, ok := content["revision"].(int64)
 	if !ok {
 		return nil, errors.New("missing revision")
 	}
@@ -121,11 +121,17 @@ func (d *Document) unmarshal(content map[string]interface{}) (*flare.Document, e
 		return nil, errors.New("missing updatedAt")
 	}
 
+	docContent, ok := content["content"].(map[string]interface{})
+	if !ok {
+		return nil, errors.New("missing content")
+	}
+
 	return &flare.Document{
-		Id:               id,
-		ChangeFieldValue: revision,
-		Resource:         flare.Resource{ID: resourceID},
-		UpdatedAt:        updatedAt,
+		ID:        id,
+		Revision:  revision,
+		Resource:  flare.Resource{ID: resourceID},
+		UpdatedAt: updatedAt,
+		Content:   docContent,
 	}, nil
 }
 

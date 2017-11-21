@@ -35,7 +35,7 @@ func (d *Document) FindOne(ctx context.Context, id string) (*flare.Document, err
 
 // FindOneWithRevision return the document that match the id and the revision.
 func (d *Document) FindOneWithRevision(
-	context.Context, string, interface{},
+	context.Context, string, int64,
 ) (*flare.Document, error) {
 	return nil, errors.New("not implemented")
 }
@@ -46,7 +46,7 @@ func (d *Document) Update(ctx context.Context, doc *flare.Document) error {
 	defer d.mutex.RUnlock()
 
 	doc.UpdatedAt = time.Now()
-	d.documents[doc.Id] = *doc
+	d.documents[doc.ID] = *doc
 	return nil
 }
 

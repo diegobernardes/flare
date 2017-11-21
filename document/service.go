@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -37,7 +38,7 @@ func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.writer.Response(w, transformDocument(d), http.StatusOK, nil)
+	s.writer.Response(w, (*document)(d), http.StatusOK, nil)
 }
 
 // HandleUpdate process the request to update a document.
@@ -52,7 +53,7 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, err := ioutil.ReadAll(r.Body)
+	rawContent, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		s.writer.Error(
 			w,
@@ -63,17 +64,39 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(content) == 0 {
+	if len(rawContent) == 0 {
 		s.writer.Error(w, "missing document body", nil, http.StatusBadRequest)
 		return
 	}
 
-	err = s.pusher.push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerUpdate, content)
+	id := s.getDocumentId(r)
+	resource, err := s.resourceRepository.FindByURI(r.Context(), id)
 	if err != nil {
+		status := http.StatusInternalServerError
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
+			status = http.StatusNotFound
+		}
+
+		s.writer.Error(w, "error during resource search", err, status)
+		return
+	}
+
+	doc, err := parseDocument(id, rawContent, resource)
+	if err != nil {
+		s.writer.Error(w, "error during document parse", err, http.StatusBadRequest)
+		return
+	}
+
+	if err = doc.Valid(); err != nil {
+		s.writer.Error(w, "invalid document", err, http.StatusBadRequest)
+		return
+	}
+
+	if err = s.pusher.push(r.Context(), flare.SubscriptionTriggerUpdate, doc); err != nil {
 		s.writer.Error(
 			w,
 			"error during document process",
-			errors.Wrap(err, "could not push the document to worker"),
+			errors.Wrap(err, "could not push the document to be processed"),
 			http.StatusInternalServerError,
 		)
 		return
@@ -94,12 +117,28 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := s.pusher.push(r.Context(), s.getDocumentId(r), flare.SubscriptionTriggerDelete, nil)
+	id := s.getDocumentId(r)
+	resource, err := s.resourceRepository.FindByURI(r.Context(), id)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
+			status = http.StatusNotFound
+		}
+
+		s.writer.Error(w, "error during resource search", err, status)
+		return
+	}
+
+	err = s.pusher.push(
+		r.Context(),
+		flare.SubscriptionTriggerDelete,
+		&flare.Document{ID: id, UpdatedAt: time.Now(), Resource: *resource},
+	)
 	if err != nil {
 		s.writer.Error(
 			w,
 			"error during document process",
-			errors.Wrap(err, "could not push the document to worker"),
+			errors.Wrap(err, "could not push the document to be processed"),
 			http.StatusInternalServerError,
 		)
 		return

@@ -311,8 +311,6 @@ func (c *Client) initDocumentService(
 
 	err = documentWorker.Init(
 		document.WorkerDocumentRepository(dr),
-		document.WorkerResourceRepository(rr),
-		document.WorkerSubscriptionRepository(sr),
 		document.WorkerSubscriptionTrigger(trigger),
 		document.WorkerPusher(jobWorker),
 	)

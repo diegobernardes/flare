@@ -89,16 +89,6 @@ func (r *Subscription) Delete(ctx context.Context, resourceId, id string) error 
 	return r.base.Delete(ctx, resourceId, id)
 }
 
-// HasSubscription mock flare.SubscriptionRepositorier.HasSubscription.
-func (r *Subscription) HasSubscription(ctx context.Context, resourceId string) (bool, error) {
-	if r.hasSubscriptionErr != nil {
-		return false, r.hasSubscriptionErr
-	} else if r.err != nil {
-		return false, r.err
-	}
-	return r.base.HasSubscription(ctx, resourceId)
-}
-
 // Trigger mock flare.SubscriptionRepositorier.Trigger.
 func (r *Subscription) Trigger(
 	ctx context.Context,

@@ -174,3 +174,25 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 		Data: s.Data,
 	}, nil
 }
+
+func wildcardReplace(r *flare.Resource, doc *flare.Document) (func(string) string, error) {
+	endpoint, err := url.Parse(doc.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("error during url parse of '%s'", doc.ID))
+	}
+	wildcards := strings.Split(r.Path, "/")
+	documentWildcards := strings.Split(endpoint.Path, "/")
+
+	return func(value string) string {
+		for i, wildcard := range wildcards {
+			if wildcard == "" {
+				continue
+			}
+
+			if wildcard[0] == '{' && wildcard[len(wildcard)-1] == '}' {
+				value = strings.Replace(value, wildcard, documentWildcards[i], -1)
+			}
+		}
+		return value
+	}, nil
+}

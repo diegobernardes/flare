@@ -176,36 +176,37 @@ func (s *Subscription) triggerProcess(
 			s.changes[subs.ID] = documents
 		}
 
-		referenceDocument, ok := documents[doc.Id]
+		referenceDocument, ok := documents[doc.ID]
 		if !ok {
 			if kind == flare.SubscriptionTriggerDelete {
 				return nil
 			}
 
-			documents[doc.Id] = *doc
+			documents[doc.ID] = *doc
 			return errors.Wrap(
 				fn(groupCtx, subs, flare.SubscriptionTriggerCreate),
 				"error during document subscription processing",
 			)
 		}
+		_ = referenceDocument
 
 		if kind == flare.SubscriptionTriggerDelete {
-			delete(documents, doc.Id)
+			delete(documents, doc.ID)
 			if err := fn(groupCtx, subs, flare.SubscriptionTriggerDelete); err != nil {
 				return errors.Wrap(err, "error during document subscription processing")
 			}
 			return nil
 		}
 
-		newer, err := doc.Newer(&referenceDocument)
-		if err != nil {
-			return errors.Wrap(err, "error during check if document is newer")
-		}
-		if !newer {
-			return nil
-		}
+		// newer, err := doc.Newer(&referenceDocument)
+		// if err != nil {
+		// 	return errors.Wrap(err, "error during check if document is newer")
+		// }
+		// if !newer {
+		// 	return nil
+		// }
 
-		documents[doc.Id] = *doc
+		documents[doc.ID] = *doc
 		if err := fn(groupCtx, subs, flare.SubscriptionTriggerUpdate); err != nil {
 			return errors.Wrap(err, "error during document subscription processing")
 		}

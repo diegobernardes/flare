@@ -1,0 +1,10 @@
+{
+  "action": "delete",
+  "document": {
+    "id": "123",
+    "updatedAt": "2009-11-10T23:00:00Z"
+  },
+  "resource": {
+    "id": "456"
+  }
+}

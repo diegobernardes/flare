@@ -1,7 +1,10 @@
 [
   {
     "id": "456",
-    "changeFieldValue": "1",
+    "revision": 1,
+    "content": {
+      "service": "user"
+    },
     "resource": {
       "id": "123"
     }

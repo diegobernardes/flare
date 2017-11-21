@@ -101,7 +101,7 @@ func TestServiceHandleShow(t *testing.T) {
 				httptest.NewRequest(http.MethodGet, "http://documents/123", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				infraTest.Load("serviceHandleShow.errorRepository.json"),
+				infraTest.Load("serviceHandleShow.repositoryError.json"),
 				repoTest.NewDocument(repoTest.DocumentError(errors.New("error at repository"))),
 			},
 			{
@@ -141,60 +141,115 @@ func TestServiceHandleShow(t *testing.T) {
 func TestServiceHandleUpdate(t *testing.T) {
 	Convey("Given a list of requests", t, func() {
 		tests := []struct {
-			title      string
-			req        *http.Request
-			status     int
-			header     http.Header
-			body       []byte
-			repository flare.DocumentRepositorier
-			pusher     pusher
+			title              string
+			req                *http.Request
+			status             int
+			header             http.Header
+			body               []byte
+			documentRepository flare.DocumentRepositorier
+			resourceRepository flare.ResourceRepositorier
+			pusher             pusher
 		}{
 			{
 				"The request should be invalid because it has a query string",
 				httptest.NewRequest(
-					http.MethodPut, "http://documents/http://app.com/123?key=value", nil,
+					http.MethodPut, "http://documents/http://app.com/users/123?key=value", nil,
 				),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				infraTest.Load("serviceHandleUpdate.invalid.1.json"),
 				repoTest.NewDocument(),
+				repoTest.NewResource(),
 				newPushMock(nil),
 			},
 			{
 				"The request should be invalid because it has no body",
 				httptest.NewRequest(
-					http.MethodPut, "http://documents/http://app.com/123", nil,
+					http.MethodPut, "http://documents/http://app.com/users/123", nil,
 				),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				infraTest.Load("serviceHandleUpdate.invalid.2.json"),
 				repoTest.NewDocument(),
+				repoTest.NewResource(),
 				newPushMock(nil),
 			},
 			{
-				"The response should be a worker push error",
+				"The request should be invalid because it don't find the resource",
 				httptest.NewRequest(
 					http.MethodPut,
-					"http://documents/http://app.com/123",
+					"http://documents/http://app.com/users/123",
+					bytes.NewBuffer(infraTest.Load("serviceHandleUpdate.input.json")),
+				),
+				http.StatusNotFound,
+				http.Header{"Content-Type": []string{"application/json"}},
+				infraTest.Load("serviceHandleDelete.invalid.2.json"),
+				repoTest.NewDocument(),
+				repoTest.NewResource(),
+				newPushMock(nil),
+			},
+			{
+				"The request should be invalid because it has a error at the repository",
+				httptest.NewRequest(
+					http.MethodPut,
+					"http://documents/http://app.com/users/123",
 					bytes.NewBuffer(infraTest.Load("serviceHandleUpdate.input.json")),
 				),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
 				infraTest.Load("serviceHandleUpdate.invalid.3.json"),
 				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceError(errors.New("error at repository")),
+				),
+				newPushMock(nil),
+			},
+			{
+				"The request should be invalid because it has a error during document parse",
+				httptest.NewRequest(
+					http.MethodPut,
+					"http://documents/http://app.com/users/123",
+					bytes.NewBuffer([]byte("{}")),
+				),
+				http.StatusBadRequest,
+				http.Header{"Content-Type": []string{"application/json"}},
+				infraTest.Load("serviceHandleUpdate.invalid.4.json"),
+				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
+				),
 				newPushMock(errors.New("error during push")),
 			},
 			{
-				"The response should be a valid response",
+				"The request should be invalid because it has a error during document push",
 				httptest.NewRequest(
 					http.MethodPut,
-					"http://documents/http://app.com/123",
-					bytes.NewBuffer(infraTest.Load("serviceHandleUpdate.input.json")),
+					"http://documents/http://app.com/users/123",
+					bytes.NewBuffer(infraTest.Load("document.input.1.json")),
+				),
+				http.StatusInternalServerError,
+				http.Header{"Content-Type": []string{"application/json"}},
+				infraTest.Load("serviceHandleUpdate.invalid.5.json"),
+				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
+				),
+				newPushMock(errors.New("error during push")),
+			},
+			{
+				"The request should be valid",
+				httptest.NewRequest(
+					http.MethodPut,
+					"http://documents/http://app.com/users/123",
+					bytes.NewBuffer(infraTest.Load("document.input.1.json")),
 				),
 				http.StatusAccepted,
 				http.Header{},
 				nil,
 				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
+				),
 				newPushMock(nil),
 			},
 		}
@@ -205,9 +260,9 @@ func TestServiceHandleUpdate(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				service, err := NewService(
-					ServiceDocumentRepository(tt.repository),
-					ServiceResourceRepository(repoTest.NewResource()),
-					ServiceGetDocumentId(func(r *http.Request) string { return "123" }),
+					ServiceDocumentRepository(tt.documentRepository),
+					ServiceResourceRepository(tt.resourceRepository),
+					ServiceGetDocumentId(func(r *http.Request) string { return "http://app.com/users/123" }),
 					ServicePusher(tt.pusher),
 					ServiceWriter(writer),
 				)
@@ -222,41 +277,75 @@ func TestServiceHandleUpdate(t *testing.T) {
 func TestServiceHandleDelete(t *testing.T) {
 	Convey("Given a list of requests", t, func() {
 		tests := []struct {
-			title      string
-			req        *http.Request
-			status     int
-			header     http.Header
-			body       []byte
-			repository flare.DocumentRepositorier
-			pusher     pusher
+			title              string
+			req                *http.Request
+			status             int
+			header             http.Header
+			body               []byte
+			documentRepository flare.DocumentRepositorier
+			resourceRepository flare.ResourceRepositorier
+			pusher             pusher
 		}{
 			{
 				"The request should be invalid because it has a query string",
 				httptest.NewRequest(
-					http.MethodDelete, "http://documents/http://app.com/123?key=value", nil,
+					http.MethodDelete, "http://documents/http://app.com/users/123?key=value", nil,
 				),
 				http.StatusBadRequest,
 				http.Header{"Content-Type": []string{"application/json"}},
 				infraTest.Load("serviceHandleDelete.invalid.1.json"),
 				repoTest.NewDocument(),
+				repoTest.NewResource(),
+				newPushMock(nil),
+			},
+			{
+				"The request should be invalid because it don't find the resource",
+				httptest.NewRequest(
+					http.MethodDelete, "http://documents/http://app.com/users/123", nil,
+				),
+				http.StatusNotFound,
+				http.Header{"Content-Type": []string{"application/json"}},
+				infraTest.Load("serviceHandleDelete.invalid.2.json"),
+				repoTest.NewDocument(),
+				repoTest.NewResource(),
+				newPushMock(nil),
+			},
+			{
+				"The request should be invalid because it has a error at the repository",
+				httptest.NewRequest(
+					http.MethodDelete, "http://documents/http://app.com/users/123", nil,
+				),
+				http.StatusInternalServerError,
+				http.Header{"Content-Type": []string{"application/json"}},
+				infraTest.Load("serviceHandleDelete.invalid.3.json"),
+				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceError(errors.New("error at repository")),
+				),
 				newPushMock(nil),
 			},
 			{
 				"The response should be a worker push error",
-				httptest.NewRequest(http.MethodDelete, "http://documents/http://app.com/123", nil),
+				httptest.NewRequest(http.MethodDelete, "http://documents/http://app1.com/users/123", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
-				infraTest.Load("serviceHandleDelete.invalid.2.json"),
+				infraTest.Load("serviceHandleDelete.invalid.4.json"),
 				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
+				),
 				newPushMock(errors.New("error during push")),
 			},
 			{
 				"The response should be a valid response",
-				httptest.NewRequest(http.MethodDelete, "http://documents/http://app.com/123", nil),
+				httptest.NewRequest(http.MethodDelete, "http://documents/http://app1.com/users/123", nil),
 				http.StatusAccepted,
 				http.Header{},
 				nil,
 				repoTest.NewDocument(),
+				repoTest.NewResource(
+					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
+				),
 				newPushMock(nil),
 			},
 		}
@@ -267,9 +356,9 @@ func TestServiceHandleDelete(t *testing.T) {
 				So(err, ShouldBeNil)
 
 				service, err := NewService(
-					ServiceDocumentRepository(tt.repository),
-					ServiceResourceRepository(repoTest.NewResource()),
-					ServiceGetDocumentId(func(r *http.Request) string { return "123" }),
+					ServiceDocumentRepository(tt.documentRepository),
+					ServiceResourceRepository(tt.resourceRepository),
+					ServiceGetDocumentId(func(r *http.Request) string { return "http://app.com/users/123" }),
 					ServicePusher(tt.pusher),
 					ServiceWriter(writer),
 				)

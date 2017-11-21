@@ -206,7 +206,7 @@ func (s *Subscription) loadReferenceDocument(
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
-		Find(bson.M{"subscriptionId": subs.ID, "document.id": doc.Id}).
+		Find(bson.M{"subscriptionId": subs.ID, "document.id": doc.ID}).
 		One(&content)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -216,8 +216,8 @@ func (s *Subscription) loadReferenceDocument(
 	}
 
 	return &flare.Document{
-		Id:               doc.Id,
-		ChangeFieldValue: content["document"].(map[string]interface{})["changeFieldValue"],
+		ID:       doc.ID,
+		Revision: content["document"].(map[string]interface{})["revision"].(int64),
 	}, nil
 }
 
@@ -259,7 +259,7 @@ func (s *Subscription) triggerProcessDelete(
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
-		Remove(bson.M{"subscriptionId": subs.ID, "document.id": doc.Id})
+		Remove(bson.M{"subscriptionId": subs.ID, "document.id": doc.ID})
 	if err != nil {
 		return errors.Wrap(err, "error during subscriptionTriggers delete")
 	}
@@ -276,11 +276,11 @@ func (s *Subscription) upsertSubscriptionTrigger(
 		DB(s.database).
 		C(s.collectionTrigger).
 		Upsert(
-			bson.M{"subscriptionId": subs.ID, "document.id": doc.Id},
+			bson.M{"subscriptionId": subs.ID, "document.id": doc.ID},
 			bson.M{"subscriptionId": subs.ID, "document": bson.M{
-				"id":               doc.Id,
-				"changeFieldValue": doc.ChangeFieldValue,
-				"updatedAt":        time.Now(),
+				"id":        doc.ID,
+				"revision":  doc.Revision,
+				"updatedAt": time.Now(),
 			}},
 		)
 	if err != nil {
@@ -315,11 +315,7 @@ func (s *Subscription) triggerProcess(
 			return s.triggerProcessDelete(groupCtx, kind, session, subs, doc, fn)
 		}
 
-		newer, err := doc.Newer(referenceDocument)
-		if err != nil {
-			return errors.Wrap(err, "error during check if document is newer")
-		}
-		if !newer {
+		if newer := doc.Newer(referenceDocument); !newer {
 			return nil
 		}
 

@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Subscription is used to notify the clients about changes on documents.
+// Subscription has all the information needed to notify the clients from changes on documents.
 type Subscription struct {
 	ID        string
 	Endpoint  SubscriptionEndpoint
@@ -35,20 +35,19 @@ type SubscriptionDelivery struct {
 	Discard []int
 }
 
-// All kinds of actions a subscription trigger supports.
+// All kinds of actions a subscription trigger has.
 const (
 	SubscriptionTriggerCreate = "create"
 	SubscriptionTriggerUpdate = "update"
 	SubscriptionTriggerDelete = "delete"
 )
 
-// SubscriptionRepositorier is used to interact with the Subscription data storage.
+// SubscriptionRepositorier is used to interact with the subscription data storage.
 type SubscriptionRepositorier interface {
 	FindAll(context.Context, *Pagination, string) ([]Subscription, *Pagination, error)
-	FindOne(ctx context.Context, resourceId, id string) (*Subscription, error)
+	FindOne(ctx context.Context, resourceID, id string) (*Subscription, error)
 	Create(context.Context, *Subscription) error
-	Delete(ctx context.Context, resourceId, id string) error
-	HasSubscription(ctx context.Context, resourceId string) (bool, error)
+	Delete(ctx context.Context, resourceID, id string) error
 	Trigger(
 		ctx context.Context,
 		action string,
@@ -57,13 +56,13 @@ type SubscriptionRepositorier interface {
 	) error
 }
 
-// SubscriptionTrigger is used to trigger the change on Documents.
+// SubscriptionTrigger is used to trigger the change on documents.
 type SubscriptionTrigger interface {
 	Update(ctx context.Context, document *Document) error
 	Delete(ctx context.Context, document *Document) error
 }
 
-// SubscriptionRepositoryError implements all the errrors the repository can return.
+// SubscriptionRepositoryError represents all the errors the repository can return.
 type SubscriptionRepositoryError interface {
 	NotFound() bool
 	AlreadyExists() bool

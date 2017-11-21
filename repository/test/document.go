@@ -43,7 +43,7 @@ func (d *Document) FindOne(ctx context.Context, id string) (*flare.Document, err
 
 // FindOneWithRevision mock flare.DocumentRepositorier.FindOneWithRevision.
 func (d *Document) FindOneWithRevision(
-	ctx context.Context, id string, revision interface{},
+	ctx context.Context, id string, revision int64,
 ) (*flare.Document, error) {
 	return d.base.FindOneWithRevision(ctx, id, revision)
 }
@@ -111,10 +111,11 @@ func DocumentDate(date time.Time) func(*Document) {
 func DocumentLoadSliceByteDocument(content []byte) func(*Document) {
 	return func(d *Document) {
 		documents := make([]struct {
-			Id               string      `json:"id"`
-			ChangeFieldValue interface{} `json:"changeFieldValue"`
-			Resource         struct {
-				Id string `json:"id"`
+			ID       string                 `json:"id"`
+			Revision float64                `json:"revision"`
+			Content  map[string]interface{} `json:"content"`
+			Resource struct {
+				ID string `json:"id"`
 			} `json:"resource"`
 		}, 0)
 		if err := json.Unmarshal(content, &documents); err != nil {
@@ -125,10 +126,11 @@ func DocumentLoadSliceByteDocument(content []byte) func(*Document) {
 
 		for _, rawDocument := range documents {
 			err := d.Update(context.Background(), &flare.Document{
-				Id:               rawDocument.Id,
-				ChangeFieldValue: rawDocument.ChangeFieldValue,
+				ID:       rawDocument.ID,
+				Revision: (int64)(rawDocument.Revision),
+				Content:  rawDocument.Content,
 				Resource: flare.Resource{
-					ID: rawDocument.Resource.Id,
+					ID: rawDocument.Resource.ID,
 				},
 			})
 			if err != nil {

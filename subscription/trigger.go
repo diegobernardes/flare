@@ -27,27 +27,17 @@ type Trigger struct {
 
 func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, error) {
 	rawContent := map[string]interface{}{
-		"action":     action,
-		"documentID": document.Id,
-		"resourceID": document.Resource.ID,
-		"changeKind": document.Resource.Change.Kind,
-		"updatedAt":  time.Now().Format(time.RFC3339),
+		"action":                   action,
+		"documentID":               document.ID,
+		"resourceID":               document.Resource.ID,
+		"changeKind":               document.Resource.Change.Kind,
+		"updatedAt":                time.Now().Format(time.RFC3339),
+		"documentChangeFieldValue": document.Revision,
 	}
 
-	var revision interface{}
 	if document.Resource.Change.Kind == flare.ResourceChangeDate {
 		rawContent["changeDateFormat"] = document.Resource.Change.DateFormat
-
-		switch v := document.ChangeFieldValue.(type) {
-		case time.Time:
-			revision = v.Format(document.Resource.Change.DateFormat)
-		default:
-			revision = document.ChangeFieldValue
-		}
-	} else {
-		revision = document.ChangeFieldValue
 	}
-	rawContent["documentChangeFieldValue"] = revision
 
 	content, err := json.Marshal(rawContent)
 	if err != nil {
@@ -58,13 +48,13 @@ func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, erro
 
 func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) {
 	type content struct {
-		Action           string      `json:"action"`
-		DocumentID       string      `json:"documentID"`
-		ResourceID       string      `json:"resourceID"`
-		ChangeKind       string      `json:"changeKind"`
-		ChangeKindFormat string      `json:"changeDateFormat"`
-		UpdateAt         time.Time   `json:"updatedAt"`
-		Revision         interface{} `json:"documentChangeFieldValue"`
+		Action           string    `json:"action"`
+		DocumentID       string    `json:"documentID"`
+		ResourceID       string    `json:"resourceID"`
+		ChangeKind       string    `json:"changeKind"`
+		ChangeKindFormat string    `json:"changeDateFormat"`
+		UpdateAt         time.Time `json:"updatedAt"`
+		Revision         int64     `json:"documentChangeFieldValue"`
 	}
 
 	var value content
@@ -80,17 +70,12 @@ func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) 
 		},
 	}
 
-	document := &flare.Document{
-		Id:               value.DocumentID,
-		ChangeFieldValue: value.Revision,
-		UpdatedAt:        value.UpdateAt,
-		Resource:         resource,
-	}
-	if err := document.TransformRevision(); err != nil {
-		return nil, "", errors.Wrap(err, "error during revison transformation")
-	}
-
-	return document, value.Action, nil
+	return &flare.Document{
+		ID:        value.DocumentID,
+		Revision:  value.Revision,
+		UpdatedAt: value.UpdateAt,
+		Resource:  resource,
+	}, value.Action, nil
 }
 
 // Update the document change signal.
@@ -126,9 +111,18 @@ func (t *Trigger) Process(ctx context.Context, rawContent []byte) error {
 		return errors.Wrap(err, "could not unmarshal the message")
 	}
 
-	document, err := t.document.FindOneWithRevision(ctx, rawDocument.Id, rawDocument.ChangeFieldValue)
-	if err != nil {
-		return errors.Wrap(err, "error during document find")
+	var document *flare.Document
+	switch action {
+	case flare.SubscriptionTriggerUpdate:
+		document, err = t.document.FindOneWithRevision(ctx, rawDocument.ID, rawDocument.Revision)
+		if err != nil {
+			return errors.Wrap(err, "error during document find")
+		}
+	case flare.SubscriptionTriggerDelete:
+		document, err = t.document.FindOne(ctx, rawDocument.ID)
+		if err != nil {
+			return errors.Wrap(err, "error during document find")
+		}
 	}
 
 	if err = t.repository.Trigger(ctx, action, document, t.exec(document)); err != nil {
@@ -187,12 +181,12 @@ func (t *Trigger) buildContent(
 	document *flare.Document, sub flare.Subscription, kind string,
 ) ([]byte, error) {
 	rawContent := map[string]interface{}{
-		"id":        document.Id,
+		"id":        document.ID,
 		"action":    kind,
 		"updatedAt": document.UpdatedAt.String(),
 	}
 	if sub.Data != nil {
-		replacer, err := sub.Resource.WildcardReplace(document.Id, document.ChangeFieldValue)
+		replacer, err := wildcardReplace(&sub.Resource, document)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
 		}

@@ -1,6 +1,6 @@
 {
   "error": {
     "title": "error during resource search",
-    "detail": "error at repository"
+    "detail": "resource '123' not found"
   }
 }

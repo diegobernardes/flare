@@ -22,6 +22,5 @@ func (p *Pagination) Valid() error {
 	if p.Limit < 0 {
 		return errors.Errorf("invalid limit '%d'", p.Limit)
 	}
-
 	return nil
 }

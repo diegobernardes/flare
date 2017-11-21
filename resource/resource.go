@@ -84,7 +84,7 @@ func (r *resourceCreate) valid() error {
 	}
 
 	switch r.Change.Kind {
-	case flare.ResourceChangeInteger, flare.ResourceChangeString:
+	case flare.ResourceChangeInteger:
 	case flare.ResourceChangeDate:
 		if r.Change.DateFormat == "" {
 			return errors.New("missing change.dateFormat")

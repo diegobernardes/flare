@@ -1,0 +1,16 @@
+[
+  {
+    "id": "1",
+    "addresses": [
+      "http://app.com",
+      "https://app.io"
+    ],
+    "path": "/users/{*}",
+    "change": {
+      "field": "updatedAt",
+      "dateFormat": "2006-01-02T15:04:05Z07:00",
+      "kind": "date"
+    },
+    "createdAt": "2009-11-10T23:00:00Z"
+  }
+]

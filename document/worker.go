@@ -7,7 +7,7 @@ package document
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -17,172 +17,114 @@ import (
 
 // Worker is used to async process all the create, update and delete operations on documents.
 type Worker struct {
-	pusher                 task.Pusher
-	resourceRepository     flare.ResourceRepositorier
-	documentRepository     flare.DocumentRepositorier
-	subscriptionRepository flare.SubscriptionRepositorier
-	subscriptionTrigger    flare.SubscriptionTrigger
+	pusher              task.Pusher
+	documentRepository  flare.DocumentRepositorier
+	subscriptionTrigger flare.SubscriptionTrigger
 }
 
 // Process process the enqueued documents.
 func (w *Worker) Process(ctx context.Context, rawContent []byte) error {
-	content, id, action, err := w.extractContent(rawContent)
+	action, doc, err := w.unmarshal(rawContent)
 	if err != nil {
-		return errors.Wrap(err, "error during message uncompress")
+		return errors.Wrap(err, "error during message unmarshal")
 	}
 
 	switch action {
-	case flare.SubscriptionTriggerCreate, flare.SubscriptionTriggerUpdate:
-		rawBody, ok := content["body"].(string)
-		if !ok {
-			return errors.New("missing body content")
+	case flare.SubscriptionTriggerUpdate:
+		if err := w.documentRepository.Update(ctx, doc); err != nil {
+			return errors.Wrap(err, "error during document upsert")
 		}
 
-		body := []byte(rawBody)
-		if err = w.processUpdate(ctx, id, action, body); err != nil {
-			var msg string
-			if action == flare.SubscriptionTriggerCreate {
-				msg = "error during document create"
-			} else {
-				msg = "error during document update"
-			}
-			return errors.Wrap(err, msg)
+		if err := w.subscriptionTrigger.Update(ctx, doc); err != nil {
+			return errors.Wrap(err, "error during document change trigger")
 		}
 	case flare.SubscriptionTriggerDelete:
-		if err = w.processDelete(ctx, id); err != nil {
-			return errors.Wrap(err, "error during document delete")
+		if err := w.subscriptionTrigger.Delete(ctx, doc); err != nil {
+			return errors.Wrap(err, "error during document change trigger")
 		}
-	default:
-		return fmt.Errorf("action '%s' not supported", action)
 	}
-
 	return nil
 }
 
-func (w *Worker) push(ctx context.Context, id, action string, body []byte) error {
-	content, err := w.marshal(id, action, body)
+func (w *Worker) push(ctx context.Context, action string, doc *flare.Document) error {
+	content, err := w.marshal(action, doc)
 	if err != nil {
-		return errors.Wrap(err, "error during message compress")
+		return errors.Wrap(err, "error during message marshal")
 	}
 
 	if err = w.pusher.Push(ctx, content); err != nil {
-		return errors.Wrap(err, "error during job enqueue")
+		return errors.Wrap(err, "error during message push to be processed")
 	}
 	return nil
 }
 
-func (w *Worker) extractContent(rawContent []byte) (map[string]interface{}, string, string, error) {
-	content, err := w.unmarshal(rawContent)
-	if err != nil {
-		return nil, "", "", errors.Wrap(err, "error during message uncompress")
+func (w *Worker) marshal(action string, doc *flare.Document) ([]byte, error) {
+	resource := map[string]interface{}{
+		"id": doc.Resource.ID,
 	}
 
-	id, ok := content["id"].(string)
-	if !ok {
-		return nil, "", "", errors.New("missing id content")
+	document := map[string]interface{}{
+		"id":        doc.ID,
+		"updatedAt": doc.UpdatedAt,
 	}
 
-	action, ok := content["action"].(string)
-	if !ok {
-		return nil, "", "", errors.New("missing action content")
+	message := map[string]interface{}{
+		"action":   action,
+		"document": document,
+		"resource": resource,
 	}
 
-	return content, id, action, nil
-}
-
-func (w *Worker) processDelete(ctx context.Context, id string) error {
-	document, err := w.documentRepository.FindOne(ctx, id)
-	if err != nil {
-		if errDoc, ok := err.(flare.DocumentRepositoryError); ok && errDoc.NotFound() {
-			return nil
+	if action == flare.SubscriptionTriggerUpdate {
+		if doc.Resource.Change.Kind == flare.ResourceChangeDate {
+			resource["dateFormat"] = doc.Resource.Change.DateFormat
 		}
-		return errors.Wrap(err, "error during the check if the document exists")
+
+		resource["kind"] = doc.Resource.Change.Kind
+		document["content"] = doc.Content
+		document["revision"] = doc.Revision
 	}
 
-	resource, err := w.resourceRepository.FindOne(ctx, document.Resource.ID)
+	content, err := json.Marshal(message)
 	if err != nil {
-		return errors.Wrap(err, "error during the check if the resource exists")
-	}
-	document.Resource = *resource
-
-	if err = w.subscriptionTrigger.Delete(ctx, document); err != nil {
-		return errors.Wrap(err, "error during document change trigger")
-	}
-	return nil
-}
-
-func (w *Worker) processUpdate(ctx context.Context, id, action string, body []byte) error {
-	document, err := w.parseHandleUpdateDocument(ctx, body, id)
-	if err != nil {
-		return errors.Wrap(err, "could not parse the document")
-	}
-
-	hasSubscr, err := w.subscriptionRepository.HasSubscription(ctx, document.Resource.ID)
-	if err != nil {
-		return errors.Wrap(err, "error during check if the document resource has subscriptions")
-	}
-	if !hasSubscr {
-		return nil
-	}
-
-	if err = w.documentRepository.Update(ctx, document); err != nil {
-		return errors.Wrap(err, "error during document persistence")
-	}
-
-	if err := w.subscriptionTrigger.Update(ctx, document); err != nil {
-		return errors.Wrap(err, "error during document change trigger")
-	}
-	return nil
-}
-
-func (w *Worker) marshal(id, action string, body []byte) ([]byte, error) {
-	content, err := json.Marshal(map[string]interface{}{
-		"id":     id,
-		"action": action,
-		"body":   string(body),
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error during message marshal")
+		return nil, errors.Wrap(err, "error during json marshal")
 	}
 	return content, nil
 }
 
-func (w *Worker) unmarshal(rawContent []byte) (map[string]interface{}, error) {
-	content := make(map[string]interface{})
-	if err := json.Unmarshal(rawContent, &content); err != nil {
-		return nil, errors.Wrap(err, "error during message unmarshal")
-	}
-	return content, nil
-}
-
-func (w *Worker) parseHandleUpdateDocument(
-	ctx context.Context, rawContent []byte, id string,
-) (*flare.Document, error) {
-	content := make(map[string]interface{})
-	if err := json.Unmarshal(rawContent, &content); err != nil {
-		return nil, errors.Wrap(err, "invalid body content")
-	}
-
-	resource, err := w.resourceRepository.FindByURI(ctx, id)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during resource search")
+func (w *Worker) unmarshal(rawContent []byte) (string, *flare.Document, error) {
+	type message struct {
+		Action   string `json:"action"`
+		Document struct {
+			ID        string                 `json:"id"`
+			Revision  int64                  `json:"revision"`
+			UpdatedAt time.Time              `json:"updatedAt"`
+			Content   map[string]interface{} `json:"content"`
+		} `json:"document"`
+		Resource struct {
+			ID         string `json:"id"`
+			Kind       string `json:"kind"`
+			DateFormat string `json:"dateFormat"`
+		} `json:"resource"`
 	}
 
-	document := &flare.Document{
-		Id:               id,
-		Resource:         *resource,
-		ChangeFieldValue: content[resource.Change.Field],
+	msg := &message{}
+	if err := json.Unmarshal(rawContent, msg); err != nil {
+		return "", nil, errors.Wrap(err, "error during json unmarshal")
 	}
 
-	if err = document.TransformRevision(); err != nil {
-		return nil, errors.Wrap(err, "error during document revision parse")
-	}
-
-	if err = document.Valid(); err != nil {
-		return nil, errors.Wrap(err, "document is not valid")
-	}
-
-	return document, nil
+	return msg.Action, &flare.Document{
+		ID:        msg.Document.ID,
+		Revision:  msg.Document.Revision,
+		Content:   msg.Document.Content,
+		UpdatedAt: msg.Document.UpdatedAt,
+		Resource: flare.Resource{
+			ID: msg.Resource.ID,
+			Change: flare.ResourceChange{
+				Kind:       msg.Resource.Kind,
+				DateFormat: msg.Resource.DateFormat,
+			},
+		},
+	}, nil
 }
 
 // Init initialize the worker.
@@ -195,16 +137,8 @@ func (w *Worker) Init(options ...func(*Worker)) error {
 		return errors.New("pusher not found")
 	}
 
-	if w.resourceRepository == nil {
-		return errors.New("resourceRepository not found")
-	}
-
 	if w.documentRepository == nil {
 		return errors.New("documentRepository not found")
-	}
-
-	if w.subscriptionRepository == nil {
-		return errors.New("subscriptionRepository not found")
 	}
 
 	if w.subscriptionTrigger == nil {
@@ -219,19 +153,9 @@ func WorkerPusher(pusher task.Pusher) func(*Worker) {
 	return func(w *Worker) { w.pusher = pusher }
 }
 
-// WorkerResourceRepository set the flare.ResourceRepositorier at Worker.
-func WorkerResourceRepository(repo flare.ResourceRepositorier) func(*Worker) {
-	return func(w *Worker) { w.resourceRepository = repo }
-}
-
 // WorkerDocumentRepository set the flare.DocumentRepositorier at Worker.
 func WorkerDocumentRepository(repo flare.DocumentRepositorier) func(*Worker) {
 	return func(w *Worker) { w.documentRepository = repo }
-}
-
-// WorkerSubscriptionRepository set the repository to access the subscriptions.
-func WorkerSubscriptionRepository(repo flare.SubscriptionRepositorier) func(*Worker) {
-	return func(w *Worker) { w.subscriptionRepository = repo }
 }
 
 // WorkerSubscriptionTrigger set the subscription trigger processor.

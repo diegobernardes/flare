@@ -95,7 +95,7 @@ func NewWorker(options ...func(*Worker)) (*Worker, error) {
 		return nil, errors.New("invalid timeoutPush")
 	}
 
-	if w.goroutines <= 0 {
+	if w.goroutines < 0 {
 		return nil, errors.New("invalid goroutines count")
 	}
 

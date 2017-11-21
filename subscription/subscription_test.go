@@ -234,3 +234,111 @@ func TestSubscriptionToFlareSubscription(t *testing.T) {
 		})
 	})
 }
+
+func TestSubscriptionCreateValidData(t *testing.T) {
+	Convey("Given a list of valid subscriptionCreate", t, func() {
+		tests := []subscriptionCreate{
+			{},
+			{Data: map[string]interface{}{"service": "user"}},
+			{Data: map[string]interface{}{"rate": float64(1)}},
+			{Data: map[string]interface{}{"enable": true}},
+			{Data: map[string]interface{}{"service": "user", "rate": float64(1), "enable": true}},
+			{Data: map[string]interface{}{"service": "user", "rate": float64(1), "enable": true}},
+			{
+				Data: map[string]interface{}{
+					"service": "user",
+					"object": []interface{}{
+						"sample", float64(2),
+					},
+				},
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.validData(), ShouldBeNil)
+			}
+		})
+	})
+
+	Convey("Given a list of invalid subscriptionCreate", t, func() {
+		tests := []subscriptionCreate{
+			{Data: map[string]interface{}{"object": map[string]interface{}{}}},
+			{
+				Data: map[string]interface{}{
+					"object": []interface{}{
+						map[string]interface{}{},
+					},
+				},
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				So(tt.validData(), ShouldNotBeNil)
+			}
+		})
+	})
+}
+
+func TestResourceWildcardReplace(t *testing.T) {
+	Convey("Given a list of valid wildcards to be replaced", t, func() {
+		tests := []struct {
+			resource   flare.Resource
+			document   flare.Document
+			revision   interface{}
+			rawContent []string
+			expected   []string
+			hasErr     bool
+		}{
+			{
+				flare.Resource{Path: "/resource/{id}"},
+				flare.Document{ID: "/resource/123"},
+				nil,
+				[]string{"{id}", `{"id":"{id}"}`},
+				[]string{"123", `{"id":"123"}`},
+				false,
+			},
+		}
+
+		Convey("The output should be valid", func() {
+			for _, tt := range tests {
+				fn, err := wildcardReplace(&tt.resource, &tt.document)
+				So(err, ShouldBeNil)
+
+				for i, value := range tt.rawContent {
+					tt.rawContent[i] = fn(value)
+				}
+
+				So(tt.rawContent, ShouldResemble, tt.expected)
+			}
+		})
+	})
+
+	Convey("Given a list of invalid wildcards to be replaced", t, func() {
+		tests := []struct {
+			resource   flare.Resource
+			document   flare.Document
+			revision   interface{}
+			rawContent []string
+			expected   []string
+			hasErr     bool
+		}{
+			{
+				flare.Resource{},
+				flare.Document{ID: "%zzzzz"},
+				nil,
+				nil,
+				nil,
+				true,
+			},
+		}
+
+		Convey("It's expected to have a error", func() {
+			for _, tt := range tests {
+				_, err := wildcardReplace(&tt.resource, &tt.document)
+				So(err, ShouldNotBeNil)
+			}
+		})
+	})
+}

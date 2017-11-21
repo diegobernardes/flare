@@ -9,27 +9,59 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/diegobernardes/flare"
 )
 
 type pusher interface {
-	push(ctx context.Context, id, action string, body []byte) error
+	push(ctx context.Context, action string, doc *flare.Document) error
 }
 
 type document flare.Document
 
 func (d *document) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
-		Id               string      `json:"id"`
-		ChangeFieldValue interface{} `json:"changeFieldValue"`
-		UpdatedAt        string      `json:"updatedAt"`
+		ID        string                 `json:"id"`
+		UpdatedAt string                 `json:"updatedAt"`
+		Content   map[string]interface{} `json:"content"`
 	}{
-		Id:               d.Id,
-		ChangeFieldValue: d.ChangeFieldValue,
-		UpdatedAt:        d.UpdatedAt.Format(time.RFC3339),
+		ID:        d.ID,
+		UpdatedAt: d.UpdatedAt.Format(time.RFC3339),
+		Content:   d.Content,
 	})
 }
 
-func transformDocument(d *flare.Document) *document {
-	return (*document)(d)
+func parseDocument(
+	id string, rawContent []byte, resource *flare.Resource,
+) (*flare.Document, error) {
+	doc := &flare.Document{
+		ID:        id,
+		Content:   make(map[string]interface{}),
+		Resource:  *resource,
+		UpdatedAt: time.Now(),
+	}
+
+	if err := json.Unmarshal(rawContent, &doc.Content); err != nil {
+		return nil, errors.Wrap(err, "error during content unmarshal")
+	}
+
+	switch value := doc.Content[doc.Resource.Change.Field].(type) {
+	case string:
+		revision, err := time.Parse(resource.Change.DateFormat, value)
+		if err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"error during time parse with value '%s' and format '%s'",
+				value,
+				resource.Change.DateFormat,
+			)
+		}
+		doc.Revision = revision.UnixNano()
+	case float64:
+		doc.Revision = int64(value)
+	default:
+		return nil, errors.New("format not supported")
+	}
+	return doc, nil
 }
