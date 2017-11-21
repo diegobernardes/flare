@@ -84,13 +84,21 @@ func (c *Client) Start() error {
 		return errors.Wrap(err, "error during subscription service initialization")
 	}
 
+	return c.initServer(resourceService, subscriptionService, documentService)
+}
+
+func (c *Client) initServer(
+	resourceService *resource.Service,
+	subscriptionService *subscription.Service,
+	documentService *document.Service,
+) error {
 	duration, err := c.config.serverMiddlewareTimeout()
 	if err != nil {
 		return errors.Wrap(err, "error during config http.timeout parse")
 	}
 
 	srv, err := newServer(
-		serverAddr(config.getString("http.addr")),
+		serverAddr(c.config.getString("http.addr")),
 		serverHandlerResource(resourceService),
 		serverHandlerSubscription(subscriptionService),
 		serverHandlerDocument(documentService),
@@ -101,7 +109,9 @@ func (c *Client) Start() error {
 		return errors.Wrap(err, "error during server initialization")
 	}
 	c.server = srv
-	c.server.start()
+	if err := c.server.start(); err != nil {
+		return errors.Wrap(err, "error during server initialization")
+	}
 	return nil
 }
 

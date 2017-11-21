@@ -39,10 +39,15 @@ type server struct {
 	writeResponse func(http.ResponseWriter, interface{}, int, http.Header)
 }
 
-func (s *server) start() {
+func (s *server) start() error {
+	router, err := s.router()
+	if err != nil {
+		return errors.Wrap(err, "error during router initialization")
+	}
+
 	s.httpServer = http.Server{
 		Addr:    s.addr,
-		Handler: s.router(),
+		Handler: router,
 	}
 
 	go func() {
@@ -63,6 +68,8 @@ func (s *server) start() {
 			}
 		}
 	}()
+
+	return nil
 }
 
 func (s *server) stop() error {
@@ -72,9 +79,11 @@ func (s *server) stop() error {
 	return nil
 }
 
-func (s *server) router() http.Handler {
+func (s *server) router() (http.Handler, error) {
 	r := chi.NewRouter()
-	s.initMiddleware(r)
+	if err := s.initMiddleware(r); err != nil {
+		return nil, errors.Wrap(err, "error during middleware initialization")
+	}
 
 	r.MethodNotAllowed(func(w http.ResponseWriter, r *http.Request) {
 		s.writeResponse(w, map[string]interface{}{
@@ -97,19 +106,31 @@ func (s *server) router() http.Handler {
 	r.Route("/resources", s.routerResource)
 	r.Route("/resources/{resourceId}/subscriptions", s.routerSubscription)
 	r.Route("/documents", s.routerDocument)
-	return r
+
+	return r, nil
 }
 
-func (s *server) initMiddleware(r chi.Router) {
+func (s *server) initMiddleware(r chi.Router) error {
 	logger := infraMiddleware.NewLog(s.logger)
+	writer, err := infraHTTP.NewWriter(s.logger)
+	if err != nil {
+		return errors.New("error during writer initialization")
+	}
 
-	r.Use(middleware.Recoverer)
+	recoverMiddleware, err := infraMiddleware.NewRecover(s.logger, writer)
+	if err != nil {
+		return errors.New("error during recover middleware initialization")
+	}
+
+	r.Use(recoverMiddleware.Handler)
 	r.Use(middleware.DefaultCompress)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.StripSlashes)
 	r.Use(middleware.Timeout(s.middleware.timeout))
 	r.Use(logger.Handler)
+
+	return nil
 }
 
 func (s *server) routerResource(r chi.Router) {
