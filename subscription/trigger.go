@@ -148,6 +148,7 @@ func (t *Trigger) exec(
 				req.Header.Add(key, value)
 			}
 		}
+		req.Header.Add("Content-Type", "application/json")
 
 		resp, err := t.httpClient.Do(req)
 		if err != nil {
