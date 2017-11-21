@@ -27,17 +27,27 @@ type Trigger struct {
 
 func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, error) {
 	rawContent := map[string]interface{}{
-		"action":                   action,
-		"documentID":               document.Id,
-		"resourceID":               document.Resource.ID,
-		"changeKind":               document.Resource.Change.Kind,
-		"updatedAt":                time.Now().Format(time.RFC3339),
-		"documentChangeFieldValue": document.ChangeFieldValue,
+		"action":     action,
+		"documentID": document.Id,
+		"resourceID": document.Resource.ID,
+		"changeKind": document.Resource.Change.Kind,
+		"updatedAt":  time.Now().Format(time.RFC3339),
 	}
 
+	var revision interface{}
 	if document.Resource.Change.Kind == flare.ResourceChangeDate {
 		rawContent["changeDateFormat"] = document.Resource.Change.DateFormat
+
+		switch v := document.ChangeFieldValue.(type) {
+		case time.Time:
+			revision = v.Format(document.Resource.Change.DateFormat)
+		default:
+			revision = document.ChangeFieldValue
+		}
+	} else {
+		revision = document.ChangeFieldValue
 	}
+	rawContent["documentChangeFieldValue"] = revision
 
 	content, err := json.Marshal(rawContent)
 	if err != nil {
