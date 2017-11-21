@@ -6,7 +6,6 @@ package middleware
 
 import (
 	"net/http"
-	"runtime/debug"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -34,26 +33,13 @@ func (l *Log) Handler(next http.Handler) http.Handler {
 		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(ww, r)
 
-		status := ww.Status()
-		postReqContent := []interface{}{
+		l.logger.Log([]interface{}{
 			"requestId", reqId,
 			"duration", time.Since(t1),
 			"contentLength", ww.BytesWritten(),
-			"status", status,
-		}
-
-		var message string
-		if status >= 100 && status < 400 {
-			message = "request finished"
-		} else if status == 500 {
-			message = "internal error during request"
-			postReqContent = append(postReqContent, []interface{}{"stacktrace", string(debug.Stack())})
-		} else {
-			message = "request finished"
-		}
-
-		postReqContent = append(postReqContent, []interface{}{"message", message}...)
-		l.logger.Log(postReqContent...)
+			"status", ww.Status(),
+			"message", "request finished",
+		}...)
 	}
 
 	return http.HandlerFunc(fn)
