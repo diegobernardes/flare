@@ -30,13 +30,12 @@ func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, erro
 		"action":                   action,
 		"documentID":               document.ID,
 		"resourceID":               document.Resource.ID,
-		"changeKind":               document.Resource.Change.Kind,
 		"updatedAt":                time.Now().Format(time.RFC3339),
 		"documentChangeFieldValue": document.Revision,
 	}
 
-	if document.Resource.Change.Kind == flare.ResourceChangeDate {
-		rawContent["changeDateFormat"] = document.Resource.Change.DateFormat
+	if document.Resource.Change.Format != "" {
+		rawContent["format"] = document.Resource.Change.Format
 	}
 
 	content, err := json.Marshal(rawContent)
@@ -48,13 +47,13 @@ func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, erro
 
 func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) {
 	type content struct {
-		Action           string    `json:"action"`
-		DocumentID       string    `json:"documentID"`
-		ResourceID       string    `json:"resourceID"`
-		ChangeKind       string    `json:"changeKind"`
-		ChangeKindFormat string    `json:"changeDateFormat"`
-		UpdateAt         time.Time `json:"updatedAt"`
-		Revision         int64     `json:"documentChangeFieldValue"`
+		Action     string    `json:"action"`
+		DocumentID string    `json:"documentID"`
+		ResourceID string    `json:"resourceID"`
+		ChangeKind string    `json:"changeKind"`
+		Format     string    `json:"format"`
+		UpdateAt   time.Time `json:"updatedAt"`
+		Revision   int64     `json:"documentChangeFieldValue"`
 	}
 
 	var value content
@@ -65,8 +64,7 @@ func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) 
 	resource := flare.Resource{
 		ID: value.ResourceID,
 		Change: flare.ResourceChange{
-			Kind:       value.ChangeKind,
-			DateFormat: value.ChangeKindFormat,
+			Format: value.Format,
 		},
 	}
 

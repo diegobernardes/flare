@@ -20,38 +20,16 @@ type Resource struct {
 	CreatedAt time.Time
 }
 
-// The types of value Flare support to detect document change.
-const (
-	ResourceChangeInteger = "integer"
-	ResourceChangeDate    = "date"
-)
-
 // ResourceChange holds the information to detect document change.
 type ResourceChange struct {
-	Field      string
-	Kind       string
-	DateFormat string
+	Field  string
+	Format string
 }
 
 // Valid indicates if the current resourceChange is valid.
 func (rc *ResourceChange) Valid() error {
 	if rc.Field == "" {
 		return errors.New("missing field")
-	}
-
-	if rc.Kind == "" {
-		return errors.New("missing kind")
-	}
-
-	switch rc.Kind {
-	case ResourceChangeDate:
-		if rc.DateFormat == "" {
-			return errors.New("missing dateFormat")
-		}
-	case ResourceChangeInteger:
-		if rc.DateFormat != "" {
-			return errors.New("dateFormat should not be present if the kind is integer")
-		}
 	}
 	return nil
 }

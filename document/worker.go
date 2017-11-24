@@ -75,11 +75,10 @@ func (w *Worker) marshal(action string, doc *flare.Document) ([]byte, error) {
 	}
 
 	if action == flare.SubscriptionTriggerUpdate {
-		if doc.Resource.Change.Kind == flare.ResourceChangeDate {
-			resource["dateFormat"] = doc.Resource.Change.DateFormat
+		if doc.Resource.Change.Format != "" {
+			resource["format"] = doc.Resource.Change.Format
 		}
 
-		resource["kind"] = doc.Resource.Change.Kind
 		document["content"] = doc.Content
 		document["revision"] = doc.Revision
 	}
@@ -101,9 +100,8 @@ func (w *Worker) unmarshal(rawContent []byte) (string, *flare.Document, error) {
 			Content   map[string]interface{} `json:"content"`
 		} `json:"document"`
 		Resource struct {
-			ID         string `json:"id"`
-			Kind       string `json:"kind"`
-			DateFormat string `json:"dateFormat"`
+			ID     string `json:"id"`
+			Format string `json:"format"`
 		} `json:"resource"`
 	}
 
@@ -120,8 +118,7 @@ func (w *Worker) unmarshal(rawContent []byte) (string, *flare.Document, error) {
 		Resource: flare.Resource{
 			ID: msg.Resource.ID,
 			Change: flare.ResourceChange{
-				Kind:       msg.Resource.Kind,
-				DateFormat: msg.Resource.DateFormat,
+				Format: msg.Resource.Format,
 			},
 		},
 	}, nil

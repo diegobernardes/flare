@@ -13,8 +13,8 @@ import (
 func TestResourceChangeValid(t *testing.T) {
 	Convey("Given a list of valid resource changes", t, func() {
 		tests := []ResourceChange{
-			{Field: "updatedAt", Kind: ResourceChangeDate, DateFormat: "2006-01-02"},
-			{Field: "sequence", Kind: ResourceChangeInteger},
+			{Field: "updatedAt", Format: "2006-01-02"},
+			{Field: "sequence"},
 		}
 
 		Convey("The validation should not return a error", func() {
@@ -32,18 +32,6 @@ func TestResourceChangeValid(t *testing.T) {
 			{
 				"Should be missing the field",
 				ResourceChange{},
-			},
-			{
-				"Should be missing the kind",
-				ResourceChange{Field: "updatedAt"},
-			},
-			{
-				"Should be missing the format",
-				ResourceChange{Field: "updatedAt", Kind: ResourceChangeDate},
-			},
-			{
-				"Should not have a format when the kind is integer",
-				ResourceChange{Field: "sequence", Kind: ResourceChangeInteger, DateFormat: "2006-01-02"},
 			},
 		}
 

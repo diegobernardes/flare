@@ -30,9 +30,8 @@ type resourceEntity struct {
 }
 
 type resourceChangeEntity struct {
-	Field      string `bson:"field"`
-	Kind       string `bson:"kind"`
-	DateFormat string `bson:"dateFormat"`
+	Field  string `bson:"field"`
+	Format string `bson:"format"`
 }
 
 // Resource implements the data layer for the resource service.
@@ -161,12 +160,9 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 	}
 
 	res.CreatedAt = time.Now()
-	contentChange := bson.M{
-		"kind":  res.Change.Kind,
-		"field": res.Change.Field,
-	}
-	if res.Change.Kind == flare.ResourceChangeDate {
-		contentChange["dateFormat"] = res.Change.DateFormat
+	contentChange := bson.M{"field": res.Change.Field}
+	if res.Change.Format != "" {
+		contentChange["format"] = res.Change.Format
 	}
 
 	content := bson.M{
@@ -277,9 +273,8 @@ func (r *Resource) resourceEntityToFlareResource(content *resourceEntity) *flare
 		Path:      content.Path,
 		CreatedAt: content.CreatedAt,
 		Change: flare.ResourceChange{
-			DateFormat: content.Change.DateFormat,
-			Field:      content.Change.Field,
-			Kind:       content.Change.Kind,
+			Format: content.Change.Format,
+			Field:  content.Change.Field,
 		},
 	}
 }

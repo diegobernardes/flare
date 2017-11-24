@@ -34,9 +34,8 @@ curl -H "Content-Type: application/json" -XPOST http://localhost:8080/resources 
 	],
 	"path": "/users/{*}",
 	"change": {
-		"kind": "date",
 		"field": "updatedAt",
-		"dateFormat": "2006-01-02T15:04:05Z07:00"
+		"format": "2006-01-02T15:04:05Z07:00"
 	}
 }
 EOF

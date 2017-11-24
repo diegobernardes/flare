@@ -35,12 +35,11 @@ type resource flare.Resource
 
 func (r *resource) MarshalJSON() ([]byte, error) {
 	change := map[string]string{
-		"kind":  r.Change.Kind,
 		"field": r.Change.Field,
 	}
 
-	if r.Change.DateFormat != "" {
-		change["dateFormat"] = r.Change.DateFormat
+	if r.Change.Format != "" {
+		change["format"] = r.Change.Format
 	}
 
 	return json.Marshal(&struct {
@@ -59,9 +58,8 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 }
 
 type resourceCreateChange struct {
-	Kind       string `json:"kind"`
-	Field      string `json:"field"`
-	DateFormat string `json:"dateFormat"`
+	Field  string `json:"field"`
+	Format string `json:"format"`
 }
 
 type resourceCreate struct {
@@ -82,17 +80,6 @@ func (r *resourceCreate) valid() error {
 	if r.Change.Field == "" {
 		return errors.New("missing change")
 	}
-
-	switch r.Change.Kind {
-	case flare.ResourceChangeInteger:
-	case flare.ResourceChangeDate:
-		if r.Change.DateFormat == "" {
-			return errors.New("missing change.dateFormat")
-		}
-	default:
-		return errors.New("invalid change.kind")
-	}
-
 	return nil
 }
 
@@ -193,9 +180,8 @@ func (r *resourceCreate) toFlareResource() *flare.Resource {
 		Addresses: r.Addresses,
 		Path:      r.Path,
 		Change: flare.ResourceChange{
-			Kind:       r.Change.Kind,
-			Field:      r.Change.Field,
-			DateFormat: r.Change.DateFormat,
+			Field:  r.Change.Field,
+			Format: r.Change.Format,
 		},
 	}
 }

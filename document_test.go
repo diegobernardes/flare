@@ -15,7 +15,7 @@ func TestDocumentValid(t *testing.T) {
 		tests := []Document{
 			{
 				ID:       "1",
-				Resource: Resource{Change: ResourceChange{Field: "seq", Kind: ResourceChangeInteger}},
+				Resource: Resource{Change: ResourceChange{Field: "seq"}},
 			},
 		}
 
@@ -37,16 +37,7 @@ func TestDocumentValid(t *testing.T) {
 			},
 			{
 				"Should have a invalid id 2",
-				Document{
-					Resource: Resource{Change: ResourceChange{Field: "seq", Kind: ResourceChangeInteger}},
-				},
-			},
-			{
-				"Should have a invalid change",
-				Document{
-					ID:       "1",
-					Resource: Resource{Change: ResourceChange{Field: "updatedAt", Kind: ResourceChangeDate}},
-				},
+				Document{ID: "1"},
 			},
 		}
 

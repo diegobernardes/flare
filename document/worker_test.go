@@ -45,8 +45,7 @@ func TestWorkerMarshal(t *testing.T) {
 					Resource: flare.Resource{
 						ID: "456",
 						Change: flare.ResourceChange{
-							Kind:       flare.ResourceChangeDate,
-							DateFormat: "2006-01-02",
+							Format: "2006-01-02",
 						},
 					},
 				},
@@ -100,8 +99,7 @@ func TestWorkerUnmarshal(t *testing.T) {
 					Resource: flare.Resource{
 						ID: "456",
 						Change: flare.ResourceChange{
-							Kind:       flare.ResourceChangeDate,
-							DateFormat: "2006-01-02",
+							Format: "2006-01-02",
 						},
 					},
 				},
@@ -144,8 +142,7 @@ func TestWorkerPush(t *testing.T) {
 					Resource: flare.Resource{
 						ID: "456",
 						Change: flare.ResourceChange{
-							Kind:       flare.ResourceChangeDate,
-							DateFormat: "2006-01-02",
+							Format: "2006-01-02",
 						},
 					},
 				},

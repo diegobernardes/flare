@@ -48,13 +48,13 @@ func parseDocument(
 
 	switch value := doc.Content[doc.Resource.Change.Field].(type) {
 	case string:
-		revision, err := time.Parse(resource.Change.DateFormat, value)
+		revision, err := time.Parse(resource.Change.Format, value)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"error during time parse with value '%s' and format '%s'",
 				value,
-				resource.Change.DateFormat,
+				resource.Change.Format,
 			)
 		}
 		doc.Revision = revision.UnixNano()

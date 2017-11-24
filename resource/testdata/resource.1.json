@@ -6,8 +6,7 @@
   ],
   "path": "/resources/{*}",
   "change": {
-    "field": "version",
-    "kind": "integer"
+    "field": "version"
   },
   "createdAt": "2009-11-10T23:00:00Z"
 }

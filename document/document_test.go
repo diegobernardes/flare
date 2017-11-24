@@ -61,7 +61,7 @@ func TestParseDocument(t *testing.T) {
 			{
 				"http://app.com/users/123",
 				[]byte(`{"seq":"2006-01-02"}`),
-				flare.Resource{Change: flare.ResourceChange{Field: "seq", DateFormat: "2006-01-02"}},
+				flare.Resource{Change: flare.ResourceChange{Field: "seq", Format: "2006-01-02"}},
 				flare.Document{
 					ID:       "http://app.com/users/123",
 					Revision: 1136160000000000000,

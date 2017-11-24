@@ -53,10 +53,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 					CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 					Addresses: []string{"http://flare.io", "https://flare.com"},
 					Path:      "/resources/{*}",
-					Change: flare.ResourceChange{
-						Field: "version",
-						Kind:  flare.ResourceChangeInteger,
-					},
+					Change:    flare.ResourceChange{Field: "version"},
 				},
 				infraTest.Load("resource.1.json"),
 			},
@@ -67,9 +64,8 @@ func TestResourceMarshalJSON(t *testing.T) {
 					Addresses: []string{"http://flare.io", "https://flare.com"},
 					Path:      "/resources/{*}",
 					Change: flare.ResourceChange{
-						Field:      "updatedAt",
-						Kind:       flare.ResourceChangeDate,
-						DateFormat: "2006-01-02",
+						Field:  "updatedAt",
+						Format: "2006-01-02",
 					},
 				},
 				infraTest.Load("resource.2.json"),
@@ -107,10 +103,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Addresses: []string{"http://address1", "https://address2"},
 						Path:      "/products/{*}",
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Change: flare.ResourceChange{
-							Kind:  flare.ResourceChangeInteger,
-							Field: "version",
-						},
+						Change:    flare.ResourceChange{Field: "version"},
 					},
 				},
 				infraTest.Load("response.2.json"),
@@ -124,10 +117,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 							Addresses: []string{"http://address1", "https://address2"},
 							Path:      "/products/{*}",
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-							Change: flare.ResourceChange{
-								Kind:  flare.ResourceChangeInteger,
-								Field: "version",
-							},
+							Change:    flare.ResourceChange{Field: "version"},
 						},
 					},
 				},
@@ -236,15 +226,14 @@ func TestResourceCreateValid(t *testing.T) {
 				Addresses: []string{"http://app.com"},
 				Path:      "/users/{*}",
 				Change: resourceCreateChange{
-					Field:      "updatedAt",
-					Kind:       flare.ResourceChangeDate,
-					DateFormat: "2006-01-02T15:04:05Z07:00",
+					Field:  "updatedAt",
+					Format: "2006-01-02T15:04:05Z07:00",
 				},
 			},
 			{
 				Addresses: []string{"http://app.com"},
 				Path:      "/users/{*}",
-				Change:    resourceCreateChange{Field: "incrCounter", Kind: flare.ResourceChangeInteger},
+				Change:    resourceCreateChange{Field: "incrCounter"},
 			},
 		}
 
@@ -264,21 +253,6 @@ func TestResourceCreateValid(t *testing.T) {
 			{Addresses: []string{"http://app.com"}, Path: "/users"},
 			{Addresses: []string{"http://app.com"}, Path: "/users/{*}-path/posts/{*}"},
 			{Addresses: []string{"http://app.com"}, Path: "/users/{*}"},
-			{
-				Addresses: []string{"http://app.com"},
-				Path:      "/users/{*}",
-				Change:    resourceCreateChange{Field: "updatedAt"},
-			},
-			{
-				Addresses: []string{"http://app.com"},
-				Path:      "/users/{*}",
-				Change:    resourceCreateChange{Field: "updatedAt", Kind: flare.ResourceChangeDate},
-			},
-			{
-				Addresses: []string{"http://app.com"},
-				Path:      "/users/{*}/",
-				Change:    resourceCreateChange{Field: "incrCounter", Kind: flare.ResourceChangeInteger},
-			},
 		}
 
 		Convey("The validation should return a error", func() {

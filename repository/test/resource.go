@@ -131,9 +131,8 @@ func ResourceLoadSliceByteResource(content []byte) func(*Resource) {
 			CreatedAt time.Time `json:"createdAt"`
 			Path      string    `json:"path"`
 			Change    struct {
-				Field      string `json:"field"`
-				Kind       string `json:"kind"`
-				DateFormat string `json:"dateFormat"`
+				Field  string `json:"field"`
+				Format string `json:"format"`
 			}
 		}, 0)
 		if err := json.Unmarshal(content, &resources); err != nil {
@@ -149,9 +148,8 @@ func ResourceLoadSliceByteResource(content []byte) func(*Resource) {
 				Path:      rawResource.Path,
 				CreatedAt: rawResource.CreatedAt,
 				Change: flare.ResourceChange{
-					DateFormat: rawResource.Change.DateFormat,
-					Field:      rawResource.Change.Field,
-					Kind:       rawResource.Change.Kind,
+					Format: rawResource.Change.Format,
+					Field:  rawResource.Change.Field,
 				},
 			})
 			if err != nil {
