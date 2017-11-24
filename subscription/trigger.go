@@ -26,16 +26,22 @@ type Trigger struct {
 }
 
 func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, error) {
-	rawContent := map[string]interface{}{
-		"action":                   action,
-		"documentID":               document.ID,
-		"resourceID":               document.Resource.ID,
-		"updatedAt":                time.Now().Format(time.RFC3339),
-		"documentChangeFieldValue": document.Revision,
+	resource := map[string]interface{}{
+		"id": document.Resource.ID,
 	}
 
 	if document.Resource.Change.Format != "" {
-		rawContent["format"] = document.Resource.Change.Format
+		resource["format"] = document.Resource.Change.Format
+	}
+
+	rawContent := map[string]interface{}{
+		"action": action,
+		"document": map[string]interface{}{
+			"id":       document.ID,
+			"revision": document.Revision,
+		},
+		"resource":  resource,
+		"updatedAt": time.Now().Format(time.RFC3339),
 	}
 
 	content, err := json.Marshal(rawContent)
@@ -47,13 +53,16 @@ func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, erro
 
 func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) {
 	type content struct {
-		Action     string    `json:"action"`
-		DocumentID string    `json:"documentID"`
-		ResourceID string    `json:"resourceID"`
-		ChangeKind string    `json:"changeKind"`
-		Format     string    `json:"format"`
-		UpdateAt   time.Time `json:"updatedAt"`
-		Revision   int64     `json:"documentChangeFieldValue"`
+		Action   string `json:"action"`
+		Document struct {
+			ID       string `json:"id"`
+			Revision int64  `json:"revision"`
+		} `json:"document"`
+		Resource struct {
+			ID     string `json:"id"`
+			Format string `json:"format"`
+		}
+		UpdateAt time.Time `json:"updatedAt"`
 	}
 
 	var value content
@@ -62,15 +71,15 @@ func (t *Trigger) unmarshal(rawContent []byte) (*flare.Document, string, error) 
 	}
 
 	resource := flare.Resource{
-		ID: value.ResourceID,
+		ID: value.Resource.ID,
 		Change: flare.ResourceChange{
-			Format: value.Format,
+			Format: value.Resource.Format,
 		},
 	}
 
 	return &flare.Document{
-		ID:        value.DocumentID,
-		Revision:  value.Revision,
+		ID:        value.Document.ID,
+		Revision:  value.Document.Revision,
 		UpdatedAt: value.UpdateAt,
 		Resource:  resource,
 	}, value.Action, nil
