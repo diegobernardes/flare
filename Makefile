@@ -18,6 +18,8 @@ coveralls:
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
 		goveralls
 
+pre-pr: test lint-fast lint-slow
+
 test:
 	@docker run \
 		-t \
