@@ -14,7 +14,6 @@ import (
 
 	"github.com/diegobernardes/flare"
 	"github.com/diegobernardes/flare/aws"
-	"github.com/diegobernardes/flare/infra/task"
 	"github.com/diegobernardes/flare/repository/memory"
 	"github.com/diegobernardes/flare/repository/mongodb"
 )
@@ -109,29 +108,37 @@ func (c *config) mongodb() (*mongodb.Client, error) {
 	return client, errors.Wrap(err, "error during MongoDB connection")
 }
 
-func (c *config) queue(name string) (task.Pusher, task.Puller, error) {
-	engine := c.getString("task.engine")
-	if engine != "sqs" {
-		return nil, nil, fmt.Errorf("invalid task.engine '%s'", engine)
-	}
-
+func (c *config) sqsOptions(name string) ([]func(*aws.SQS), error) {
 	session, err := aws.NewSession(
 		aws.SessionKey(c.getString("aws.key")),
 		aws.SessionSecret(c.getString("aws.secret")),
 		aws.SessionRegion(c.getString("aws.region")),
 	)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "error during AWS session initialization")
+		return nil, errors.Wrap(err, "error during AWS session initialization")
 	}
 
-	sqs, err := aws.NewSQS(
+	return []func(*aws.SQS){
 		aws.SQSQueueName(c.getString(fmt.Sprintf("task.queue-%s", name))),
 		aws.SQSSession(session),
-	)
+	}, nil
+}
+
+func (c *config) queue(name string) (*aws.SQS, *aws.SQS, error) {
+	engine := c.getString("task.engine")
+	if engine != "sqs" {
+		return nil, nil, fmt.Errorf("invalid task.engine '%s'", engine)
+	}
+
+	options, err := c.sqsOptions(name)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sqs, err := aws.NewSQS(options...)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "error during AWS SQS initialization")
 	}
-
 	return sqs, sqs, nil
 }
 

@@ -5,6 +5,7 @@
 package flare
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/aws"
 	"github.com/diegobernardes/flare/document"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	"github.com/diegobernardes/flare/infra/task"
@@ -85,6 +87,32 @@ func (c *Client) Start() error {
 	}
 
 	return c.initServer(resourceService, subscriptionService, documentService)
+}
+
+// Setup is used to initialize necessary resources before use.
+func (c *Client) Setup(ctx context.Context) error {
+	config, err := newConfig(configContent(c.rawConfig))
+	if err != nil {
+		return errors.Wrap(err, "error during config load")
+	}
+	c.config = config
+
+	if c.config.getString("task.engine") == "" {
+		return nil
+	}
+
+	for _, queue := range []string{"document", "subscription"} {
+		options, err := c.config.sqsOptions(queue)
+		if err != nil {
+			return errors.Wrap(err, "error during aws.SQS initialization")
+		}
+
+		if err := aws.SQSSetup(options...); err != nil {
+			return errors.Wrap(err, "error during aws.SQS queue create")
+		}
+	}
+
+	return nil
 }
 
 func (c *Client) initServer(
