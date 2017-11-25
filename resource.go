@@ -46,6 +46,5 @@ type ResourceRepositorier interface {
 // ResourceRepositoryError represents all the errors the repository can return.
 type ResourceRepositoryError interface {
 	AlreadyExists() bool
-	PathConflict() bool
 	NotFound() bool
 }

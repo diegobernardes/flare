@@ -127,7 +127,7 @@ func TestResourceCreate(t *testing.T) {
 
 				nErr, ok := err.(flare.ResourceRepositoryError)
 				So(ok, ShouldBeTrue)
-				So(nErr.PathConflict(), ShouldBeTrue)
+				So(nErr.AlreadyExists(), ShouldBeTrue)
 			})
 		})
 	})

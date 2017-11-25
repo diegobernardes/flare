@@ -74,12 +74,14 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 			}
 		}
 
-		if sliceIntersection(resource.Addresses, res.Addresses, resource.Path, res.Path) {
+		if sliceIntersection(
+			resource.Addresses, res.Addresses, r.normalizePath(resource.Path), r.normalizePath(res.Path),
+		) {
 			return &errMemory{
 				message: fmt.Sprintf(
 					"address+path already associated to another resource '%s'", resource.ID,
 				),
-				pathConflict: true,
+				alreadyExists: true,
 			}
 		}
 	}
@@ -87,6 +89,18 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 	res.CreatedAt = time.Now()
 	r.resources = append(r.resources, *res)
 	return nil
+}
+
+func (r *Resource) normalizePath(raw string) string {
+	result := []string{"/"}
+	for _, segment := range strings.Split(raw, "/") {
+		if len(segment) >= 2 && segment[0] == '{' && segment[len(segment)-1] == '}' {
+			result = append(result, "{*}")
+			continue
+		}
+		result = append(result, segment)
+	}
+	return strings.Join(result, "/")
 }
 
 // Delete a given resource.

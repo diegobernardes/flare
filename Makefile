@@ -37,6 +37,7 @@ test:
 		-t \
 		--rm \
 		-v "$(PWD)":/go/src/$(PROJECT_PATH) \
+		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \

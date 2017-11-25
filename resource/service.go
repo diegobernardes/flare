@@ -84,10 +84,8 @@ func (s *Service) HandleCreate(w http.ResponseWriter, r *http.Request) {
 	result := content.toFlareResource()
 	if err := s.repository.Create(r.Context(), result); err != nil {
 		status := http.StatusInternalServerError
-		if errRepo, ok := err.(flare.ResourceRepositoryError); ok {
-			if errRepo.PathConflict() || errRepo.AlreadyExists() {
-				status = http.StatusConflict
-			}
+		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.AlreadyExists() {
+			status = http.StatusConflict
 		}
 
 		s.writer.Error(w, "error during resource create", err, status)

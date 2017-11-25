@@ -3,6 +3,8 @@ language: bash
 notifications:
   email: false
 
+sudo: required
+
 services:
  - docker
 

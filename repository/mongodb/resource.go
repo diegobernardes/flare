@@ -145,13 +145,21 @@ func (r *Resource) FindByURI(_ context.Context, rawAddress string) (*flare.Resou
 
 // Create a resource.
 func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
-	_, err := r.findResourceByURI(res.Addresses, res.Path)
+	exists, err := r.existsResourceByID(res.ID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return &errMemory{message: "resource already exists", alreadyExists: true}
+	}
+
+	_, err = r.findResourceByURI(res.Addresses, res.Path)
 	if err == nil {
 		return &errMemory{message: "resource already exists", alreadyExists: true}
 	}
 	if err != nil {
 		if nErr, ok := err.(flare.ResourceRepositoryError); ok {
-			if nErr.AlreadyExists() || nErr.PathConflict() {
+			if nErr.AlreadyExists() {
 				return err
 			}
 		} else {
@@ -248,6 +256,18 @@ func (r *Resource) pathSegments(path string) []string {
 	}
 
 	return result
+}
+
+func (r *Resource) existsResourceByID(id string) (bool, error) {
+	session := r.client.session()
+	session.SetMode(mgo.Monotonic, true)
+	defer session.Close()
+
+	count, err := session.DB(r.database).C(r.collection).Find(bson.M{"id": id}).Count()
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // Delete a given resource.
