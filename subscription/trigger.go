@@ -192,7 +192,7 @@ func (t *Trigger) buildContent(
 		"action":    kind,
 		"updatedAt": document.UpdatedAt.String(),
 	}
-	if sub.Data != nil {
+	if len(sub.Data) > 0 {
 		replacer, err := wildcardReplace(&sub.Resource, document)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
