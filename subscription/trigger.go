@@ -207,6 +207,10 @@ func (t *Trigger) buildContent(
 		rawContent["data"] = sub.Data
 	}
 
+	if sub.SendDocument {
+		rawContent["document"] = document.Content
+	}
+
 	content, err := json.Marshal(rawContent)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during response generate")

@@ -68,17 +68,19 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(&struct {
-		Id        string                 `json:"id"`
-		Endpoint  map[string]interface{} `json:"endpoint"`
-		Delivery  map[string][]int       `json:"delivery"`
-		CreatedAt string                 `json:"createdAt"`
-		Data      map[string]interface{} `json:"data,omitempty"`
+		Id           string                 `json:"id"`
+		Endpoint     map[string]interface{} `json:"endpoint"`
+		Delivery     map[string][]int       `json:"delivery"`
+		CreatedAt    string                 `json:"createdAt"`
+		Data         map[string]interface{} `json:"data,omitempty"`
+		SendDocument bool                   `json:"sendDocument"`
 	}{
-		Id:        s.ID,
-		Endpoint:  endpoint,
-		Delivery:  delivery,
-		CreatedAt: s.CreatedAt.Format(time.RFC3339),
-		Data:      s.Data,
+		Id:           s.ID,
+		Endpoint:     endpoint,
+		Delivery:     delivery,
+		CreatedAt:    s.CreatedAt.Format(time.RFC3339),
+		Data:         s.Data,
+		SendDocument: s.SendDocument,
 	})
 }
 
@@ -104,7 +106,8 @@ type subscriptionCreate struct {
 		Success []int `json:"success"`
 		Discard []int `json:"discard"`
 	} `json:"delivery"`
-	Data map[string]interface{} `json:"data"`
+	Data         map[string]interface{} `json:"data"`
+	SendDocument bool                   `json:"sendDocument"`
 }
 
 func (s *subscriptionCreate) valid() error {
@@ -171,7 +174,8 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 			Discard: s.Delivery.Discard,
 			Success: s.Delivery.Success,
 		},
-		Data: s.Data,
+		Data:         s.Data,
+		SendDocument: s.SendDocument,
 	}, nil
 }
 
