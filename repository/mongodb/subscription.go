@@ -206,7 +206,7 @@ func (s *Subscription) loadReferenceDocument(
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
-		Find(bson.M{"subscriptionId": subs.ID, "document.id": doc.ID}).
+		Find(bson.M{"subscriptionID": subs.ID, "document.id": doc.ID}).
 		One(&content)
 	if err != nil {
 		if err == mgo.ErrNotFound {
@@ -259,7 +259,7 @@ func (s *Subscription) triggerProcessDelete(
 	err := session.
 		DB(s.database).
 		C(s.collectionTrigger).
-		Remove(bson.M{"subscriptionId": subs.ID, "document.id": doc.ID})
+		Remove(bson.M{"subscriptionID": subs.ID, "document.id": doc.ID})
 	if err != nil {
 		return errors.Wrap(err, "error during subscriptionTriggers delete")
 	}
@@ -276,8 +276,8 @@ func (s *Subscription) upsertSubscriptionTrigger(
 		DB(s.database).
 		C(s.collectionTrigger).
 		Upsert(
-			bson.M{"subscriptionId": subs.ID, "document.id": doc.ID},
-			bson.M{"subscriptionId": subs.ID, "document": bson.M{
+			bson.M{"subscriptionID": subs.ID, "document.id": doc.ID},
+			bson.M{"subscriptionID": subs.ID, "document": bson.M{
 				"id":        doc.ID,
 				"revision":  doc.Revision,
 				"updatedAt": time.Now(),
