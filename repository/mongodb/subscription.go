@@ -340,6 +340,46 @@ func (s *Subscription) SetResourceRepository(repo flare.ResourceRepositorier) er
 	return nil
 }
 
+func (s *Subscription) ensureIndex() error {
+	session := s.client.session()
+	session.SetMode(mgo.Monotonic, true)
+	defer session.Close()
+
+	indexes := []struct {
+		index      mgo.Index
+		collection string
+	}{
+		{
+			mgo.Index{
+				Background: true,
+				Unique:     true,
+				Key:        []string{"id", "resource.id"},
+			},
+			s.collection,
+		},
+		{
+			mgo.Index{
+				Background: true,
+				Unique:     true,
+				Key:        []string{"subscriptionID", "document.id"},
+			},
+			s.collectionTrigger,
+		},
+	}
+
+	for _, index := range indexes {
+		err := session.
+			DB(s.database).
+			C(index.collection).
+			EnsureIndex(index.index)
+		if err != nil {
+			return errors.Wrap(err, "error during index creation")
+		}
+	}
+
+	return nil
+}
+
 // Init configure the subscription repository.
 func (s *Subscription) Init(options ...func(*Subscription)) error {
 	for _, option := range options {
@@ -357,7 +397,8 @@ func (s *Subscription) Init(options ...func(*Subscription)) error {
 	s.collection = "subscriptions"
 	s.collectionTrigger = "subscriptionTriggers"
 	s.database = s.client.database
-	return nil
+
+	return s.ensureIndex()
 }
 
 // SubscriptionClient set the client to access MongoDB.

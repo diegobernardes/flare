@@ -298,6 +298,25 @@ func (r *Resource) SetSubscriptionRepository(repo flare.SubscriptionRepositorier
 	return nil
 }
 
+func (r *Resource) ensureIndex() error {
+	session := r.client.session()
+	session.SetMode(mgo.Monotonic, true)
+	defer session.Close()
+
+	err := session.
+		DB(r.database).
+		C(r.collection).
+		EnsureIndex(mgo.Index{
+			Background: true,
+			Unique:     true,
+			Key:        []string{"addresses"},
+		})
+	if err != nil {
+		return errors.Wrap(err, "error during index creation")
+	}
+	return nil
+}
+
 // Init configure the resource repository.
 func (r *Resource) Init(options ...func(*Resource)) error {
 	for _, option := range options {
@@ -314,7 +333,8 @@ func (r *Resource) Init(options ...func(*Resource)) error {
 
 	r.collection = "resources"
 	r.database = r.client.database
-	return nil
+
+	return r.ensureIndex()
 }
 
 // ResourceSubscriptionRepository set the repository to access the subscriptions.

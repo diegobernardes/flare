@@ -135,6 +135,25 @@ func (d *Document) unmarshal(content map[string]interface{}) (*flare.Document, e
 	}, nil
 }
 
+func (d *Document) ensureIndex() error {
+	session := d.client.session()
+	session.SetMode(mgo.Monotonic, true)
+	defer session.Close()
+
+	err := session.
+		DB(d.database).
+		C(d.collection).
+		EnsureIndex(mgo.Index{
+			Background: true,
+			Unique:     true,
+			Key:        []string{"id", "-revision"},
+		})
+	if err != nil {
+		return errors.Wrap(err, "error during index creation")
+	}
+	return nil
+}
+
 // NewDocument returns a configured document repository.
 func NewDocument(options ...func(*Document)) (*Document, error) {
 	d := &Document{}
@@ -147,6 +166,10 @@ func NewDocument(options ...func(*Document)) (*Document, error) {
 	}
 	d.collection = "documents"
 	d.database = d.client.database
+
+	if err := d.ensureIndex(); err != nil {
+		return nil, err
+	}
 	return d, nil
 }
 
