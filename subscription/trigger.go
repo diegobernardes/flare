@@ -26,20 +26,19 @@ type Trigger struct {
 }
 
 func (t *Trigger) marshal(document *flare.Document, action string) ([]byte, error) {
-	resource := map[string]interface{}{
-		"id": document.Resource.ID,
-	}
-
+	resource := map[string]interface{}{"id": document.Resource.ID}
 	if document.Resource.Change.Format != "" {
 		resource["format"] = document.Resource.Change.Format
 	}
 
+	doc := map[string]interface{}{"id": document.ID}
+	if action == flare.SubscriptionTriggerUpdate {
+		doc["revision"] = document.Revision
+	}
+
 	rawContent := map[string]interface{}{
-		"action": action,
-		"document": map[string]interface{}{
-			"id":       document.ID,
-			"revision": document.Revision,
-		},
+		"action":    action,
+		"document":  doc,
 		"resource":  resource,
 		"updatedAt": time.Now().Format(time.RFC3339),
 	}
