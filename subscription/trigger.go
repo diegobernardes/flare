@@ -128,6 +128,9 @@ func (t *Trigger) Process(ctx context.Context, rawContent []byte) error {
 	case flare.SubscriptionTriggerDelete:
 		document, err = t.document.FindOne(ctx, rawDocument.ID)
 		if err != nil {
+			if errRepo, ok := err.(flare.DocumentRepositoryError); ok && errRepo.NotFound() {
+				return nil
+			}
 			return errors.Wrap(err, "error during document find")
 		}
 	}
