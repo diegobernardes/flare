@@ -1,8 +1,7 @@
 {
-  "id": "123",
   "endpoint": {
-    "method": "POST",
-    "url": "http://app.io/update",
+    "url": "http://localhost:5001/update",
+    "method": "post",
     "headers": {
       "Content-Type": [
         "application/json"
@@ -17,7 +16,6 @@
       500
     ]
   },
-  "createdAt": "2009-11-10T23:00:00Z",
-  "sendDocument": false,
-  "skipEnvelope": false
+  "skipEnvelope": true,
+  "sendDocument": false
 }

@@ -187,35 +187,41 @@ func (t *Trigger) exec(
 func (t *Trigger) buildContent(
 	document *flare.Document, sub flare.Subscription, kind string,
 ) ([]byte, error) {
-	rawContent := map[string]interface{}{
-		"id":        document.ID,
-		"action":    kind,
-		"updatedAt": document.UpdatedAt.String(),
-	}
-	if len(sub.Data) > 0 {
-		replacer, err := wildcardReplace(&sub.Resource, document)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
-		}
+	var content map[string]interface{}
 
-		for key, rawValue := range sub.Data {
-			if value, ok := rawValue.(string); ok {
-				sub.Data[key] = replacer(value)
+	if sub.SkipEnvelope {
+		content = document.Content
+	} else {
+		content = map[string]interface{}{
+			"id":        document.ID,
+			"action":    kind,
+			"updatedAt": document.UpdatedAt.String(),
+		}
+		if len(sub.Data) > 0 {
+			replacer, err := wildcardReplace(&sub.Resource, document)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
 			}
+
+			for key, rawValue := range sub.Data {
+				if value, ok := rawValue.(string); ok {
+					sub.Data[key] = replacer(value)
+				}
+			}
+
+			content["data"] = sub.Data
 		}
 
-		rawContent["data"] = sub.Data
+		if sub.SendDocument {
+			content["document"] = document.Content
+		}
 	}
 
-	if sub.SendDocument {
-		rawContent["document"] = document.Content
-	}
-
-	content, err := json.Marshal(rawContent)
+	result, err := json.Marshal(content)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during response generate")
 	}
-	return content, nil
+	return result, nil
 }
 
 // Init initialize the Trigger.

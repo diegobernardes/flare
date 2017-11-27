@@ -25,7 +25,8 @@
         ]
       },
       "createdAt": "2009-11-10T23:00:00Z",
-      "sendDocument": false
+      "sendDocument": false,
+      "skipEnvelope": false
     },
     {
       "id": "3",
@@ -47,7 +48,8 @@
         ]
       },
       "createdAt": "2009-11-10T23:00:00Z",
-      "sendDocument": false
+      "sendDocument": false,
+      "skipEnvelope": false
     }
   ]
 }

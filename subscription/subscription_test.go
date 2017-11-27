@@ -124,7 +124,8 @@ func TestResponseMarshalJSON(t *testing.T) {
 func TestSubscriptionCreateValid(t *testing.T) {
 	Convey("Given a list of valid subscriptionCreate", t, func() {
 		tests := [][]byte{
-			infraTest.Load("subscriptionCreateValid.valid.json"),
+			infraTest.Load("subscriptionCreateValid.valid.1.json"),
+			infraTest.Load("subscriptionCreateValid.valid.2.json"),
 		}
 
 		Convey("The output should be valid", func() {
@@ -160,6 +161,18 @@ func TestSubscriptionCreateValid(t *testing.T) {
 				"Should be missing delivery discard",
 				infraTest.Load("subscriptionCreateValid.invalid.4.json"),
 			},
+			{
+				"Should have a invalid envelope",
+				infraTest.Load("subscriptionCreateValid.invalid.5.json"),
+			},
+			{
+				"Should not have data if skipEnvelope is true",
+				infraTest.Load("subscriptionCreateValid.invalid.6.json"),
+			},
+			{
+				"Should have a invalid data",
+				infraTest.Load("subscriptionCreateValid.invalid.7.json"),
+			},
 		}
 
 		for _, tt := range tests {
@@ -182,7 +195,7 @@ func TestSubscriptionToFlareSubscription(t *testing.T) {
 			output *flare.Subscription
 		}{
 			{
-				infraTest.Load("subscriptionToFlareSubscription.valid.json"),
+				infraTest.Load("subscriptionToFlareSubscription.valid.1.json"),
 				&flare.Subscription{
 					Delivery: flare.SubscriptionDelivery{
 						Discard: []int{500},
@@ -192,6 +205,20 @@ func TestSubscriptionToFlareSubscription(t *testing.T) {
 						URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 						Method: "post",
 					},
+				},
+			},
+			{
+				infraTest.Load("subscriptionToFlareSubscription.valid.2.json"),
+				&flare.Subscription{
+					Delivery: flare.SubscriptionDelivery{
+						Discard: []int{500},
+						Success: []int{200},
+					},
+					Endpoint: flare.SubscriptionEndpoint{
+						URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+						Method: "post",
+					},
+					SendDocument: true,
 				},
 			},
 		}

@@ -74,6 +74,7 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		CreatedAt    string                 `json:"createdAt"`
 		Data         map[string]interface{} `json:"data,omitempty"`
 		SendDocument bool                   `json:"sendDocument"`
+		SkipEnvelope bool                   `json:"skipEnvelope"`
 	}{
 		Id:           s.ID,
 		Endpoint:     endpoint,
@@ -81,6 +82,7 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		CreatedAt:    s.CreatedAt.Format(time.RFC3339),
 		Data:         s.Data,
 		SendDocument: s.SendDocument,
+		SkipEnvelope: s.SkipEnvelope,
 	})
 }
 
@@ -107,7 +109,8 @@ type subscriptionCreate struct {
 		Discard []int `json:"discard"`
 	} `json:"delivery"`
 	Data         map[string]interface{} `json:"data"`
-	SendDocument bool                   `json:"sendDocument"`
+	SendDocument *bool                  `json:"sendDocument"`
+	SkipEnvelope bool                   `json:"skipEnvelope"`
 }
 
 func (s *subscriptionCreate) valid() error {
@@ -130,10 +133,28 @@ func (s *subscriptionCreate) valid() error {
 		return errors.New("missing delivery.Discard")
 	}
 
-	if err := s.validData(); err != nil {
+	if err := s.validEnvelope(); err != nil {
 		return err
 	}
 
+	if err := s.validData(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *subscriptionCreate) validEnvelope() error {
+	if !s.SkipEnvelope {
+		return nil
+	}
+
+	if s.SendDocument != nil && !*s.SendDocument {
+		return errors.New("if skipEnvelope is true, then, sendDocument must be true")
+	}
+
+	if len(s.Data) > 0 {
+		return errors.New("if skipEnvelope is true, then, data can't be set")
+	}
 	return nil
 }
 
@@ -163,7 +184,7 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 		return nil, errors.Wrap(err, fmt.Sprintf("error during parse '%s' to url.URL", s.Endpoint.URL))
 	}
 
-	return &flare.Subscription{
+	subscription := &flare.Subscription{
 		ID: uuid.NewV4().String(),
 		Endpoint: flare.SubscriptionEndpoint{
 			URL:     *path,
@@ -175,8 +196,13 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 			Success: s.Delivery.Success,
 		},
 		Data:         s.Data,
-		SendDocument: s.SendDocument,
-	}, nil
+		SkipEnvelope: s.SkipEnvelope,
+	}
+	if s.SendDocument != nil {
+		subscription.SendDocument = *s.SendDocument
+	}
+
+	return subscription, nil
 }
 
 func wildcardReplace(r *flare.Resource, doc *flare.Document) (func(string) string, error) {

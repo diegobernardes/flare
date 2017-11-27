@@ -19,6 +19,7 @@ type Subscription struct {
 	Resource     Resource
 	Data         map[string]interface{}
 	SendDocument bool
+	SkipEnvelope bool
 	CreatedAt    time.Time
 }
 
