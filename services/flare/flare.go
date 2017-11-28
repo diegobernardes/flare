@@ -26,6 +26,13 @@ import (
 	"github.com/diegobernardes/flare/subscription"
 )
 
+// Variables set with ldflags during compilation.
+var (
+	Version   = "N/A"
+	BuildTime = "N/A"
+	Commit    = "N/A"
+)
+
 const (
 	logLevelDebug = "debug"
 	logLevelInfo  = "info"

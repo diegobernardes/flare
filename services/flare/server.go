@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/go-chi/chi/middleware"
@@ -101,6 +102,15 @@ func (s *server) router() (http.Handler, error) {
 				"title":  "not found",
 			},
 		}, http.StatusNotFound, nil)
+	})
+
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		s.writeResponse(w, map[string]interface{}{
+			"version":   Version,
+			"commit":    Commit,
+			"buildTime": BuildTime,
+			"goVersion": runtime.Version(),
+		}, http.StatusOK, nil)
 	})
 
 	r.Route("/resources", s.routerResource)

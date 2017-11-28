@@ -3,3 +3,4 @@ services/flare/cmd/flare.toml
 **/debug.test
 **/debug
 .vscode/tags
+flare

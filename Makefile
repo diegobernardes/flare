@@ -1,6 +1,18 @@
 DOCKER_VERSION ?= 0.4
-DOCKER_IMAGE ?= diegobernardes/flare
-PROJECT_PATH = github.com/diegobernardes/flare
+DOCKER_IMAGE   ?= diegobernardes/flare
+PROJECT_PATH   ?= github.com/diegobernardes/flare
+VERSION        = $(shell git describe --tags --always --dirty="-dev")
+DATE           = $(shell date -u '+%Y-%m-%d %H:%M UTC')
+COMMIT         = $(shell git rev-parse --short HEAD)
+VERSION_FLAGS  = -ldflags='-X "github.com/diegobernardes/flare/services/flare.Version=$(VERSION)" \
+                           -X "github.com/diegobernardes/flare/services/flare.BuildTime=$(DATE)" \
+                           -X "github.com/diegobernardes/flare/services/flare.Commit=$(COMMIT)"'
+
+.PHONY: run configure coveralls pre-pr test git-clean flare-build docker-push docker-build lint-slow lint-fast
+
+run:
+	@echo $(VERSION)
+	@echo $(DATE)
 
 configure:
 	@git config pull.rebase true
@@ -99,7 +111,7 @@ flare-build:
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
-		go build services/flare/cmd/flare.go
+		go build $(VERSION_FLAGS) services/flare/cmd/flare.go
 
 git-clean:
 	@git remote prune origin

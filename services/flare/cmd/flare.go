@@ -10,6 +10,8 @@ import (
 	"io/ioutil"
 	"os"
 	"os/signal"
+	"runtime"
+	"text/tabwriter"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -76,8 +78,22 @@ look for a 'flare.toml' file at the same directory as the binary.`,
 		},
 	}
 
+	cmdVersion := &cobra.Command{
+		Use:   "version",
+		Short: "Show the Flare Version",
+		Long:  "Show information about the Go, Repository and Flare version.",
+		Run: func(cmd *cobra.Command, args []string) {
+			w := tabwriter.NewWriter(os.Stdout, 0, 8, 1, '\t', tabwriter.AlignRight)
+			fmt.Fprintln(w, fmt.Sprintf("Version:\t%s", flare.Version))
+			fmt.Fprintln(w, fmt.Sprintf("Commit:\t%s", flare.Commit))
+			fmt.Fprintln(w, fmt.Sprintf("Build Time:\t%s", flare.BuildTime))
+			fmt.Fprintln(w, fmt.Sprintf("Go Version:\t%s", runtime.Version()))
+			w.Flush()
+		},
+	}
+
 	var rootCmd = &cobra.Command{Use: "flare"}
-	rootCmd.AddCommand(cmdStart, cmdSetup)
+	rootCmd.AddCommand(cmdStart, cmdSetup, cmdVersion)
 	rootCmd.Execute()
 }
 
