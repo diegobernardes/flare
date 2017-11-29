@@ -5,17 +5,23 @@
 package mongodb
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/pkg/errors"
 	mgo "gopkg.in/mgo.v2"
 )
 
 // Client is used to interact with MongoDB.
 type Client struct {
-	addrs    []string
-	database string
-	username string
-	password string
-	sess     *mgo.Session
+	addrs      []string
+	database   string
+	username   string
+	password   string
+	replicaSet string
+	sess       *mgo.Session
+	poolLimit  int
+	timeout    time.Duration
 }
 
 // Stop close the session with MongoDB.
@@ -41,12 +47,24 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		c.database = "flare"
 	}
 
+	if c.poolLimit < 0 {
+		return nil, fmt.Errorf("invalid pool limit '%d'", c.poolLimit)
+	} else if c.poolLimit == 0 {
+		c.poolLimit = 4096
+	}
+
+	if c.timeout == 0 {
+		c.timeout = time.Duration(1 * time.Second)
+	}
+
 	di := &mgo.DialInfo{
-		Addrs:    c.addrs,
-		Database: c.database,
-		FailFast: true,
-		Username: c.username,
-		Password: c.password,
+		Addrs:          c.addrs,
+		Database:       c.database,
+		FailFast:       true,
+		Username:       c.username,
+		Password:       c.password,
+		ReplicaSetName: c.replicaSet,
+		PoolLimit:      c.poolLimit,
 	}
 
 	session, err := mgo.DialWithInfo(di)
@@ -76,4 +94,19 @@ func ClientUsername(username string) func(*Client) {
 // ClientPassword set the password to authenticate.
 func ClientPassword(password string) func(*Client) {
 	return func(c *Client) { c.password = password }
+}
+
+// ClientReplicaSet set the replicaSet.
+func ClientReplicaSet(replicaSet string) func(*Client) {
+	return func(c *Client) { c.replicaSet = replicaSet }
+}
+
+// ClientPoolLimit set the limit of connections per server.
+func ClientPoolLimit(limit int) func(*Client) {
+	return func(c *Client) { c.poolLimit = limit }
+}
+
+// ClientTimeout set the timeout during operations.
+func ClientTimeout(timeout time.Duration) func(*Client) {
+	return func(c *Client) { c.timeout = timeout }
 }

@@ -37,6 +37,19 @@ func (c *config) getStringSlice(key string) []string { return c.viper.GetStringS
 
 func (c *config) getInt(key string) int { return c.viper.GetInt(key) }
 
+func (c *config) getDuration(key string) (time.Duration, error) {
+	value := c.getString(key)
+	if value == "" {
+		return 0, nil
+	}
+
+	duration, err := time.ParseDuration(value)
+	if err != nil {
+		return 0, errors.Wrap(err, fmt.Sprintf("error during parse '%s' to time.Duration", key))
+	}
+	return duration, nil
+}
+
 func (c *config) documentRepository() (flare.DocumentRepositorier, error) {
 	engine := c.getString("repository.engine")
 	switch engine {
@@ -99,11 +112,19 @@ func (c *config) resourceRepository() (flare.ResourceRepositorier, error) {
 }
 
 func (c *config) mongodb() (*mongodb.Client, error) {
+	timeout, err := c.getDuration("repository.timeout")
+	if err != nil {
+		return nil, err
+	}
+
 	client, err := mongodb.NewClient(
 		mongodb.ClientAddrs(c.getStringSlice("repository.addrs")),
 		mongodb.ClientDatabase(c.getString("repository.database")),
 		mongodb.ClientUsername(c.getString("repository.username")),
 		mongodb.ClientPassword(c.getString("repository.password")),
+		mongodb.ClientReplicaSet(c.getString("repository.replica-set")),
+		mongodb.ClientPoolLimit(c.getInt("repository.pool-limit")),
+		mongodb.ClientTimeout(timeout),
 	)
 	return client, errors.Wrap(err, "error during MongoDB connection")
 }
