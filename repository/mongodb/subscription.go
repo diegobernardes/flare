@@ -108,7 +108,12 @@ func (s *Subscription) Create(_ context.Context, subscription *flare.Subscriptio
 		"endpoint.url": subscription.Endpoint.URL.String(),
 	}).One(resourceEntity)
 	if err == nil {
-		return fmt.Errorf("already has a subscription '%s' with this endpoint", resourceEntity.Id)
+		return &errMemory{
+			message: fmt.Sprintf(
+				"already has a subscription '%s' with this endpoint", resourceEntity.Id,
+			),
+			alreadyExists: true,
+		}
 	}
 	if err != nil && err != mgo.ErrNotFound {
 		return errors.Wrap(err, "error during subscription search")
