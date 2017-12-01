@@ -23,4 +23,5 @@ jobs:
     - script: make test
 
     - script: make coveralls
+      if: branch = master
 
