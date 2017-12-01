@@ -54,7 +54,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	}
 
 	if c.timeout == 0 {
-		c.timeout = time.Duration(1 * time.Second)
+		c.timeout = time.Second
 	}
 
 	di := &mgo.DialInfo{
