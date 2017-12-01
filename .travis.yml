@@ -1,5 +1,8 @@
 language: bash
 
+notifications:
+  email: false
+
 services:
  - docker
 
