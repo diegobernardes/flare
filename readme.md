@@ -14,6 +14,8 @@ cd github.com/diegobernardes/flare/services/flare/cmd
 go run flare.go start
 ```
 
+Currently the `memory` provider is broken, use `mongodb` and `aws` instead. Soon this will be solved.
+
 ## How it works
 Flare has 3 basic entities: `Resource`, `Subscription` and `Document`. The origin of content is responsible for `Resource` and `Document` entities and the clients are responsible for `Subscription`.
 
