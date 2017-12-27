@@ -12,9 +12,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/go-chi/chi/middleware"
-
 	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
