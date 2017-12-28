@@ -5,7 +5,6 @@
 package document
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
@@ -13,10 +12,6 @@ import (
 
 	"github.com/diegobernardes/flare"
 )
-
-type pusher interface {
-	push(ctx context.Context, action string, doc *flare.Document) error
-}
 
 type document flare.Document
 

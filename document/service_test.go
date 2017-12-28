@@ -21,6 +21,7 @@ import (
 	"github.com/diegobernardes/flare/infra/http/test"
 	infraTest "github.com/diegobernardes/flare/infra/test"
 	repoTest "github.com/diegobernardes/flare/repository/test"
+	subscriptionTest "github.com/diegobernardes/flare/subscription/test"
 )
 
 func TestNewService(t *testing.T) {
@@ -32,8 +33,8 @@ func TestNewService(t *testing.T) {
 			{
 				ServiceDocumentRepository(repoTest.NewDocument()),
 				ServiceResourceRepository(repoTest.NewResource()),
-				ServiceGetDocumentId(func(*http.Request) string { return "" }),
-				ServicePusher(newPushMock(nil)),
+				ServiceGetDocumentID(func(*http.Request) string { return "" }),
+				ServiceSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 				ServiceWriter(writer),
 			},
 		}
@@ -59,13 +60,19 @@ func TestNewService(t *testing.T) {
 			{
 				ServiceDocumentRepository(repoTest.NewDocument()),
 				ServiceResourceRepository(repoTest.NewResource()),
-				ServiceGetDocumentId(func(*http.Request) string { return "" }),
+				ServiceSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 			},
 			{
 				ServiceDocumentRepository(repoTest.NewDocument()),
 				ServiceResourceRepository(repoTest.NewResource()),
-				ServiceGetDocumentId(func(*http.Request) string { return "" }),
-				ServicePusher(newPushMock(nil)),
+				ServiceSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
+				ServiceGetDocumentID(func(*http.Request) string { return "" }),
+			},
+			{
+				ServiceDocumentRepository(repoTest.NewDocument()),
+				ServiceResourceRepository(repoTest.NewResource()),
+				ServiceSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
+				ServiceGetDocumentID(func(*http.Request) string { return "" }),
 			},
 		}
 
@@ -125,10 +132,10 @@ func TestServiceHandleShow(t *testing.T) {
 				service, err := NewService(
 					ServiceDocumentRepository(tt.repository),
 					ServiceResourceRepository(repoTest.NewResource()),
-					ServiceGetDocumentId(func(r *http.Request) string {
+					ServiceGetDocumentID(func(r *http.Request) string {
 						return strings.Replace(r.URL.Path, "/", "", -1)
 					}),
-					ServicePusher(newPushMock(nil)),
+					ServiceSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)
@@ -141,14 +148,14 @@ func TestServiceHandleShow(t *testing.T) {
 func TestServiceHandleUpdate(t *testing.T) {
 	Convey("Given a list of requests", t, func() {
 		tests := []struct {
-			title              string
-			req                *http.Request
-			status             int
-			header             http.Header
-			body               []byte
-			documentRepository flare.DocumentRepositorier
-			resourceRepository flare.ResourceRepositorier
-			pusher             pusher
+			title               string
+			req                 *http.Request
+			status              int
+			header              http.Header
+			body                []byte
+			documentRepository  flare.DocumentRepositorier
+			resourceRepository  flare.ResourceRepositorier
+			subscriptionTrigger flare.SubscriptionTrigger
 		}{
 			{
 				"The request should be invalid because it has a query string",
@@ -160,7 +167,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				infraTest.Load("serviceHandleUpdate.invalid.1.json"),
 				repoTest.NewDocument(),
 				repoTest.NewResource(),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
 				"The request should be invalid because it has no body",
@@ -172,7 +179,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				infraTest.Load("serviceHandleUpdate.invalid.2.json"),
 				repoTest.NewDocument(),
 				repoTest.NewResource(),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
 				"The request should be invalid because it don't find the resource",
@@ -186,7 +193,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				infraTest.Load("serviceHandleDelete.invalid.2.json"),
 				repoTest.NewDocument(),
 				repoTest.NewResource(),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
 				"The request should be invalid because it has a error at the repository",
@@ -202,7 +209,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceError(errors.New("error at repository")),
 				),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
 				"The request should be invalid because it has a error during document parse",
@@ -218,7 +225,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
 				),
-				newPushMock(errors.New("error during push")),
+				subscriptionTest.NewTrigger(errors.New("error during push")),
 			},
 			{
 				"The request should be invalid because it has a error during document push",
@@ -234,7 +241,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
 				),
-				newPushMock(errors.New("error during push")),
+				subscriptionTest.NewTrigger(errors.New("error during push")),
 			},
 			{
 				"The request should be valid",
@@ -250,7 +257,7 @@ func TestServiceHandleUpdate(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
 				),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 		}
 
@@ -262,8 +269,8 @@ func TestServiceHandleUpdate(t *testing.T) {
 				service, err := NewService(
 					ServiceDocumentRepository(tt.documentRepository),
 					ServiceResourceRepository(tt.resourceRepository),
-					ServiceGetDocumentId(func(r *http.Request) string { return "http://app.com/users/123" }),
-					ServicePusher(tt.pusher),
+					ServiceGetDocumentID(func(r *http.Request) string { return "http://app.com/users/123" }),
+					ServiceSubscriptionTrigger(tt.subscriptionTrigger),
 					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)
@@ -277,14 +284,14 @@ func TestServiceHandleUpdate(t *testing.T) {
 func TestServiceHandleDelete(t *testing.T) {
 	Convey("Given a list of requests", t, func() {
 		tests := []struct {
-			title              string
-			req                *http.Request
-			status             int
-			header             http.Header
-			body               []byte
-			documentRepository flare.DocumentRepositorier
-			resourceRepository flare.ResourceRepositorier
-			pusher             pusher
+			title               string
+			req                 *http.Request
+			status              int
+			header              http.Header
+			body                []byte
+			documentRepository  flare.DocumentRepositorier
+			resourceRepository  flare.ResourceRepositorier
+			subscriptionTrigger flare.SubscriptionTrigger
 		}{
 			{
 				"The request should be invalid because it has a query string",
@@ -296,7 +303,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				infraTest.Load("serviceHandleDelete.invalid.1.json"),
 				repoTest.NewDocument(),
 				repoTest.NewResource(),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
 				"The request should be invalid because it don't find the resource",
@@ -308,7 +315,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				infraTest.Load("serviceHandleDelete.invalid.2.json"),
 				repoTest.NewDocument(),
 				repoTest.NewResource(),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
 				"The request should be invalid because it has a error at the repository",
@@ -322,10 +329,10 @@ func TestServiceHandleDelete(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceError(errors.New("error at repository")),
 				),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 			{
-				"The response should be a worker push error",
+				"The response should be a subscription trigger error",
 				httptest.NewRequest(http.MethodDelete, "http://documents/http://app1.com/users/123", nil),
 				http.StatusInternalServerError,
 				http.Header{"Content-Type": []string{"application/json"}},
@@ -334,7 +341,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
 				),
-				newPushMock(errors.New("error during push")),
+				subscriptionTest.NewTrigger(errors.New("error during push")),
 			},
 			{
 				"The response should be a valid response",
@@ -346,7 +353,7 @@ func TestServiceHandleDelete(t *testing.T) {
 				repoTest.NewResource(
 					repoTest.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
 				),
-				newPushMock(nil),
+				subscriptionTest.NewTrigger(nil),
 			},
 		}
 
@@ -358,8 +365,8 @@ func TestServiceHandleDelete(t *testing.T) {
 				service, err := NewService(
 					ServiceDocumentRepository(tt.documentRepository),
 					ServiceResourceRepository(tt.resourceRepository),
-					ServiceGetDocumentId(func(r *http.Request) string { return "http://app.com/users/123" }),
-					ServicePusher(tt.pusher),
+					ServiceGetDocumentID(func(r *http.Request) string { return "http://app.com/users/123" }),
+					ServiceSubscriptionTrigger(tt.subscriptionTrigger),
 					ServiceWriter(writer),
 				)
 				So(err, ShouldBeNil)

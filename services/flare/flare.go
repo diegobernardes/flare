@@ -79,6 +79,11 @@ func (c *Client) Start() error {
 		return err
 	}
 
+	subscriptionService, err := c.initSubscriptionService(resourceRepository, subscriptionRepository)
+	if err != nil {
+		return errors.Wrap(err, "error during subscription service initialization")
+	}
+
 	documentService, err := c.initDocumentService(
 		documentRepository,
 		resourceRepository,
@@ -86,11 +91,6 @@ func (c *Client) Start() error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "error during document service initialization")
-	}
-
-	subscriptionService, err := c.initSubscriptionService(resourceRepository, subscriptionRepository)
-	if err != nil {
-		return errors.Wrap(err, "error during subscription service initialization")
 	}
 
 	return c.initServer(resourceService, subscriptionService, documentService)
@@ -108,7 +108,7 @@ func (c *Client) Setup(ctx context.Context) error {
 		return nil
 	}
 
-	for _, queue := range []string{"document", "subscription"} {
+	for _, queue := range []string{"subscription"} {
 		options, err := c.config.sqsOptions(queue)
 		if err != nil {
 			return errors.Wrap(err, "error during aws.SQS initialization")
@@ -295,11 +295,6 @@ func (c *Client) initDocumentService(
 	rr flare.ResourceRepositorier,
 	sr flare.SubscriptionRepositorier,
 ) (*document.Service, error) {
-	documentPusher, documentPuller, err := c.config.queue("document")
-	if err != nil {
-		return nil, errors.Wrap(err, "error during queue initialization")
-	}
-
 	subscriptionPusher, subscriptionPuller, err := c.config.queue("subscription")
 	if err != nil {
 		return nil, errors.Wrap(err, "error during queue initialization")
@@ -330,30 +325,6 @@ func (c *Client) initDocumentService(
 	}
 	triggerWorker.Start()
 
-	documentWorker := &document.Worker{}
-	jobWorker, err := task.NewWorker(
-		task.WorkerGoroutines(1),
-		task.WorkerProcessor(documentWorker),
-		task.WorkerPuller(documentPuller),
-		task.WorkerPusher(documentPusher),
-		task.WorkerTimeoutProcess(30*time.Second),
-		task.WorkerTimeoutPush(30*time.Second),
-		task.WorkerLogger(c.logger),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during worker initialization")
-	}
-
-	err = documentWorker.Init(
-		document.WorkerDocumentRepository(dr),
-		document.WorkerSubscriptionTrigger(trigger),
-		document.WorkerPusher(jobWorker),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during worker initialization")
-	}
-	jobWorker.Start()
-
 	writer, err := infraHTTP.NewWriter(c.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during writer initialization")
@@ -362,9 +333,9 @@ func (c *Client) initDocumentService(
 	documentService, err := document.NewService(
 		document.ServiceDocumentRepository(dr),
 		document.ServiceResourceRepository(rr),
-		document.ServiceGetDocumentId(func(r *http.Request) string { return chi.URLParam(r, "*") }),
-		document.ServicePusher(documentWorker),
+		document.ServiceGetDocumentID(func(r *http.Request) string { return chi.URLParam(r, "*") }),
 		document.ServiceWriter(writer),
+		document.ServiceSubscriptionTrigger(trigger),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during document.Service initialization")

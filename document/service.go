@@ -5,6 +5,7 @@
 package document
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,22 +19,21 @@ import (
 
 // Service implements the HTTP handler to manage documents.
 type Service struct {
-	documentRepository flare.DocumentRepositorier
-	resourceRepository flare.ResourceRepositorier
-	getDocumentId      func(*http.Request) string
-	pusher             pusher
-	writer             *infraHTTP.Writer
+	documentRepository  flare.DocumentRepositorier
+	resourceRepository  flare.ResourceRepositorier
+	subscriptionTrigger flare.SubscriptionTrigger
+	getDocumentID       func(*http.Request) string
+	writer              *infraHTTP.Writer
 }
 
 // HandleShow receive the request to show a given document.
 func (s *Service) HandleShow(w http.ResponseWriter, r *http.Request) {
-	d, err := s.documentRepository.FindOne(r.Context(), s.getDocumentId(r))
+	d, err := s.documentRepository.FindOne(r.Context(), s.getDocumentID(r))
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
 		}
-
 		s.writer.Error(w, "error during document search", err, status)
 		return
 	}
@@ -69,19 +69,13 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := s.getDocumentId(r)
-	resource, err := s.resourceRepository.FindByURI(r.Context(), id)
-	if err != nil {
-		status := http.StatusInternalServerError
-		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
-			status = http.StatusNotFound
-		}
-
-		s.writer.Error(w, "error during resource search", err, status)
+	documentID := s.getDocumentID(r)
+	resource := s.fetchResource(r.Context(), documentID, w)
+	if resource == nil {
 		return
 	}
 
-	doc, err := parseDocument(id, rawContent, resource)
+	doc, err := parseDocument(documentID, rawContent, resource)
 	if err != nil {
 		s.writer.Error(w, "error during document parse", err, http.StatusBadRequest)
 		return
@@ -92,13 +86,13 @@ func (s *Service) HandleUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = s.pusher.push(r.Context(), flare.SubscriptionTriggerUpdate, doc); err != nil {
-		s.writer.Error(
-			w,
-			"error during document process",
-			errors.Wrap(err, "could not push the document to be processed"),
-			http.StatusInternalServerError,
-		)
+	if err = s.documentRepository.Update(r.Context(), doc); err != nil {
+		s.writer.Error(w, "error during document update", err, http.StatusInternalServerError)
+		return
+	}
+
+	if err := s.subscriptionTrigger.Update(r.Context(), doc); err != nil {
+		s.writer.Error(w, "error during subscription trigger", err, http.StatusInternalServerError)
 		return
 	}
 
@@ -117,34 +111,51 @@ func (s *Service) HandleDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := s.getDocumentId(r)
-	resource, err := s.resourceRepository.FindByURI(r.Context(), id)
+	documentID := s.getDocumentID(r)
+	resource := s.fetchResource(r.Context(), documentID, w)
+	if resource == nil {
+		return
+	}
+
+	if err := s.subscriptionTrigger.Delete(r.Context(), &flare.Document{
+		ID:        documentID,
+		UpdatedAt: time.Now(),
+		Resource:  *resource,
+	}); err != nil {
+		s.writer.Error(w, "error during subscription trigger", err, http.StatusInternalServerError)
+		return
+	}
+
+	s.writer.Response(w, nil, http.StatusAccepted, nil)
+}
+
+func (s *Service) fetchResource(
+	ctx context.Context,
+	documentID string,
+	w http.ResponseWriter,
+) *flare.Resource {
+	doc, err := s.documentRepository.FindOne(ctx, documentID)
+	if errRepo, ok := err.(flare.DocumentRepositoryError); ok && !errRepo.NotFound() {
+		s.writer.Error(w, "error during document search", err, http.StatusInternalServerError)
+		return nil
+	}
+
+	var resource *flare.Resource
+	if doc == nil {
+		resource, err = s.resourceRepository.FindByURI(ctx, documentID)
+	} else {
+		resource, err = s.resourceRepository.FindOne(ctx, doc.Resource.ID)
+	}
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
 			status = http.StatusNotFound
 		}
-
 		s.writer.Error(w, "error during resource search", err, status)
-		return
+		return nil
 	}
 
-	err = s.pusher.push(
-		r.Context(),
-		flare.SubscriptionTriggerDelete,
-		&flare.Document{ID: id, UpdatedAt: time.Now(), Resource: *resource},
-	)
-	if err != nil {
-		s.writer.Error(
-			w,
-			"error during document process",
-			errors.Wrap(err, "could not push the document to be processed"),
-			http.StatusInternalServerError,
-		)
-		return
-	}
-
-	s.writer.Response(w, nil, http.StatusAccepted, nil)
+	return resource
 }
 
 // NewService initialize the service to handle HTTP requests.
@@ -163,12 +174,12 @@ func NewService(options ...func(*Service)) (*Service, error) {
 		return nil, errors.New("resourceRepository not found")
 	}
 
-	if s.getDocumentId == nil {
-		return nil, errors.New("getDocumentId not found")
+	if s.subscriptionTrigger == nil {
+		return nil, errors.New("subscriptionTrigger not found")
 	}
 
-	if s.pusher == nil {
-		return nil, errors.New("pusher not found")
+	if s.getDocumentID == nil {
+		return nil, errors.New("getDocumentId not found")
 	}
 
 	if s.writer == nil {
@@ -188,14 +199,14 @@ func ServiceResourceRepository(repo flare.ResourceRepositorier) func(*Service) {
 	return func(s *Service) { s.resourceRepository = repo }
 }
 
-// ServiceGetDocumentId set the function to get the document id.
-func ServiceGetDocumentId(fn func(*http.Request) string) func(*Service) {
-	return func(s *Service) { s.getDocumentId = fn }
+// ServiceSubscriptionTrigger set the subscription trigger to process the document updates.
+func ServiceSubscriptionTrigger(trigger flare.SubscriptionTrigger) func(*Service) {
+	return func(s *Service) { s.subscriptionTrigger = trigger }
 }
 
-// ServicePusher set the pusher to enqueue the messages to be processed async.
-func ServicePusher(p pusher) func(*Service) {
-	return func(s *Service) { s.pusher = p }
+// ServiceGetDocumentID set the function to get the document id.
+func ServiceGetDocumentID(fn func(*http.Request) string) func(*Service) {
+	return func(s *Service) { s.getDocumentID = fn }
 }
 
 // ServiceWriter set the writer to send the content to client.

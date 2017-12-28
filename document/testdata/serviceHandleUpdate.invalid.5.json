@@ -1,6 +1,6 @@
 {
   "error": {
-    "title": "error during document process",
-    "detail": "could not push the document to be processed: error during push"
+    "title": "error during subscription trigger",
+    "detail": "error during push"
   }
 }
