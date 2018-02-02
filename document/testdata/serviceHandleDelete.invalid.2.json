@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "error during resource search",
-    "detail": "could not found a resource for this uri 'http://app.com/users/123'"
-  }
-}

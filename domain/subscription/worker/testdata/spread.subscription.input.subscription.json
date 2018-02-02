@@ -1,0 +1,21 @@
+[
+  {
+    "id": "1",
+    "partition": "1",
+    "endpoint": {
+      "url": "http://app1.com",
+      "method": "POST"
+    },
+    "delivery": {
+      "success": [
+        200
+      ],
+      "discard": [
+        500
+      ]
+    },
+    "resource": {
+      "id": "123"
+    }
+  }
+]

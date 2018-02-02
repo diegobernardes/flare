@@ -1,4 +1,4 @@
-// Copyright 2017 Diego Bernardes. All rights reserved.
+// Copyright 2018 Diego Bernardes. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -11,34 +11,25 @@ import (
 )
 
 func TestResourceChangeValid(t *testing.T) {
-	Convey("Given a list of valid resource changes", t, func() {
-		tests := []ResourceChange{
-			{Field: "updatedAt", Format: "2006-01-02"},
-			{Field: "sequence"},
-		}
-
-		Convey("The validation should not return a error", func() {
-			for _, tt := range tests {
-				So(tt.Valid(), ShouldBeNil)
+	Convey("Feature: Validate the ResourceChange", t, func() {
+		Convey("Given a list of valid resource changes", func() {
+			tests := []ResourceChange{
+				{Field: "updatedAt", Format: "2006-01-02"},
+				{Field: "sequence"},
 			}
-		})
-	})
 
-	Convey("Given a list of invalid resource changes", t, func() {
-		tests := []struct {
-			title string
-			rc    ResourceChange
-		}{
-			{
-				"Should be missing the field",
-				ResourceChange{},
-			},
-		}
-
-		for _, tt := range tests {
-			Convey(tt.title, func() {
-				So(tt.rc.Valid(), ShouldNotBeNil)
+			Convey("Should not return a error", func() {
+				for _, tt := range tests {
+					So(tt.Valid(), ShouldBeNil)
+				}
 			})
-		}
+		})
+
+		Convey("Given a invalid resource change", func() {
+			Convey("Should return a error", func() {
+				r := ResourceChange{}
+				So(r.Valid(), ShouldNotBeNil)
+			})
+		})
 	})
 }

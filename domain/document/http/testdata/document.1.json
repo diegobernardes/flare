@@ -1,0 +1,12 @@
+[
+  {
+    "id": "456",
+    "revision": 1,
+    "content": {
+      "service": "user"
+    },
+    "resource": {
+      "id": "1"
+    }
+  }
+]

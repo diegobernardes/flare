@@ -1,4 +1,4 @@
-// Copyright 2017 Diego Bernardes. All rights reserved.
+// Copyright 2018 Diego Bernardes. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -17,6 +17,7 @@ type Subscription struct {
 	Endpoint     SubscriptionEndpoint
 	Delivery     SubscriptionDelivery
 	Resource     Resource
+	Partition    string
 	Data         map[string]interface{}
 	SendDocument bool
 	SkipEnvelope bool
@@ -46,26 +47,30 @@ const (
 
 // SubscriptionRepositorier is used to interact with the subscription data storage.
 type SubscriptionRepositorier interface {
-	FindAll(context.Context, *Pagination, string) ([]Subscription, *Pagination, error)
-	FindOne(ctx context.Context, resourceID, id string) (*Subscription, error)
+	Find(context.Context, *Pagination, string) ([]Subscription, *Pagination, error)
+	FindByID(ctx context.Context, resourceID, id string) (*Subscription, error)
+	FindByPartition(
+		ctx context.Context, resourceID, partition string,
+	) (<-chan Subscription, <-chan error, error)
 	Create(context.Context, *Subscription) error
 	Delete(ctx context.Context, resourceID, id string) error
 	Trigger(
 		ctx context.Context,
 		action string,
 		document *Document,
-		fn func(context.Context, Subscription, string) error,
+		subscription *Subscription,
+		fn func(context.Context, *Document, *Subscription, string) error,
 	) error
 }
 
 // SubscriptionTrigger is used to trigger the change on documents.
 type SubscriptionTrigger interface {
-	Update(ctx context.Context, document *Document) error
-	Delete(ctx context.Context, document *Document) error
+	Push(ctx context.Context, document *Document, action string) error
 }
 
 // SubscriptionRepositoryError represents all the errors the repository can return.
 type SubscriptionRepositoryError interface {
+	error
 	NotFound() bool
 	AlreadyExists() bool
 }

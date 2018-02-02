@@ -4,11 +4,9 @@ PROJECT_PATH   ?= github.com/diegobernardes/flare
 VERSION        = $(shell git describe --tags --always --dirty="-dev")
 DATE           = $(shell date -u '+%Y-%m-%d %H:%M UTC')
 COMMIT         = $(shell git rev-parse --short HEAD)
-VERSION_FLAGS  = -ldflags='-X "github.com/diegobernardes/flare/services/flare.Version=$(VERSION)" \
-                           -X "github.com/diegobernardes/flare/services/flare.BuildTime=$(DATE)" \
-                           -X "github.com/diegobernardes/flare/services/flare.Commit=$(COMMIT)"'
-
-.PHONY: run configure coveralls pre-pr test git-clean flare-build docker-push docker-build lint-slow lint-fast
+VERSION_FLAGS  = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(VERSION)" \
+                           -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(DATE)" \
+                           -X "github.com/diegobernardes/flare/service/flare.Commit=$(COMMIT)"'
 
 run:
 	@echo $(VERSION)
@@ -65,10 +63,12 @@ lint-fast:
 			--enable=misspell \
 			--enable=vet \
 			--enable=vetshadow \
+			--enable=errcheck \
 			--deadline=30s \
 			--aggregate \
 			--line-length=100 \
 			--min-confidence=.9 \
+			--linter='errcheck:errcheck -ignorepkg github.com/go-kit/kit/log -abspath {not_tests=-ignoretests}:PATH:LINE:COL:MESSAGE' \
 			--linter='gas:gas -exclude=G104 -fmt=csv {path}/*.go:^(?P<path>.*?\.go),(?P<line>\d+),(?P<message>[^,]+,[^,]+,[^,]+)' \
 			--tests \
 			--vendor
@@ -113,7 +113,7 @@ flare-build:
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
-		go build $(VERSION_FLAGS) services/flare/cmd/flare.go
+		go build $(VERSION_FLAGS) service/flare/cmd/flare.go
 
 git-clean:
 	@git remote prune origin

@@ -1,4 +1,4 @@
-# <img src="doc/logo.png" border="0" alt="flare" height="45">
+# <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>
 <a href="https://godoc.org/github.com/diegobernardes/flare"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
@@ -14,14 +14,12 @@ cd github.com/diegobernardes/flare/services/flare/cmd
 go run flare.go start
 ```
 
-Currently the `memory` provider is broken, use `mongodb` and `aws` instead. Soon this will be solved.
-
 ## How it works
 Flare has 3 basic entities: `Resource`, `Subscription` and `Document`. The origin of content is responsible for `Resource` and `Document` entities and the clients are responsible for `Subscription`.
 
 ### Resource
 <p align="center">
-	<img src="doc/resource.jpg">
+	<img src="misc/doc/resource.jpg">
 <p>
 
 Resource represents the entity you want to track. It cannot be updated, only deleted, and to delete, first you need to remove all the associated subscriptions.
@@ -37,7 +35,7 @@ Resource represents the entity you want to track. It cannot be updated, only del
 
 ### Subscription
 <p align="center">
-	<img src="doc/subscription.jpg">
+	<img src="misc/doc/subscription.jpg">
 <p>
 
 
@@ -56,20 +54,20 @@ Subscription is the responsible to notify the clients when a document from a res
 
 ### Document
 <p align="center">
-	<img src="doc/document-create.jpg">
+	<img src="misc/doc/document-create.jpg">
 <p>
 
 To update a document, a `PUT` should be done at `http://flare/documents/{endpoint}`, where the `{endpoint}` is the real document endpoint and it should match the information inserted at the resource creation. The body should contain the document.
 If the origin send the same document or older documents more then one time, the service don't gonna notify the clients again because it know the document version each client has. The notification only happens when is really needed.  
 
 <p align="center">
-	<img src="doc/document-update.jpg">
+	<img src="misc/doc/document-update.jpg">
 <p>
 
 The difference from previous request is that the email has changed from `@gmail.com` to `@outlook.com` and the `updatedAt` from `08:30` to `08:35`. After this, the client receive a notifications of update.
 
 <p align="center">
-	<img src="doc/document-delete.jpg">
+	<img src="misc/doc/document-delete.jpg">
 <p>
 
 The delete should be sent with the delete method and no body.

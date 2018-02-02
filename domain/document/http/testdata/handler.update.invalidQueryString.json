@@ -1,0 +1,6 @@
+{
+  "error": {
+    "title": "error during document update",
+    "detail": "query string not allowed 'key=value'"
+  }
+}

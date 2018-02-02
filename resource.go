@@ -1,4 +1,4 @@
-// Copyright 2017 Diego Bernardes. All rights reserved.
+// Copyright 2018 Diego Bernardes. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -36,15 +36,17 @@ func (rc *ResourceChange) Valid() error {
 
 // ResourceRepositorier is used to interact with Resource repository.
 type ResourceRepositorier interface {
-	FindAll(context.Context, *Pagination) ([]Resource, *Pagination, error)
-	FindOne(context.Context, string) (*Resource, error)
+	Find(context.Context, *Pagination) ([]Resource, *Pagination, error)
+	FindByID(context.Context, string) (*Resource, error)
 	FindByURI(context.Context, string) (*Resource, error)
+	Partitions(ctx context.Context, id string) (partitions []string, err error)
 	Create(context.Context, *Resource) error
 	Delete(context.Context, string) error
 }
 
 // ResourceRepositoryError represents all the errors the repository can return.
 type ResourceRepositoryError interface {
+	error
 	AlreadyExists() bool
 	NotFound() bool
 }

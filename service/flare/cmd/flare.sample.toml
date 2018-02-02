@@ -1,0 +1,200 @@
+# --------------------------------------------------------------------------------------------------
+#   More about this configuration at: https://github.com/diegobernardes/flare/wiki/Configuration   #
+# --------------------------------------------------------------------------------------------------
+# - log.level
+#   Control the minimum log level from messages to be displayed.
+#   Possible values: "debug", "info", "warn" and "error".
+#
+# - log.output
+#   Where the logs gonna be sent.
+#   Possible values: "stdout" and "discard".
+#
+# - log.format
+#   Format of the outputed log.
+#   Possible values: "human" and "json".
+#
+[log]
+level  = "debug"
+output = "stdout"
+format = "human"
+
+[http]
+  # ------------------------------------------------------------------------------------------------
+  # - http.server.addr
+  #   Where the HTTP server gonna listen. The value should have this format: "host:port". The host
+  #   can be omited, in this case, Flare gonna bind to all available interfaces. The port is always
+  #   required.
+  #
+  # - http.server.timeout
+  #   The max time a request has to be processed.
+  #
+  # - http.server.enable
+  #   Used to enable or disable the HTTP server.
+  #   Possible values: true or false.
+  #
+  [http.server]
+  enable  = true
+  addr    = ":8080"
+  timeout = "5s"
+
+  # ------------------------------------------------------------------------------------------------
+  # - http.client.max-idle-connections
+  #   The quantity of idle connections that are kept open.
+  #
+  # - http.client.max-idle-connections-per-host
+  #   The quantity of idle connections per host that are kept open.
+  #
+  # - http.client.idle-connections-timeout
+  #   The time to live of a idle connection inside the pool of idle connections. If a connection is
+  #   used, this time resets.
+  #
+  [http.client]
+  max-idle-connections          = 1000
+  max-idle-connections-per-host = 100
+  idle-connection-timeout       = "60s"
+
+[domain]
+  # ------------------------------------------------------------------------------------------------
+  # - domain.resource.partition
+  #   The quantity of elements inside a resource partition. This is done to improve the speed to
+  #   notify a large quantity of subscriptions as it allow the resource to be parallel processed.
+  #
+  [domain.resource]
+  partition = 1000
+
+  # ------------------------------------------------------------------------------------------------
+  # - domain.pagination.default-limit
+  #   The quantity of entities to be returned by default on collections.
+  #
+  [domain.pagination]
+  default-limit = 30
+
+# --------------------------------------------------------------------------------------------------
+# - worker.enable
+#   Used to enable or disable the worker.
+#   Possible values: true or false.
+#
+# - worker.{name}.timeout
+#   The time a given message has to be processed.
+#
+# - worker.{name}.concurrency
+#   The quantity of goroutines to process the message queue.
+#
+# - worker.{name}.concurrency-output
+#   After the worker finish the process it need to send the output to another worker. This value
+#   control the quantity of goroutines delivering the output.
+#
+[worker]
+enable = true
+
+  [worker.subscription.partition]
+  timeout            = "10s"
+  concurrency        = 10
+  concurrency-output = 100
+
+  [worker.subscription.spread]
+  timeout            = "10s"
+  concurrency        = 100
+  concurrency-output = 100
+
+  [worker.subscription.delivery]
+  timeout     = "10s"
+  concurrency = 1000
+
+# --------------------------------------------------------------------------------------------------
+# - provider.repository
+#   The content location.
+#   Possible values: "memory" and "mongodb".
+#
+# - provider.queue
+#   The messages location.
+#   Posssible values: "memory" or "aws.sqs".
+#
+[provider]
+repository = "memory"
+queue      = "memory"
+
+  # ------------------------------------------------------------------------------------------------
+  # - provider.aws.key
+  #   Key to connect to AWS.
+  #
+  # - provider.aws.secret
+  #   Secret to connect to AWS.
+  #
+  # - provider.aws.region
+  #   Region to connect to AWS.
+  #
+  # - provider.aws.sqs.queue.{name}.queue
+  #   The SQS queue the messages gonna be delivered/consumed.
+  #
+  # - provider.aws.sqs.queue.{name}.ingress.timeout
+  #   The max quantity of time to wait during a request to send the messages to SQS.
+  #
+  # - provider.aws.sqs.queue.{name}.egress.receive-wait-time
+  #   The quantity of time to wait a new message be ready to be delived.
+  #
+  [provider.aws]
+  key    = ""
+  secret = ""
+  region = ""
+
+    [provider.aws.sqs.queue.subscription.partition]
+    queue = "flare-subscription-partition"
+
+      [provider.aws.sqs.queue.subscription.partition.ingress]
+      timeout = "1s"
+
+      [provider.aws.sqs.queue.subscription.partition.egress]
+      receive-wait-time = "20s"
+
+    [provider.aws.sqs.queue.subscription.spread]
+    queue = "flare-subscription-spread"
+
+      [provider.aws.sqs.queue.subscription.spread.ingress]
+      timeout = "1s"
+
+      [provider.aws.sqs.queue.subscription.spread.egress]
+      receive-wait-time = "20s"
+
+    [provider.aws.sqs.queue.subscription.delivery]
+    queue = "flare-subscription-delivery"
+
+      [provider.aws.sqs.queue.subscription.delivery.ingress]
+      timeout = "1s"
+
+      [provider.aws.sqs.queue.subscription.delivery.egress]
+      receive-wait-time = "20s"
+
+  # -------------------------------------------------------------------------------------------------
+  # - provider.mongodb.addrs
+  #   List of "host:port" to MongoDB servers.
+  #
+  # - provider.mongodb.database
+  #   Name of the database at MongoDB.
+  #
+  # - provider.mongodb.username
+  #   Username used to connect to MongoDB.
+  #
+  # - provider.mongodb.password
+  #   Password used to connect to MongoDB.
+  #
+  # - provider.mongodb.replica-set
+  #   Replica set, if specified, will prevent the obtained session from communicating with any server
+  #   which is not part of a replica set with the given name. The default is to communicate with any
+  #   server specified or discovered via the servers contacted.
+  #
+  # - provider.mongodb.pool-limit
+  #   Defines the per-server socket pool limit.
+  #
+  # - provider.mongodb.timeout
+  #   Timeout is the amount of time to wait for a server to respond when first connecting and on
+  #   follow up operations in the session.
+  #
+  [provider.mongodb]
+  addrs       = ["localhost:27017"]
+  database    = "flare"
+  username    = ""
+  password    = ""
+  replica-set = ""
+  pool-limit  = 4096
+  timeout     = "1s"

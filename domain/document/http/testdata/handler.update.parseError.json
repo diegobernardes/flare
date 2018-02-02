@@ -1,0 +1,6 @@
+{
+  "error": {
+    "title": "error during document parse",
+    "detail": "data type not supported"
+  }
+}

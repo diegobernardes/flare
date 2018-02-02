@@ -3,7 +3,6 @@
   "editor.formatOnSave": true,
   "files.exclude": {
     "**/.git": true,
-    "**/.svn": true,
     "**/.hg": true,
     "**/.DS_Store": true,
     "service/flare/cmd/flare": true
@@ -28,6 +27,10 @@
   "[markdown]": {
     "files.trimTrailingWhitespace": false
   },
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 2
+  },
   "go.formatTool": "goreturns",
   "go.formatFlags": [
     "-local",
@@ -47,12 +50,14 @@
     "--enable=misspell",
     "--enable=vet",
     "--enable=vetshadow",
+    "--enable=errcheck",
     "--aggregate",
     "--deadline=3s",
     "--line-length=100",
     "--min-confidence=.9",
     "--tests",
     "--vendor",
+    "--linter=errcheck:errcheck -ignorepkg github.com/go-kit/kit/log -abspath {not_tests=-ignoretests}:PATH:LINE:COL:MESSAGE",
     "--linter=gofmt:gofmt -s -w {path}/*.go:^(?P<path>.*?\\.go)$",
     "--linter=gas:gas -exclude=G104 -fmt=csv {path}/*.go:^(?P<path>.*?\\.go),(?P<line>\\d+),(?P<message>[^,]+,[^,]+,[^,]+)"
   ],
@@ -61,11 +66,5 @@
     "-shadow"
   ],
   "go.autocompleteUnimportedPackages": true,
-  "go.docsTool": "gogetdoc",
-  "terraform.formatOnSave": true,
-  "terraform.formatVarsOnSave": true,
-  "[makefile]": {
-    "editor.insertSpaces": false,
-    "editor.tabSize": 2
-  }
+  "go.docsTool": "gogetdoc"
 }
