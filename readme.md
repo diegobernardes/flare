@@ -2,6 +2,7 @@
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>
 <a href="https://godoc.org/github.com/diegobernardes/flare"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
+<a href="https://app.fossa.io/projects/git%2Bgithub.com%2Fdiegobernardes%2Fflare?ref=badge_shield" alt="FOSSA Status"><img src="https://app.fossa.io/api/projects/git%2Bgithub.com%2Fdiegobernardes%2Fflare.svg?type=shield"/></a>
 
 Flare is a service that listen to changes on HTTP endpoints and notify subscripted clients about the changes. It help reduce the pressure on APIs by avoiding the clients to do pooling requests to search for new/changed content and the need of the APIs to develop workers to notify the clients about document changes.
 
@@ -73,3 +74,7 @@ The difference from previous request is that the email has changed from `@gmail.
 <p>
 
 The delete should be sent with the delete method and no body.
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fdiegobernardes%2Fflare.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fdiegobernardes%2Fflare?ref=badge_large)
