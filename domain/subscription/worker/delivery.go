@@ -124,7 +124,7 @@ func (d *Delivery) buildContent(
 ) ([]byte, error) {
 	var content map[string]interface{}
 
-	if sub.SkipEnvelope {
+	if !sub.Content.Envelope {
 		content = document.Content
 	} else {
 		content = map[string]interface{}{
@@ -147,7 +147,7 @@ func (d *Delivery) buildContent(
 			content["data"] = sub.Data
 		}
 
-		if sub.SendDocument {
+		if sub.Content.Document {
 			content["document"] = document.Content
 		}
 	}

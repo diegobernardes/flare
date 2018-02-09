@@ -13,15 +13,20 @@ import (
 
 // Subscription has all the information needed to notify the clients from changes on documents.
 type Subscription struct {
-	ID           string
-	Endpoint     SubscriptionEndpoint
-	Delivery     SubscriptionDelivery
-	Resource     Resource
-	Partition    string
-	Data         map[string]interface{}
-	SendDocument bool
-	SkipEnvelope bool
-	CreatedAt    time.Time
+	ID        string
+	Endpoint  SubscriptionEndpoint
+	Delivery  SubscriptionDelivery
+	Resource  Resource
+	Partition string
+	Data      map[string]interface{}
+	Content   SubscriptionContent
+	CreatedAt time.Time
+}
+
+// SubscriptionContent configure the content delived by the subscription.
+type SubscriptionContent struct {
+	Document bool
+	Envelope bool
 }
 
 // SubscriptionEndpoint has the address information to notify the clients.

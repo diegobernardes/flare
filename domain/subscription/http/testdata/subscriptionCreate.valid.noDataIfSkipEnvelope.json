@@ -16,7 +16,9 @@
       500
     ]
   },
-  "skipEnvelope": true,
+  "content": {
+    "envelope": false
+  },
   "data": {
     "service": "user"
   }

@@ -12,6 +12,7 @@
     ]
   },
   "content": {
-    "document": true
+    "document": true,
+    "envelope": true
   }
 }

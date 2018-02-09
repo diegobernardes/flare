@@ -68,21 +68,31 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(&struct {
-		Id           string                 `json:"id"`
-		Endpoint     map[string]interface{} `json:"endpoint"`
-		Delivery     map[string][]int       `json:"delivery"`
-		CreatedAt    string                 `json:"createdAt"`
-		Data         map[string]interface{} `json:"data,omitempty"`
-		SendDocument bool                   `json:"sendDocument"`
-		SkipEnvelope bool                   `json:"skipEnvelope"`
+		Id        string                 `json:"id"`
+		Endpoint  map[string]interface{} `json:"endpoint"`
+		Delivery  map[string][]int       `json:"delivery"`
+		Content   subscriptionContent    `json:"content"`
+		Data      map[string]interface{} `json:"data,omitempty"`
+		CreatedAt string                 `json:"createdAt"`
 	}{
-		Id:           s.ID,
-		Endpoint:     endpoint,
-		Delivery:     delivery,
-		CreatedAt:    s.CreatedAt.Format(time.RFC3339),
-		Data:         s.Data,
-		SendDocument: s.SendDocument,
-		SkipEnvelope: s.SkipEnvelope,
+		Id:        s.ID,
+		Endpoint:  endpoint,
+		Delivery:  delivery,
+		Content:   subscriptionContent(s.Content),
+		Data:      s.Data,
+		CreatedAt: s.CreatedAt.Format(time.RFC3339),
+	})
+}
+
+type subscriptionContent flare.SubscriptionContent
+
+func (sc *subscriptionContent) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Document bool `json:"document"`
+		Envelope bool `json:"envelope"`
+	}{
+		Document: sc.Document,
+		Envelope: sc.Envelope,
 	})
 }
 
@@ -108,9 +118,11 @@ type subscriptionCreate struct {
 		Success []int `json:"success"`
 		Discard []int `json:"discard"`
 	} `json:"delivery"`
-	Data         map[string]interface{} `json:"data"`
-	SendDocument *bool                  `json:"sendDocument"`
-	SkipEnvelope bool                   `json:"skipEnvelope"`
+	Data    map[string]interface{} `json:"data"`
+	Content struct {
+		Document *bool `json:"document"`
+		Envelope *bool `json:"envelope"`
+	} `json:"content"`
 }
 
 func (s *subscriptionCreate) valid() error {
@@ -133,27 +145,12 @@ func (s *subscriptionCreate) valid() error {
 		return errors.New("missing delivery.Discard")
 	}
 
-	if err := s.validEnvelope(); err != nil {
-		return err
+	if s.Data != nil && s.Content.Envelope != nil && !*s.Content.Envelope {
+		return errors.New("could not have data while content.envelope is false")
 	}
 
 	if err := s.validData(); err != nil {
 		return err
-	}
-	return nil
-}
-
-func (s *subscriptionCreate) validEnvelope() error {
-	if !s.SkipEnvelope {
-		return nil
-	}
-
-	if s.SendDocument != nil && !*s.SendDocument {
-		return errors.New("if skipEnvelope is true, then, sendDocument must be true")
-	}
-
-	if len(s.Data) > 0 {
-		return errors.New("if skipEnvelope is true, then, data can't be set")
 	}
 	return nil
 }
@@ -195,11 +192,15 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 			Discard: s.Delivery.Discard,
 			Success: s.Delivery.Success,
 		},
-		Data:         s.Data,
-		SkipEnvelope: s.SkipEnvelope,
+		Data: s.Data,
 	}
-	if s.SendDocument != nil {
-		subscription.SendDocument = *s.SendDocument
+
+	if s.Content.Document != nil {
+		subscription.Content.Document = *s.Content.Document
+	}
+
+	if s.Content.Envelope != nil {
+		subscription.Content.Envelope = *s.Content.Envelope
 	}
 
 	return subscription, nil

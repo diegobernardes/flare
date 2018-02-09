@@ -167,10 +167,6 @@ func TestSubscriptionCreateValid(t *testing.T) {
 					infraTest.Load("subscriptionCreate.valid.missingDeliveryDiscard.json"),
 				},
 				{
-					"Should have a invalid envelope",
-					infraTest.Load("subscriptionCreate.valid.invalidEnvelope.json"),
-				},
-				{
 					"Should not have data if skipEnvelope is true",
 					infraTest.Load("subscriptionCreate.valid.noDataIfSkipEnvelope.json"),
 				},
@@ -225,7 +221,26 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 							URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 							Method: "post",
 						},
-						SendDocument: true,
+						Content: flare.SubscriptionContent{
+							Document: true,
+						},
+					},
+				},
+				{
+					infraTest.Load("subscriptionCreate.toFlareSubscription.valid.3.json"),
+					&flare.Subscription{
+						Delivery: flare.SubscriptionDelivery{
+							Discard: []int{500},
+							Success: []int{200},
+						},
+						Endpoint: flare.SubscriptionEndpoint{
+							URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+							Method: "post",
+						},
+						Content: flare.SubscriptionContent{
+							Document: true,
+							Envelope: true,
+						},
 					},
 				},
 			}
