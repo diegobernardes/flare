@@ -170,59 +170,6 @@ func TestResourceCreateValidAddresses(t *testing.T) {
 	})
 }
 
-func TestResourceCreateValidWildcard(t *testing.T) {
-	Convey("Feature: Validate resourceCreate.Path wildcards", t, func() {
-		Convey("Given a list of valid paths", func() {
-			tests := []resourceCreate{
-				{Path: "/users/{*}"},
-				{Path: "/users/{ * }"},
-				{Path: "/users/{*}/{wildcard2}"},
-				{Path: "/{wildcard1}/{wildcard2}/{wildcard3}"},
-				{Path: "/{wildcard}/{*}/users"},
-				{Path: "/{ id1 }/{ id2}"},
-			}
-
-			Convey("Should not return a error", func() {
-				for _, tt := range tests {
-					result := tt.validWildcard()
-					So(result, ShouldBeNil)
-				}
-			})
-		})
-
-		Convey("Given a list of invalid paths", func() {
-			tests := []resourceCreate{
-				{Path: "/"},
-				{Path: "/users"},
-				{Path: "/users/{}"},
-				{Path: "/users/{"},
-				{Path: "/users/}"},
-				{Path: "/{revision}"},
-				{Path: "/{ id }/{ id}"},
-				{Path: "/{ revision }"},
-				{Path: "/{*}{*}"},
-				{Path: "/{{*}}"},
-				{Path: "/{wildcard}}"},
-				{Path: "/{*}/{*}"},
-				{Path: "/{wildcard}/{*}/{wildcard}"},
-				{Path: "/{*}-something"},
-				{Path: "/some{*}thing"},
-				{Path: "/{*}thing{id}"},
-				{Path: "/some{*}thing/{id}"},
-				{Path: "/some{x}/{id}"},
-				{Path: "/some{id}teste{id2}/{id3}"},
-			}
-
-			Convey("Should return a error", func() {
-				for _, tt := range tests {
-					result := tt.validWildcard()
-					So(result, ShouldNotBeNil)
-				}
-			})
-		})
-	})
-}
-
 func TestResourceCreateValid(t *testing.T) {
 	type resourceCreateChange struct {
 		Field  string `json:"field"`
@@ -260,7 +207,6 @@ func TestResourceCreateValid(t *testing.T) {
 			})
 		})
 
-		// mover a maioria desses testes para o wildcard, que eh o que estamos querendo testar
 		Convey("Given a list of invalid resourceCreate", func() {
 			tests := []resourceCreate{
 				{},

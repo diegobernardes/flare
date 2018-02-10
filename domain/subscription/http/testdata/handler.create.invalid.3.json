@@ -1,6 +1,6 @@
 {
   "error": {
-    "title": "invalid subscription",
-    "detail": "error during parse '%zzzzz' to url.URL: parse %zzzzz: invalid URL escape \"%zz\""
+    "title": "error during body parse",
+    "detail": "error during content unescape: error during endpoint.url unescape: invalid URL escape \"%zz\""
   }
 }

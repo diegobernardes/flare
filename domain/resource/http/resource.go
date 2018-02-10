@@ -8,13 +8,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 	"github.com/satori/go.uuid"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/infra/wildcard"
 )
 
 type pagination flare.Pagination
@@ -94,74 +94,14 @@ func (r *resourceCreate) validPath() error {
 		return errors.New("path should not end with a slash")
 	}
 
-	if err := r.validWildcard(); err != nil {
+	if !wildcard.Present(r.Path) {
+		return errors.New("path is missing a wildcard")
+	}
+
+	if err := wildcard.ValidWithoutDuplication(r.Path); err != nil {
 		return err
 	}
 
-	return nil
-}
-
-func (r *resourceCreate) validWildcard() error {
-	wildcards := make(map[string]struct{})
-	for _, value := range strings.Split(r.Path, "/") {
-		wildcard, err := r.validWildcardFragment(value)
-		if err != nil {
-			return err
-		}
-		if wildcard == "" {
-			continue
-		}
-
-		if _, ok := wildcards[wildcard]; ok {
-			return fmt.Errorf("wildcard '%s' is present more then 1 time", wildcard)
-		}
-		wildcards[wildcard] = struct{}{}
-	}
-
-	if len(wildcards) == 0 {
-		return errors.New("missing wildcard")
-	}
-	return nil
-}
-
-func (r *resourceCreate) validWildcardFragment(value string) (string, error) {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "", nil
-	}
-
-	first := strings.Index(value, "{")
-	last := strings.Index(value, "}")
-	if first == -1 && last == -1 {
-		return "", nil
-	}
-
-	if err := r.validWildcardBracket(value, first, last); err != nil {
-		return "", err
-	}
-
-	wildcard := strings.TrimSpace(value[first+1 : last])
-	if wildcard == "revision" {
-		return "", errors.New("revision is a reserved word")
-	} else if wildcard == "" {
-		return "", fmt.Errorf("missing wildcard identifier on '%s'", value)
-	}
-
-	return wildcard, nil
-}
-
-func (r *resourceCreate) validWildcardBracket(value string, first, last int) error {
-	if first > -1 && last == -1 {
-		return fmt.Errorf("missing '}' on wildcard '%s'", value)
-	} else if first == -1 && last > -1 {
-		return fmt.Errorf("missing '{' on wildcard '%s'", value)
-	} else if strings.Count(value, "{") > 1 {
-		return errors.New("invalid wildcard, found more then one '{' on fragment")
-	} else if strings.Count(value, "}") > 1 {
-		return errors.New("invalid wildcard, found more then one '}' on fragment")
-	} else if first != 0 || last+1 != len(value) {
-		return fmt.Errorf("invalid wildcard '%s'", value)
-	}
 	return nil
 }
 
@@ -171,34 +111,44 @@ func (r *resourceCreate) validAddresses() error {
 	}
 
 	for _, address := range r.Addresses {
-		d, err := url.Parse(address)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", address))
-		}
-
-		if d.Path != "" {
-			return fmt.Errorf("address is invalid because it has a path '%s'", d.Path)
-		}
-
-		if d.RawQuery != "" {
-			return fmt.Errorf("address is invalid because it has query string '%s'", d.RawQuery)
-		}
-
-		if d.Fragment != "" {
-			return fmt.Errorf("address is invalid because it has fragment '%s'", d.Fragment)
-		}
-
-		switch d.Scheme {
-		case "http", "https":
-			continue
-		case "":
-			return errors.Errorf("missing scheme on address '%s'", address)
-		default:
-			return errors.Errorf("invalid scheme on address '%s'", address)
+		if err := r.validAddressUnit(address); err != nil {
+			return err
 		}
 	}
 
 	return nil
+}
+
+func (r *resourceCreate) validAddressUnit(addr string) error {
+	d, err := url.Parse(addr)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", addr))
+	}
+
+	if d.Path != "" {
+		return fmt.Errorf("address is invalid because it has a path '%s'", d.Path)
+	}
+
+	if d.RawQuery != "" {
+		return fmt.Errorf("address is invalid because it has query string '%s'", d.RawQuery)
+	}
+
+	if d.Fragment != "" {
+		return fmt.Errorf("address is invalid because it has fragment '%s'", d.Fragment)
+	}
+
+	if wildcard.Present(addr) {
+		return errors.New("address cannot have wildcard")
+	}
+
+	switch d.Scheme {
+	case "http", "https":
+		return nil
+	case "":
+		return errors.Errorf("missing scheme on address '%s'", addr)
+	default:
+		return errors.Errorf("invalid scheme on address '%s'", addr)
+	}
 }
 
 func (r *resourceCreate) toFlareResource() *flare.Resource {
@@ -213,17 +163,23 @@ func (r *resourceCreate) toFlareResource() *flare.Resource {
 	}
 }
 
-func transformResources(r []flare.Resource) []resource {
-	result := make([]resource, len(r))
-	for i := 0; i < len(r); i++ {
-		result[i] = (resource)(r[i])
+func (r *resourceCreate) unescape() error {
+	for i, rawAddr := range r.Addresses {
+		addr, err := url.QueryUnescape(rawAddr)
+		if err != nil {
+			return errors.Wrap(err, "error during addresses unescape")
+		}
+		r.Addresses[i] = addr
 	}
-	return result
+
+	path, err := url.QueryUnescape(r.Path)
+	if err != nil {
+		return errors.Wrap(err, "error during path unescape")
+	}
+	r.Path = path
+
+	return nil
 }
-
-func transformResource(r *flare.Resource) *resource { return (*resource)(r) }
-
-func transformPagination(p *flare.Pagination) *pagination { return (*pagination)(p) }
 
 type response struct {
 	Pagination *pagination
@@ -245,3 +201,15 @@ func (r *response) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(result)
 }
+
+func transformResources(r []flare.Resource) []resource {
+	result := make([]resource, len(r))
+	for i := 0; i < len(r); i++ {
+		result[i] = (resource)(r[i])
+	}
+	return result
+}
+
+func transformResource(r *flare.Resource) *resource { return (*resource)(r) }
+
+func transformPagination(p *flare.Pagination) *pagination { return (*pagination)(p) }

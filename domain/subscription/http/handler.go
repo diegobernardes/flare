@@ -6,8 +6,10 @@ package http
 
 import (
 	"encoding/json"
-	"errors"
+	"io"
 	"net/http"
+
+	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
@@ -69,27 +71,6 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 
 // Create receive the request to create a subscription.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var (
-		d       = json.NewDecoder(r.Body)
-		content = &subscriptionCreate{}
-	)
-
-	if err := d.Decode(content); err != nil {
-		h.writer.Error(w, "error during body parse", err, http.StatusBadRequest)
-		return
-	}
-
-	if err := content.valid(); err != nil {
-		h.writer.Error(w, "invalid body content", err, http.StatusBadRequest)
-		return
-	}
-
-	result, err := content.toFlareSubscription()
-	if err != nil {
-		h.writer.Error(w, "invalid subscription", err, http.StatusBadRequest)
-		return
-	}
-
 	resource, err := h.resourceRepository.FindByID(r.Context(), h.getResourceID(r))
 	if err != nil {
 		status := http.StatusInternalServerError
@@ -98,6 +79,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 
 		h.writer.Error(w, "error during resource search", err, status)
+		return
+	}
+
+	content, err := h.parseSubscriptionCreateAndValidate(r.Body, resource)
+	if err != nil {
+		h.writer.Error(w, "error during body parse", err, http.StatusBadRequest)
+		return
+	}
+
+	result, err := content.toFlareSubscription()
+	if err != nil {
+		h.writer.Error(w, "invalid subscription", err, http.StatusBadRequest)
 		return
 	}
 	result.Resource.ID = resource.ID
@@ -132,6 +125,30 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writer.Response(w, nil, http.StatusNoContent, nil)
+}
+
+func (h *Handler) parseSubscriptionCreateAndValidate(
+	body io.Reader,
+	resource *flare.Resource,
+) (*subscriptionCreate, error) {
+	var (
+		d       = json.NewDecoder(body)
+		content = &subscriptionCreate{}
+	)
+
+	if err := d.Decode(content); err != nil {
+		return nil, err
+	}
+
+	if err := content.unescape(); err != nil {
+		return nil, errors.Wrap(err, "error during content unescape")
+	}
+
+	if err := content.valid(resource); err != nil {
+		return nil, errors.Wrap(err, "invalid body content")
+	}
+
+	return content, nil
 }
 
 // NewHandler initialize the service to handle HTTP Requests.

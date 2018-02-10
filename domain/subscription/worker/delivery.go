@@ -11,20 +11,21 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/infra/wildcard"
 	"github.com/diegobernardes/flare/infra/worker"
 )
 
 // Delivery do the heavy lifting by discovering if the given subscription need or not to receive the
 // document.
 type Delivery struct {
-	pusher     worker.Pusher
-	repository flare.SubscriptionRepositorier
-	httpClient *http.Client
+	pusher                 worker.Pusher
+	resourceRepository     flare.ResourceRepositorier
+	subscriptionRepository flare.SubscriptionRepositorier
+	httpClient             *http.Client
 }
 
 // Push the signal to delivery the document.
@@ -49,7 +50,8 @@ func (d *Delivery) Process(ctx context.Context, rawContent []byte) error {
 		return errors.Wrap(err, "error during content unmarshal")
 	}
 
-	if err := d.repository.Trigger(ctx, action, document, subscription, d.trigger); err != nil {
+	err = d.subscriptionRepository.Trigger(ctx, action, document, subscription, d.trigger)
+	if err != nil {
 		return errors.Wrap(err, "error during subscription trigger")
 	}
 	return nil
@@ -65,8 +67,12 @@ func (d *Delivery) Init(options ...func(*Delivery)) error {
 		return errors.New("pusher not found")
 	}
 
-	if d.repository == nil {
-		return errors.New("repository not found")
+	if d.resourceRepository == nil {
+		return errors.New("resource repository not found")
+	}
+
+	if d.subscriptionRepository == nil {
+		return errors.New("subscription repository not found")
 	}
 
 	if d.httpClient == nil {
@@ -120,7 +126,11 @@ func (d *Delivery) unmarshal(
 }
 
 func (d *Delivery) buildContent(
-	document *flare.Document, sub flare.Subscription, kind string,
+	resource *flare.Resource,
+	document *flare.Document,
+	documentEndpoint *url.URL,
+	sub flare.Subscription,
+	kind string,
 ) ([]byte, error) {
 	var content map[string]interface{}
 
@@ -133,15 +143,14 @@ func (d *Delivery) buildContent(
 			"updatedAt": document.UpdatedAt.String(),
 		}
 		if len(sub.Data) > 0 {
-			replacer, err := d.wildcardReplace(&sub.Resource, document)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to extract the wildcards from document id")
-			}
+			values := wildcard.ExtractValue(resource.Path, documentEndpoint.Path)
 
 			for key, rawValue := range sub.Data {
-				if value, ok := rawValue.(string); ok {
-					sub.Data[key] = replacer(value)
+				value, ok := rawValue.(string)
+				if !ok {
+					continue
 				}
+				sub.Data[key] = wildcard.Replace(value, values)
 			}
 
 			content["data"] = sub.Data
@@ -157,30 +166,6 @@ func (d *Delivery) buildContent(
 		return nil, errors.Wrap(err, "error during response generate")
 	}
 	return result, nil
-}
-
-func (d *Delivery) wildcardReplace(
-	r *flare.Resource, doc *flare.Document,
-) (func(string) string, error) {
-	endpoint, err := url.Parse(doc.ID)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error during url parse of '%s'", doc.ID))
-	}
-	wildcards := strings.Split(r.Path, "/")
-	documentWildcards := strings.Split(endpoint.Path, "/")
-
-	return func(value string) string {
-		for i, wildcard := range wildcards {
-			if wildcard == "" {
-				continue
-			}
-
-			if wildcard[0] == '{' && wildcard[len(wildcard)-1] == '}' {
-				value = strings.Replace(value, wildcard, documentWildcards[i], -1)
-			}
-		}
-		return value
-	}, nil
 }
 
 func (d *Delivery) trigger(
@@ -222,13 +207,42 @@ func (d *Delivery) buildRequest(
 	subscription *flare.Subscription,
 	action string,
 ) (*http.Request, error) {
-	content, err := d.buildContent(document, *subscription, action)
+	endpoint, err := url.Parse(document.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("error during url parse of '%s'", document.ID))
+	}
+
+	resource, err := d.resourceRepository.FindByID(ctx, document.Resource.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	content, err := d.buildContent(resource, document, endpoint, *subscription, action)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during content build")
 	}
 
+	addr, err := d.buildEndpoint(resource, subscription, endpoint)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during endpoint generate")
+	}
+
+	req, err := d.buildRequestHTTP(ctx, content, subscription, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+func (d *Delivery) buildRequestHTTP(
+	ctx context.Context,
+	content []byte,
+	subscription *flare.Subscription,
+	addr string,
+) (*http.Request, error) {
 	buf := bytes.NewBuffer(content)
-	req, err := http.NewRequest(subscription.Endpoint.Method, subscription.Endpoint.URL.String(), buf)
+	req, err := http.NewRequest(subscription.Endpoint.Method, addr, buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during http request create")
 	}
@@ -250,9 +264,26 @@ func (d *Delivery) buildRequest(
 	return req, nil
 }
 
+func (d *Delivery) buildEndpoint(
+	resource *flare.Resource, subscription *flare.Subscription, endpoint *url.URL,
+) (string, error) {
+	values := wildcard.ExtractValue(resource.Path, endpoint.Path)
+	subscriptionEndpoint, err := url.QueryUnescape(subscription.Endpoint.URL.String())
+	if err != nil {
+		return "", errors.Wrap(err, "error during subscription endpoint unescape")
+	}
+
+	return wildcard.Replace(subscriptionEndpoint, values), nil
+}
+
+// DeliveryResourceRepository set the resource repository.
+func DeliveryResourceRepository(repository flare.ResourceRepositorier) func(*Delivery) {
+	return func(d *Delivery) { d.resourceRepository = repository }
+}
+
 // DeliverySubscriptionRepository set the subscription repository.
 func DeliverySubscriptionRepository(repository flare.SubscriptionRepositorier) func(*Delivery) {
-	return func(d *Delivery) { d.repository = repository }
+	return func(d *Delivery) { d.subscriptionRepository = repository }
 }
 
 // DeliveryPusher set the output of the messages.

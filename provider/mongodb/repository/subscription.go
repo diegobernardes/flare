@@ -21,6 +21,7 @@ import (
 // Subscription implements the data layer for the subscription service.
 type Subscription struct {
 	resourceRepository resourceRepositorier
+	documentRepository flare.DocumentRepositorier
 	client             *mongodb.Client
 	database           string
 	collection         string
@@ -218,6 +219,11 @@ func (s *Subscription) Trigger(
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error during resource '%s' find", doc.Resource.ID))
 	}
+
+	doc, err = s.documentRepository.FindByID(ctx, doc.ID)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error during document '%s' find", doc.ID))
+	}
 	doc.Resource = *resource
 
 	return s.triggerProcess(ctx, subscription, doc, kind, fn)
@@ -400,6 +406,10 @@ func (s *Subscription) init() error {
 
 	if s.resourceRepository == nil {
 		return errors.New("invalid resource repository")
+	}
+
+	if s.documentRepository == nil {
+		return errors.New("invalid document repository")
 	}
 
 	s.collection = "subscriptions"

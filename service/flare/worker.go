@@ -159,6 +159,7 @@ func (w *worker) initSubscriptionDelivery() error {
 
 	err = unitOfWork.Init(
 		subscriptionWorker.DeliveryPusher(client),
+		subscriptionWorker.DeliveryResourceRepository(w.repository.base.Resource()),
 		subscriptionWorker.DeliverySubscriptionRepository(w.repository.base.Subscription()),
 		subscriptionWorker.DeliveryHTTPClient(hc),
 	)

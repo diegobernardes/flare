@@ -139,7 +139,7 @@ func TestSubscriptionCreateValid(t *testing.T) {
 					err := json.Unmarshal([]byte(tt), &content)
 					So(err, ShouldBeNil)
 
-					err = content.valid()
+					err = content.valid(&flare.Resource{})
 					So(err, ShouldBeNil)
 				}
 			})
@@ -182,7 +182,7 @@ func TestSubscriptionCreateValid(t *testing.T) {
 					err := json.Unmarshal([]byte(tt.input), &content)
 					So(err, ShouldBeNil)
 
-					err = content.valid()
+					err = content.valid(&flare.Resource{})
 					So(err, ShouldNotBeNil)
 				})
 			}
@@ -307,7 +307,7 @@ func TestSubscriptionCreateValidData(t *testing.T) {
 
 			Convey("Should not return a error", func() {
 				for _, tt := range tests {
-					So(tt.validData(), ShouldBeNil)
+					So(tt.validData(&flare.Resource{}), ShouldBeNil)
 				}
 			})
 		})
@@ -320,7 +320,7 @@ func TestSubscriptionCreateValidData(t *testing.T) {
 
 			Convey("Should return a error", func() {
 				for _, tt := range tests {
-					So(tt.validData(), ShouldNotBeNil)
+					So(tt.validData(&flare.Resource{}), ShouldNotBeNil)
 				}
 			})
 		})

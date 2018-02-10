@@ -72,6 +72,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 
 	c.resource.subscriptionRepository = &c.subscription
 	c.subscription.resourceRepository = &c.resource
+	c.subscription.documentRepository = &c.document
 	c.resource.client = c.base
 	c.subscription.client = c.base
 	c.document.client = c.base

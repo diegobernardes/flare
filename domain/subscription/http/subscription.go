@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/diegobernardes/flare/infra/wildcard"
+
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
@@ -53,8 +55,13 @@ func (r *response) MarshalJSON() ([]byte, error) {
 type subscription flare.Subscription
 
 func (s *subscription) MarshalJSON() ([]byte, error) {
+	endpointURL, err := url.QueryUnescape(s.Endpoint.URL.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "error during endpoint.url unescape")
+	}
+
 	endpoint := map[string]interface{}{
-		"url":    s.Endpoint.URL.String(),
+		"url":    endpointURL,
 		"method": s.Endpoint.Method,
 	}
 
@@ -125,9 +132,9 @@ type subscriptionCreate struct {
 	} `json:"content"`
 }
 
-func (s *subscriptionCreate) valid() error {
-	if s.Endpoint.URL == "" {
-		return errors.New("missing endpoint.URL")
+func (s *subscriptionCreate) valid(resource *flare.Resource) error {
+	if err := s.validEndpointURL(resource); err != nil {
+		return err
 	}
 
 	s.Endpoint.Method = strings.ToUpper(s.Endpoint.Method)
@@ -149,13 +156,44 @@ func (s *subscriptionCreate) valid() error {
 		return errors.New("could not have data while content.envelope is false")
 	}
 
-	if err := s.validData(); err != nil {
+	if err := s.validData(resource); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *subscriptionCreate) validEndpointURL(resource *flare.Resource) error {
+	if s.Endpoint.URL == "" {
+		return errors.New("missing endpoint.URL")
+	}
+
+	if err := wildcard.Valid(s.Endpoint.URL); err != nil {
+		return errors.Wrap(err, "invalid wildcard")
+	}
+
+	resourceWildcards := wildcard.Extract(resource.Path)
+	resourceWildcards = append(resourceWildcards, wildcard.Reserved...)
+
+	endpointWildcards := wildcard.Extract(s.Endpoint.URL)
+	if len(endpointWildcards) == 0 {
+		return nil
+	}
+
+outer:
+	for _, wildcard := range endpointWildcards {
+		for _, rw := range resourceWildcards {
+			if wildcard == rw {
+				continue outer
+			}
+		}
+
+		return fmt.Errorf("endpoint.url has a wildcard '%s' that is not at the resource", wildcard)
 	}
 	return nil
 }
 
-func (s *subscriptionCreate) validData() error {
+func (s *subscriptionCreate) validData(resource *flare.Resource) error {
 	for key, value := range s.Data {
 		switch v := value.(type) {
 		case bool, float64, string:
@@ -172,6 +210,30 @@ func (s *subscriptionCreate) validData() error {
 		}
 	}
 
+	return s.validDataWildcard(resource)
+}
+
+func (s *subscriptionCreate) validDataWildcard(resource *flare.Resource) error {
+	resourceWildcards := wildcard.Extract(resource.Path)
+	resourceWildcards = append(resourceWildcards, wildcard.Reserved...)
+
+	for key, rawData := range s.Data {
+		data, ok := rawData.(string)
+		if !ok {
+			continue
+		}
+
+	outer:
+		for _, wildcard := range wildcard.Extract(data) {
+			for _, rw := range resourceWildcards {
+				if wildcard == rw {
+					continue outer
+				}
+			}
+
+			return fmt.Errorf("data.'%s' has a wildcard '%s' that is not at the resource", key, wildcard)
+		}
+	}
 	return nil
 }
 
@@ -204,4 +266,14 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 	}
 
 	return subscription, nil
+}
+
+func (s *subscriptionCreate) unescape() error {
+	endpoint, err := url.QueryUnescape(s.Endpoint.URL)
+	if err != nil {
+		return errors.Wrap(err, "error during endpoint.url unescape")
+	}
+	s.Endpoint.URL = endpoint
+
+	return nil
 }

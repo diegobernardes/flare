@@ -25,6 +25,7 @@ func TestInitDelivery(t *testing.T) {
 				{
 					DeliveryPusher(testQueue.NewClient()),
 					DeliverySubscriptionRepository(&testRepository.Subscription{}),
+					DeliveryResourceRepository(&testRepository.Resource{}),
 					DeliveryHTTPClient(http.DefaultClient),
 				},
 			}

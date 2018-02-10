@@ -76,6 +76,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := content.unescape(); err != nil {
+		h.writer.Error(w, "error during content unescape", err, http.StatusBadRequest)
+		return
+	}
+
 	if err := content.valid(); err != nil {
 		h.writer.Error(w, "invalid body content", err, http.StatusBadRequest)
 		return

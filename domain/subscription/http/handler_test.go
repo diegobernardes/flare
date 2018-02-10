@@ -392,7 +392,11 @@ func TestHandlerCreate(t *testing.T) {
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.create.invalid.1.json"),
 					nil,
-					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(
+							infraTest.Load("handler.create.resourceInput.json"),
+						),
+					},
 				},
 				{
 					"return a error because of a invalid content (1)",
@@ -403,7 +407,11 @@ func TestHandlerCreate(t *testing.T) {
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.create.invalid.2.json"),
 					nil,
-					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(
+							infraTest.Load("handler.create.resourceInput.json"),
+						),
+					},
 				},
 				{
 					"return a error because of a invalid content (2)",
@@ -416,7 +424,11 @@ func TestHandlerCreate(t *testing.T) {
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.create.invalid.3.json"),
 					nil,
-					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(
+							infraTest.Load("handler.create.resourceInput.json"),
+						),
+					},
 				},
 				{
 					"return a error because the resource don't exist",

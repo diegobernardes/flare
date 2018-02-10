@@ -1,6 +1,6 @@
 {
   "error": {
-    "title": "invalid body content",
-    "detail": "missing endpoint.URL"
+    "title": "error during body parse",
+    "detail": "invalid body content: missing endpoint.URL"
   }
 }
