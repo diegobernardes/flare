@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -144,9 +145,16 @@ func (h *Handler) parseSubscriptionCreateAndValidate(
 		return nil, errors.Wrap(err, "error during content unescape")
 	}
 
+	content.Endpoint.Method = strings.ToUpper(content.Endpoint.Method)
+	for action, endpoint := range content.Endpoint.Action {
+		endpoint.Method = strings.ToUpper(endpoint.Method)
+		content.Endpoint.Action[action] = endpoint
+	}
+
 	if err := content.valid(resource); err != nil {
 		return nil, errors.Wrap(err, "invalid body content")
 	}
+	content.normalize()
 
 	return content, nil
 }

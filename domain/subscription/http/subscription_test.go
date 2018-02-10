@@ -57,7 +57,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Subscription: &subscription{
 							ID: "123",
 							Endpoint: flare.SubscriptionEndpoint{
-								URL:     url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+								URL:     &url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 								Method:  http.MethodPost,
 								Headers: map[string][]string{"Content-Type": {"application/json"}},
 							},
@@ -77,7 +77,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 							{
 								ID: "123",
 								Endpoint: flare.SubscriptionEndpoint{
-									URL:     url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+									URL:     &url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 									Method:  http.MethodPost,
 									Headers: map[string][]string{"Content-Type": {"application/json"}},
 								},
@@ -90,7 +90,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 							{
 								ID: "456",
 								Endpoint: flare.SubscriptionEndpoint{
-									URL:     url.URL{Scheme: "https", Host: "app.com", Path: "/update"},
+									URL:     &url.URL{Scheme: "https", Host: "app.com", Path: "/update"},
 									Method:  http.MethodPost,
 									Headers: map[string][]string{"Content-Type": {"application/json"}},
 								},
@@ -205,8 +205,9 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 							Success: []int{200},
 						},
 						Endpoint: flare.SubscriptionEndpoint{
-							URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+							URL:    &url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 							Method: "post",
+							Action: make(map[string]flare.SubscriptionEndpoint),
 						},
 					},
 				},
@@ -218,8 +219,9 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 							Success: []int{200},
 						},
 						Endpoint: flare.SubscriptionEndpoint{
-							URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+							URL:    &url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 							Method: "post",
+							Action: make(map[string]flare.SubscriptionEndpoint),
 						},
 						Content: flare.SubscriptionContent{
 							Document: true,
@@ -234,8 +236,9 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 							Success: []int{200},
 						},
 						Endpoint: flare.SubscriptionEndpoint{
-							URL:    url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
+							URL:    &url.URL{Scheme: "http", Host: "app.io", Path: "/update"},
 							Method: "post",
+							Action: make(map[string]flare.SubscriptionEndpoint),
 						},
 						Content: flare.SubscriptionContent{
 							Document: true,

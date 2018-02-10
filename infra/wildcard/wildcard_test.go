@@ -289,3 +289,45 @@ func TestExtractValue(t *testing.T) {
 		})
 	})
 }
+
+func TestNormalize(t *testing.T) {
+	Convey("Feature: Normalize a wildcard", t, func() {
+		Convey("Given a list of parameters", func() {
+			tests := []struct {
+				wildcard string
+				expected string
+			}{
+				{
+					"sample",
+					"sample",
+				},
+				{
+					"users/{id}",
+					"users/{id}",
+				},
+				{
+					"users/{id}/{id2}",
+					"users/{id}/{id2}",
+				},
+				{
+					"users/{ id }/{  id2}",
+					"users/{id}/{id2}",
+				},
+				{
+					"{ id }-sample-{  id2}",
+					"{id}-sample-{id2}",
+				},
+				{
+					" { id } ",
+					" {id} ",
+				},
+			}
+
+			Convey("Should have the expected output", func() {
+				for _, tt := range tests {
+					So(tt.expected, ShouldEqual, Normalize(tt.wildcard))
+				}
+			})
+		})
+	})
+}

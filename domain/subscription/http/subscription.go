@@ -9,15 +9,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
-
-	"github.com/diegobernardes/flare/infra/wildcard"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/diegobernardes/flare"
+	"github.com/diegobernardes/flare/infra/wildcard"
 )
 
 type pagination flare.Pagination
@@ -55,18 +53,22 @@ func (r *response) MarshalJSON() ([]byte, error) {
 type subscription flare.Subscription
 
 func (s *subscription) MarshalJSON() ([]byte, error) {
-	endpointURL, err := url.QueryUnescape(s.Endpoint.URL.String())
+	endpoint, err := s.endpointMarshalJSON(s.Endpoint)
 	if err != nil {
-		return nil, errors.Wrap(err, "error during endpoint.url unescape")
+		return nil, errors.Wrap(err, "error during endpoint marshal")
 	}
 
-	endpoint := map[string]interface{}{
-		"url":    endpointURL,
-		"method": s.Endpoint.Method,
+	actions := make(map[string]interface{})
+	for action, actionEndpoint := range s.Endpoint.Action {
+		content, err := s.endpointMarshalJSON(actionEndpoint)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf("error during endpoint.%s marshal", action))
+		}
+		actions[action] = content
 	}
 
-	if len(s.Endpoint.Headers) > 0 {
-		endpoint["headers"] = s.Endpoint.Headers
+	if len(actions) > 0 {
+		endpoint["actions"] = actions
 	}
 
 	delivery := map[string][]int{
@@ -89,6 +91,30 @@ func (s *subscription) MarshalJSON() ([]byte, error) {
 		Data:      s.Data,
 		CreatedAt: s.CreatedAt.Format(time.RFC3339),
 	})
+}
+
+func (*subscription) endpointMarshalJSON(
+	endpoint flare.SubscriptionEndpoint,
+) (map[string]interface{}, error) {
+	content := map[string]interface{}{}
+
+	if endpoint.URL != nil {
+		endpointURL, err := url.QueryUnescape(endpoint.URL.String())
+		if err != nil {
+			return nil, errors.Wrap(err, "error during endpoint.url unescape")
+		}
+		content["url"] = endpointURL
+	}
+
+	if endpoint.Method != "" {
+		content["method"] = endpoint.Method
+	}
+
+	if len(endpoint.Headers) > 0 {
+		content["headers"] = endpoint.Headers
+	}
+
+	return content, nil
 }
 
 type subscriptionContent flare.SubscriptionContent
@@ -115,12 +141,15 @@ func transformSubscriptions(s []flare.Subscription) []subscription {
 	return result
 }
 
+type subscriptionCreateEndpoint struct {
+	URL     string                                `json:"url"`
+	Method  string                                `json:"method"`
+	Headers http.Header                           `json:"headers"`
+	Action  map[string]subscriptionCreateEndpoint `json:"actions"`
+}
+
 type subscriptionCreate struct {
-	Endpoint struct {
-		URL     string      `json:"url"`
-		Method  string      `json:"method"`
-		Headers http.Header `json:"headers"`
-	} `json:"endpoint"`
+	Endpoint subscriptionCreateEndpoint `json:"endpoint"`
 	Delivery struct {
 		Success []int `json:"success"`
 		Discard []int `json:"discard"`
@@ -134,14 +163,11 @@ type subscriptionCreate struct {
 
 func (s *subscriptionCreate) valid(resource *flare.Resource) error {
 	if err := s.validEndpointURL(resource); err != nil {
-		return err
+		return errors.Wrap(err, "invalid endpoint")
 	}
 
-	s.Endpoint.Method = strings.ToUpper(s.Endpoint.Method)
-	switch s.Endpoint.Method {
-	case http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch:
-	default:
-		return fmt.Errorf("invalid endpoint.Method '%s'", s.Endpoint.Method)
+	if err := s.validEndpointMethod(resource); err != nil {
+		return errors.Wrap(err, "invalid method")
 	}
 
 	if len(s.Delivery.Success) == 0 {
@@ -163,19 +189,62 @@ func (s *subscriptionCreate) valid(resource *flare.Resource) error {
 	return nil
 }
 
-func (s *subscriptionCreate) validEndpointURL(resource *flare.Resource) error {
-	if s.Endpoint.URL == "" {
-		return errors.New("missing endpoint.URL")
+func (s *subscriptionCreate) normalize() {
+	if s.Endpoint.URL != "" {
+		s.Endpoint.URL = wildcard.Normalize(s.Endpoint.URL)
 	}
 
-	if err := wildcard.Valid(s.Endpoint.URL); err != nil {
+	for action, endpoint := range s.Endpoint.Action {
+		if endpoint.URL != "" {
+			endpoint.URL = wildcard.Normalize(endpoint.URL)
+			s.Endpoint.Action[action] = endpoint
+		}
+	}
+}
+
+func (s *subscriptionCreate) validEndpointURL(resource *flare.Resource) error {
+	var missingURL string
+	for key, action := range s.Endpoint.Action {
+		if action.URL == "" {
+			missingURL = key
+			break
+		}
+	}
+
+	if s.Endpoint.URL == "" && missingURL != "" {
+		return fmt.Errorf(
+			"'endpoint.url' not found while the 'endpoint.actions.%s.url' is not present", missingURL,
+		)
+	}
+
+	if err := s.validEndpointURLWildcard(resource, s.Endpoint.URL, ""); err != nil {
+		return err
+	}
+
+	for action, endpoint := range s.Endpoint.Action {
+		if err := s.validEndpointURLWildcard(resource, endpoint.URL, action); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *subscriptionCreate) validEndpointURLWildcard(
+	resource *flare.Resource, endpoint, action string,
+) error {
+	if endpoint == "" {
+		return nil
+	}
+
+	if err := wildcard.Valid(endpoint); err != nil {
 		return errors.Wrap(err, "invalid wildcard")
 	}
 
 	resourceWildcards := wildcard.Extract(resource.Path)
 	resourceWildcards = append(resourceWildcards, wildcard.Reserved...)
 
-	endpointWildcards := wildcard.Extract(s.Endpoint.URL)
+	endpointWildcards := wildcard.Extract(endpoint)
 	if len(endpointWildcards) == 0 {
 		return nil
 	}
@@ -188,8 +257,54 @@ outer:
 			}
 		}
 
-		return fmt.Errorf("endpoint.url has a wildcard '%s' that is not at the resource", wildcard)
+		var msg string
+		if action == "" {
+			msg = fmt.Sprintf("endpoint.url has a wildcard '%s' that is not at the resource", wildcard)
+
+		} else {
+			msg = fmt.Sprintf(
+				"endpoint.%s.url has a wildcard '%s' that is not at the resource", action, wildcard,
+			)
+		}
+
+		return fmt.Errorf(msg)
 	}
+
+	return nil
+}
+
+func (s *subscriptionCreate) validEndpointMethod(resource *flare.Resource) error {
+	valid := func(method string) bool {
+		switch method {
+		case "", http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
+		default:
+			return false
+		}
+		return true
+	}
+
+	var missingMethod string
+	for key, action := range s.Endpoint.Action {
+		if action.Method == "" {
+			missingMethod = key
+		}
+
+		if !valid(action.Method) {
+			return fmt.Errorf("invalid endpoint.%s.Method '%s'", key, s.Endpoint.Method)
+		}
+	}
+
+	if !valid(s.Endpoint.Method) {
+		return fmt.Errorf("invalid endpoint.Method '%s'", s.Endpoint.Method)
+	}
+
+	if s.Endpoint.Method == "" && missingMethod != "" {
+		return fmt.Errorf(
+			"'endpoint.method' not found while the 'endpoint.actions.%s.Method' is not present",
+			missingMethod,
+		)
+	}
+
 	return nil
 }
 
@@ -238,18 +353,14 @@ func (s *subscriptionCreate) validDataWildcard(resource *flare.Resource) error {
 }
 
 func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) {
-	path, err := url.Parse(s.Endpoint.URL)
+	endpoint, err := s.toFlareSubscriptionEndpoint()
 	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error during parse '%s' to url.URL", s.Endpoint.URL))
+		return nil, err
 	}
 
 	subscription := &flare.Subscription{
-		ID: uuid.NewV4().String(),
-		Endpoint: flare.SubscriptionEndpoint{
-			URL:     *path,
-			Method:  s.Endpoint.Method,
-			Headers: s.Endpoint.Headers,
-		},
+		ID:       uuid.NewV4().String(),
+		Endpoint: *endpoint,
 		Delivery: flare.SubscriptionDelivery{
 			Discard: s.Delivery.Discard,
 			Success: s.Delivery.Success,
@@ -276,4 +387,43 @@ func (s *subscriptionCreate) unescape() error {
 	s.Endpoint.URL = endpoint
 
 	return nil
+}
+
+func (s *subscriptionCreate) toFlareSubscriptionEndpoint() (*flare.SubscriptionEndpoint, error) {
+	result := flare.SubscriptionEndpoint{
+		Method:  s.Endpoint.Method,
+		Headers: s.Endpoint.Headers,
+		Action:  make(map[string]flare.SubscriptionEndpoint),
+	}
+
+	if s.Endpoint.URL != "" {
+		addr, err := url.Parse(s.Endpoint.URL)
+		if err != nil {
+			return nil, errors.Wrap(err, fmt.Sprintf(
+				"error during parse endpoint.url '%s' to url.URL", s.Endpoint.URL),
+			)
+		}
+		result.URL = addr
+	}
+
+	for action, endpoint := range s.Endpoint.Action {
+		ea := flare.SubscriptionEndpoint{
+			Method:  endpoint.Method,
+			Headers: endpoint.Headers,
+		}
+
+		if endpoint.URL != "" {
+			addr, err := url.Parse(endpoint.URL)
+			if err != nil {
+				return nil, errors.Wrap(err, fmt.Sprintf(
+					"error during parse endpoint.%s.url '%s' to url.URL", action, s.Endpoint.URL),
+				)
+			}
+			ea.URL = addr
+		}
+
+		result.Action[action] = ea
+	}
+
+	return &result, nil
 }

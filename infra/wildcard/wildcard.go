@@ -152,6 +152,27 @@ func ExtractValue(a, b string) map[string]string {
 	return result
 }
 
+// Normalize is used to normalize the wildcards.
+func Normalize(content string) string {
+	var offset int
+	for {
+		start := strings.Index(content[offset:], "{") + offset
+		end := strings.Index(content[offset:], "}") + offset
+
+		if start-offset == -1 {
+			break
+		}
+		offset = end
+
+		key := strings.TrimSpace(content[start+1 : end])
+		lenBefore := len(content)
+		content = content[:start] + "{" + key + "}" + content[end+1:]
+		offset += len(content) - lenBefore + 1
+	}
+
+	return content
+}
+
 func valid(content string, duplicate bool) error {
 	var (
 		offset  int

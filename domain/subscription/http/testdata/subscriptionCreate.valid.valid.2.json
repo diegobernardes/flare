@@ -1,7 +1,7 @@
 {
   "endpoint": {
     "url": "http://localhost:5001/update",
-    "method": "post",
+    "method": "POST",
     "headers": {
       "Content-Type": [
         "application/json"

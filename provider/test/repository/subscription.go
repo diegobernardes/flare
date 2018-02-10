@@ -197,7 +197,7 @@ func SubscriptionLoadSliceByteSubscription(content []byte) func(*Subscription) {
 					Success: rawSubscription.Delivery.Success,
 				},
 				Endpoint: flare.SubscriptionEndpoint{
-					URL:     *uriParsed,
+					URL:     uriParsed,
 					Method:  rawSubscription.Endpoint.Method,
 					Headers: rawSubscription.Endpoint.Headers,
 				},

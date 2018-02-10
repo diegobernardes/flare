@@ -1,6 +1,6 @@
 {
   "error": {
-    "title": "error during body parse",
-    "detail": "error during content unescape: error during endpoint.url unescape: invalid URL escape \"%zz\""
+    "title": "error during resource search",
+    "detail": "resource '123' not found"
   }
 }

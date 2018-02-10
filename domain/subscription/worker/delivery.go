@@ -222,12 +222,30 @@ func (d *Delivery) buildRequest(
 		return nil, errors.Wrap(err, "error during content build")
 	}
 
-	addr, err := d.buildEndpoint(resource, subscription, endpoint)
+	rawAddr := subscription.Endpoint.URL
+	headers := subscription.Endpoint.Headers
+	method := subscription.Endpoint.Method
+	endpointAction, ok := subscription.Endpoint.Action[action]
+	if ok {
+		if endpointAction.Method != "" {
+			method = endpointAction.Method
+		}
+
+		if len(endpointAction.Headers) > 0 {
+			headers = endpointAction.Headers
+		}
+
+		if endpointAction.URL != nil {
+			rawAddr = endpointAction.URL
+		}
+	}
+
+	addr, err := d.buildEndpoint(resource, subscription, endpoint, rawAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during endpoint generate")
 	}
 
-	req, err := d.buildRequestHTTP(ctx, content, subscription, addr)
+	req, err := d.buildRequestHTTP(ctx, content, subscription, addr, method, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -239,10 +257,11 @@ func (d *Delivery) buildRequestHTTP(
 	ctx context.Context,
 	content []byte,
 	subscription *flare.Subscription,
-	addr string,
+	addr, method string,
+	headers http.Header,
 ) (*http.Request, error) {
 	buf := bytes.NewBuffer(content)
-	req, err := http.NewRequest(subscription.Endpoint.Method, addr, buf)
+	req, err := http.NewRequest(method, addr, buf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during http request create")
 	}
@@ -265,10 +284,13 @@ func (d *Delivery) buildRequestHTTP(
 }
 
 func (d *Delivery) buildEndpoint(
-	resource *flare.Resource, subscription *flare.Subscription, endpoint *url.URL,
+	resource *flare.Resource,
+	subscription *flare.Subscription,
+	endpoint *url.URL,
+	rawSubscriptionEndpoint *url.URL,
 ) (string, error) {
 	values := wildcard.ExtractValue(resource.Path, endpoint.Path)
-	subscriptionEndpoint, err := url.QueryUnescape(subscription.Endpoint.URL.String())
+	subscriptionEndpoint, err := url.QueryUnescape(rawSubscriptionEndpoint.String())
 	if err != nil {
 		return "", errors.Wrap(err, "error during subscription endpoint unescape")
 	}

@@ -31,9 +31,10 @@ type SubscriptionContent struct {
 
 // SubscriptionEndpoint has the address information to notify the clients.
 type SubscriptionEndpoint struct {
-	URL     url.URL
+	URL     *url.URL
 	Method  string
 	Headers http.Header
+	Action  map[string]SubscriptionEndpoint
 }
 
 // SubscriptionDelivery is used to control whenever the notification can be considered successful

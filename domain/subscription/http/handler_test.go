@@ -399,21 +399,6 @@ func TestHandlerCreate(t *testing.T) {
 					},
 				},
 				{
-					"return a error because of a invalid content (1)",
-					httptest.NewRequest(
-						http.MethodPost, "http://resources/123/subscriptions", bytes.NewBufferString("{}"),
-					),
-					http.StatusBadRequest,
-					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.create.invalid.2.json"),
-					nil,
-					[]func(*testRepository.Resource){
-						testRepository.ResourceLoadSliceByteResource(
-							infraTest.Load("handler.create.resourceInput.json"),
-						),
-					},
-				},
-				{
 					"return a error because of a invalid content (2)",
 					httptest.NewRequest(
 						http.MethodPost, "http://resources/123/subscriptions", bytes.NewBuffer(
@@ -422,7 +407,7 @@ func TestHandlerCreate(t *testing.T) {
 					),
 					http.StatusBadRequest,
 					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.create.invalid.3.json"),
+					infraTest.Load("handler.create.invalid.2.json"),
 					nil,
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(
@@ -439,7 +424,7 @@ func TestHandlerCreate(t *testing.T) {
 					),
 					http.StatusNotFound,
 					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.create.invalid.4.json"),
+					infraTest.Load("handler.create.invalid.3.json"),
 					nil,
 					nil,
 				},
@@ -452,7 +437,7 @@ func TestHandlerCreate(t *testing.T) {
 					),
 					http.StatusInternalServerError,
 					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.create.invalid.5.json"),
+					infraTest.Load("handler.create.invalid.4.json"),
 					nil,
 					[]func(*testRepository.Resource){
 						testRepository.ResourceError(errors.New("error at repository")),

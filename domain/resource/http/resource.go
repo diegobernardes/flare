@@ -163,6 +163,10 @@ func (r *resourceCreate) toFlareResource() *flare.Resource {
 	}
 }
 
+func (r *resourceCreate) normalize() {
+	r.Path = wildcard.Normalize(r.Path)
+}
+
 func (r *resourceCreate) unescape() error {
 	for i, rawAddr := range r.Addresses {
 		addr, err := url.QueryUnescape(rawAddr)

@@ -250,7 +250,7 @@ func TestSpreadProcess(t *testing.T) {
 							subscription: flare.Subscription{
 								ID: "1",
 								Endpoint: flare.SubscriptionEndpoint{
-									URL:    url.URL{Scheme: "http", Host: "app1.com"},
+									URL:    &url.URL{Scheme: "http", Host: "app1.com"},
 									Method: http.MethodPost,
 								},
 								Delivery: flare.SubscriptionDelivery{

@@ -100,10 +100,26 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 	session := s.client.Session()
 	defer session.Close()
 
+	var queryEndpoint []bson.M
+	if subscription.Endpoint.URL != nil {
+		queryEndpoint = append(queryEndpoint, bson.M{"endpoint.url": subscription.Endpoint.URL.String()})
+	}
+
+	for action, endpoint := range subscription.Endpoint.Action {
+		if endpoint.URL == nil {
+			continue
+		}
+
+		queryEndpoint = append(
+			queryEndpoint,
+			bson.M{fmt.Sprintf("endpoint.action.%s.url", action): endpoint.URL.String()},
+		)
+	}
+
 	resourceEntity := &resourceEntity{}
 	err := session.DB(s.database).C(s.collection).Find(bson.M{
-		"resource.id":  subscription.Resource.ID,
-		"endpoint.url": subscription.Endpoint.URL.String(),
+		"resource.id": subscription.Resource.ID,
+		"$or":         queryEndpoint,
 	}).One(resourceEntity)
 	if err == nil {
 		return &errMemory{
