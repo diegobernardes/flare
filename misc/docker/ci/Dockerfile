@@ -1,4 +1,4 @@
-FROM golang:1.9.2-stretch
+FROM golang:1.9.4-stretch
 
 RUN go get -u github.com/alecthomas/gometalinter && gometalinter --install \
   && go get github.com/mattn/goveralls \

@@ -9,7 +9,7 @@ services:
  - docker
 
 before_install:
-  - docker pull diegobernardes/flare:0.4
+  - docker pull diegobernardes/flare-ci:0.1
 
 stages:
   - compile

@@ -1,12 +1,12 @@
-DOCKER_VERSION ?= 0.4
-DOCKER_IMAGE   ?= diegobernardes/flare
-PROJECT_PATH   ?= github.com/diegobernardes/flare
-VERSION        = $(shell git describe --tags --always --dirty="-dev")
-DATE           = $(shell date -u '+%Y-%m-%d %H:%M UTC')
-COMMIT         = $(shell git rev-parse --short HEAD)
-VERSION_FLAGS  = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(VERSION)" \
-                           -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(DATE)" \
-                           -X "github.com/diegobernardes/flare/service/flare.Commit=$(COMMIT)"'
+DOCKER_VERSION  ?= 0.1
+DOCKER_IMAGE    ?= diegobernardes/flare-ci
+PROJECT_PATH    ?= github.com/diegobernardes/flare
+VERSION          = $(shell git describe --tags --always --dirty="-dev")
+DATE             = $(shell date -u '+%Y-%m-%d %H:%M UTC')
+COMMIT           = $(shell git rev-parse --short HEAD)
+VERSION_FLAGS    = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(VERSION)" \
+                               -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(DATE)" \
+                               -X "github.com/diegobernardes/flare/service/flare.Commit=$(COMMIT)"'
 
 run:
 	@echo $(VERSION)
@@ -100,7 +100,7 @@ lint-slow:
 			--vendor
 
 docker-build:
-	@docker build --network=host -t $(DOCKER_IMAGE):$(DOCKER_VERSION) misc/docker
+	@docker build --network=host -t $(DOCKER_IMAGE):$(DOCKER_VERSION) misc/docker/ci
 
 docker-push:
 	@docker push $(DOCKER_IMAGE):$(DOCKER_VERSION)
