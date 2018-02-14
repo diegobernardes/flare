@@ -225,7 +225,7 @@ func (s *Subscription) Trigger(
 	err := session.
 		DB(s.database).
 		C(s.collection).
-		Find(bson.M{"resource.id": doc.Resource.ID}).
+		Find(bson.M{"resource.id": doc.Resource.ID, "id": sub.ID}).
 		One(subscription)
 	if err != nil {
 		return errors.Wrap(err, "error while subscription search")
