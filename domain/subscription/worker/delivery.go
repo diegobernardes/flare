@@ -267,16 +267,9 @@ func (d *Delivery) buildRequestHTTP(
 	}
 	req = req.WithContext(ctx)
 
-	for key, values := range subscription.Endpoint.Headers {
-		for _, value := range values {
-			if key == "Content-Type" && value == "application/json" && len(content) > 0 {
-				continue
-			}
-			req.Header.Add(key, value)
-		}
-	}
-
-	if len(content) > 0 {
+	req.Header = subscription.Endpoint.Headers
+	contentType := req.Header.Get("content-type")
+	if contentType == "" && len(content) > 0 {
 		req.Header.Add("Content-Type", "application/json")
 	}
 
