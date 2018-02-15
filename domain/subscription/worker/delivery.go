@@ -280,7 +280,7 @@ func (d *Delivery) buildEndpoint(
 	resource *flare.Resource,
 	subscription *flare.Subscription,
 	endpoint *url.URL,
-	rawSubscriptionEndpoint *url.URL,
+	rawSubscriptionEndpoint fmt.Stringer,
 ) (string, error) {
 	values := wildcard.ExtractValue(resource.Path, endpoint.Path)
 	subscriptionEndpoint, err := url.QueryUnescape(rawSubscriptionEndpoint.String())
