@@ -5,8 +5,8 @@ VERSION          = $(shell git describe --tags --always --dirty="-dev")
 DATE             = $(shell date -u '+%Y-%m-%d %H:%M UTC')
 COMMIT           = $(shell git rev-parse --short HEAD)
 VERSION_FLAGS    = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(VERSION)" \
-                               -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(DATE)" \
-                               -X "github.com/diegobernardes/flare/service/flare.Commit=$(COMMIT)"'
+                             -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(DATE)" \
+                             -X "github.com/diegobernardes/flare/service/flare.Commit=$(COMMIT)"'
 
 run:
 	@echo $(VERSION)
