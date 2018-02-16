@@ -204,7 +204,7 @@ func (s *Subscription) Trigger(
 		ctx, action, rawDocument, rawSubscription,
 	)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	subscriptionMap, ok := s.changes[subscription.ID]
