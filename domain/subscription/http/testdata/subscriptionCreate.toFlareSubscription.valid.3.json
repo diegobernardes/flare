@@ -12,7 +12,7 @@
     ]
   },
   "content": {
-    "document": true,
-    "envelope": true
+    "document": false,
+    "envelope": false
   }
 }

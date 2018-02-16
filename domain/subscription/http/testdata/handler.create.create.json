@@ -14,7 +14,7 @@
   "createdAt": "2009-11-10T23:00:00Z",
   "id": "456",
   "content": {
-    "document": false,
-    "envelope": false
+    "document": true,
+    "envelope": true
   }
 }

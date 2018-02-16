@@ -209,6 +209,10 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 							Method: "post",
 							Action: make(map[string]flare.SubscriptionEndpoint),
 						},
+						Content: flare.SubscriptionContent{
+							Document: true,
+							Envelope: true,
+						},
 					},
 				},
 				{
@@ -225,6 +229,7 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 						},
 						Content: flare.SubscriptionContent{
 							Document: true,
+							Envelope: false,
 						},
 					},
 				},
@@ -241,8 +246,8 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 							Action: make(map[string]flare.SubscriptionEndpoint),
 						},
 						Content: flare.SubscriptionContent{
-							Document: true,
-							Envelope: true,
+							Document: false,
+							Envelope: false,
 						},
 					},
 				},

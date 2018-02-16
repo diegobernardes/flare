@@ -12,6 +12,6 @@
     ]
   },
   "content": {
-    "document": true
+    "envelope": false
   }
 }

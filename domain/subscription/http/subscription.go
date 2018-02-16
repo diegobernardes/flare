@@ -370,10 +370,14 @@ func (s *subscriptionCreate) toFlareSubscription() (*flare.Subscription, error) 
 
 	if s.Content.Document != nil {
 		subscription.Content.Document = *s.Content.Document
+	} else {
+		subscription.Content.Document = true
 	}
 
 	if s.Content.Envelope != nil {
 		subscription.Content.Envelope = *s.Content.Envelope
+	} else {
+		subscription.Content.Envelope = true
 	}
 
 	return subscription, nil
