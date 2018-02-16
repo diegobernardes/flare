@@ -129,15 +129,38 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 		s.subscriptions[subscription.Resource.ID] = make([]flare.Subscription, 0)
 	}
 
+	fetchEndpoints := func(endpoint flare.SubscriptionEndpoint) []string {
+		var endpoints []string
+
+		if endpoint.URL != nil {
+			endpoints = append(endpoints, endpoint.URL.String())
+		}
+
+		for _, ea := range endpoint.Action {
+			if ea.URL != nil {
+				endpoints = append(endpoints, ea.URL.String())
+			}
+		}
+
+		return endpoints
+	}
+
+	newEndpoints := fetchEndpoints(subscription.Endpoint)
 	for _, subs := range subscriptions {
-		if subs.Endpoint.URL.String() == subscription.Endpoint.URL.String() {
-			return &errMemory{
-				alreadyExists: true,
-				message: fmt.Sprintf(
-					"already exists a subscription '%s' with the endpoint.URL '%s'",
-					subscription.ID,
-					subscription.Endpoint.URL.String(),
-				),
+		referenceEndpoints := fetchEndpoints(subs.Endpoint)
+
+		for _, ne := range newEndpoints {
+			for _, re := range referenceEndpoints {
+				if ne == re {
+					return &errMemory{
+						alreadyExists: true,
+						message: fmt.Sprintf(
+							"already exists a subscription '%s' with the endpoint.URL '%s'",
+							subscription.ID,
+							ne,
+						),
+					}
+				}
 			}
 		}
 	}
