@@ -9,7 +9,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare/infra/config"
-	wrk "github.com/diegobernardes/flare/infra/worker"
 	"github.com/diegobernardes/flare/provider/aws"
 	sqsQueue "github.com/diegobernardes/flare/provider/aws/queue"
 	memoryQueue "github.com/diegobernardes/flare/provider/memory/queue"
@@ -47,35 +46,14 @@ func (q *queue) init() error {
 	return nil
 }
 
-func (q *queue) pusher(name string) (wrk.Pusher, error) {
+func (q *queue) fetch(name string) (queuer, error) {
 	switch q.cfg.GetString("provider.queue") {
 	case providerMemory:
-		return q.providerMemory(name)
+		return memoryQueue.NewClient(), nil
 	case providerAWSSQS:
 		return q.providerAWSSQS(name)
 	}
 	return nil, nil
-}
-
-func (q *queue) puller(name string) (wrk.Puller, error) {
-	switch q.cfg.GetString("provider.queue") {
-	case providerMemory:
-		return q.providerMemory(name)
-	case providerAWSSQS:
-		return q.providerAWSSQS(name)
-	}
-	return nil, nil
-}
-
-func (q *queue) providerMemory(name string) (queuer, error) {
-	timeout, err := q.cfg.GetDuration(
-		fmt.Sprintf("provider.memory.queue.%s.process-timeout", name),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return memoryQueue.NewClient(memoryQueue.ClientProcessTimeout(timeout)), nil
 }
 
 func (q *queue) providerAWSSQS(name string) (queuer, error) {

@@ -57,35 +57,22 @@ func (w *worker) init() error {
 func (w *worker) processor(
 	name string, processor infraWorker.Processor,
 ) (*infraWorker.Client, error) {
-	concurrency := w.cfg.GetInt(fmt.Sprintf("worker.%s.concurrency", name))
-	if concurrency == 0 {
-		concurrency = 1
-	}
-
 	timeout, err := w.cfg.GetDuration(fmt.Sprintf("worker.%s.timeout", name))
 	if err != nil {
 		return nil, err
 	}
-	if timeout == 0 {
-		timeout = 10 * time.Second
-	}
 
-	pusher, err := w.queue.pusher(name)
-	if err != nil {
-		return nil, err
-	}
-
-	puller, err := w.queue.puller(name)
+	queuer, err := w.queue.fetch(name)
 	if err != nil {
 		return nil, err
 	}
 
 	client, err := infraWorker.NewClient(
-		infraWorker.WorkerGoroutines(concurrency),
+		infraWorker.WorkerGoroutines(w.cfg.GetInt(fmt.Sprintf("worker.%s.concurrency", name))),
 		infraWorker.WorkerLogger(w.logger),
 		infraWorker.WorkerProcessor(processor),
-		infraWorker.WorkerPuller(puller),
-		infraWorker.WorkerPusher(pusher),
+		infraWorker.WorkerPuller(queuer),
+		infraWorker.WorkerPusher(queuer),
 		infraWorker.WorkerTimeout(timeout),
 	)
 	if err != nil {

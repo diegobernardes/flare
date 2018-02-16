@@ -12,38 +12,34 @@ import (
 
 // Client implements the queue interface.
 type Client struct {
-	mutex          sync.Mutex
-	messages       [][]byte
-	timeoutProcess time.Duration
+	mutex    sync.Mutex
+	messages [][]byte
 }
 
 // Push the message to queue.
-func (q *Client) Push(_ context.Context, content []byte) error {
-	q.mutex.Lock()
-	defer q.mutex.Unlock()
+func (c *Client) Push(_ context.Context, content []byte) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
-	q.messages = append(q.messages, content)
+	c.messages = append(c.messages, content)
 	return nil
 }
 
 // Pull fetch a message from queue.
-func (q *Client) Pull(ctx context.Context, fn func(context.Context, []byte) error) error {
-	q.mutex.Lock()
+func (c *Client) Pull(ctx context.Context, fn func(context.Context, []byte) error) error {
+	c.mutex.Lock()
 
-	if len(q.messages) == 0 {
-		q.mutex.Unlock()
+	if len(c.messages) == 0 {
+		c.mutex.Unlock()
 		<-time.After(1 * time.Second)
 		return nil
 	}
-	defer q.mutex.Unlock()
+	defer c.mutex.Unlock()
 
-	ctx, ctxCancel := context.WithTimeout(ctx, q.timeoutProcess)
-	defer ctxCancel()
-
-	if err := fn(ctx, q.messages[0]); err != nil {
+	if err := fn(ctx, c.messages[0]); err != nil {
 		return err
 	}
-	q.messages = q.messages[1:]
+	c.messages = c.messages[1:]
 	return nil
 }
 
@@ -55,16 +51,5 @@ func NewClient(options ...func(*Client)) *Client {
 		option(c)
 	}
 
-	if c.timeoutProcess == 0 {
-		c.timeoutProcess = time.Hour
-	}
-
 	return c
-}
-
-// ClientProcessTimeout set the max duration a message has to be processed.
-func ClientProcessTimeout(timeout time.Duration) func(*Client) {
-	return func(c *Client) {
-		c.timeoutProcess = timeout
-	}
 }
