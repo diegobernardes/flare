@@ -75,6 +75,10 @@ func (r *resourceCreate) valid() error {
 		return errors.Wrap(err, "invalid endpoint")
 	}
 
+	if err := r.validEndpointWildcard(); err != nil {
+		return errors.Wrap(err, "invalid endpoint")
+	}
+
 	if r.Change.Field == "" {
 		return errors.New("missing change field")
 	}
@@ -82,6 +86,18 @@ func (r *resourceCreate) valid() error {
 }
 
 func (r *resourceCreate) validEndpoint() error {
+	if r.endpoint.Opaque != "" {
+		return fmt.Errorf("should not have opaque content '%s'", r.endpoint.Opaque)
+	}
+
+	if r.endpoint.User != nil {
+		return errors.New("should not have user")
+	}
+
+	if r.endpoint.Host == "" {
+		return errors.New("missing host")
+	}
+
 	if r.endpoint.Path == "" {
 		return errors.New("missing path")
 	}
@@ -102,6 +118,10 @@ func (r *resourceCreate) validEndpoint() error {
 		return errors.New("unknown scheme")
 	}
 
+	return nil
+}
+
+func (r *resourceCreate) validEndpointWildcard() error {
 	if !wildcard.Present(r.endpoint.Path) {
 		return errors.New("missing wildcard")
 	}
