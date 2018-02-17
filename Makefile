@@ -1,4 +1,4 @@
-DOCKER_VERSION  ?= 0.1
+DOCKER_VERSION  ?= 0.2
 DOCKER_IMAGE    ?= diegobernardes/flare-ci
 PROJECT_PATH    ?= github.com/diegobernardes/flare
 VERSION          = $(shell git describe --tags --always --dirty="-dev")
@@ -40,7 +40,7 @@ test:
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
-		gotest -v -race ./...
+		gotest -v -race -failfast ./...
 
 lint-fast:
 	@docker run \
