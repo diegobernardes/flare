@@ -103,15 +103,12 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 			}
 		}
 
-		if sliceIntersection(
-			resource.base.Addresses,
-			res.Addresses,
-			r.normalizePath(resource.base.Path),
-			r.normalizePath(res.Path),
-		) {
+		if resource.base.Endpoint.Scheme == res.Endpoint.Scheme &&
+			resource.base.Endpoint.Host == res.Endpoint.Host &&
+			resource.base.Endpoint.Path == res.Endpoint.Path {
 			return &errMemory{
 				message: fmt.Sprintf(
-					"address+path already associated to another resource '%s'", resource.base.ID,
+					"endpoint already associated to another resource '%s'", resource.base.ID,
 				),
 				alreadyExists: true,
 			}
@@ -124,18 +121,6 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 		partitions: make(map[string]int),
 	})
 	return nil
-}
-
-func (r *Resource) normalizePath(raw string) string {
-	result := []string{"/"}
-	for _, segment := range strings.Split(raw, "/") {
-		if len(segment) >= 2 && segment[0] == '{' && segment[len(segment)-1] == '}' {
-			result = append(result, "{*}")
-			continue
-		}
-		result = append(result, segment)
-	}
-	return strings.Join(result, "/")
 }
 
 // Delete a given resource.
@@ -178,11 +163,7 @@ func (r *Resource) FindByURI(_ context.Context, rawURI string) (*flare.Resource,
 		return nil, errors.Wrap(err, fmt.Sprintf("error during url.Parse with '%s'", rawURI))
 	}
 
-	resources, err := r.findResourcesByHost(uri)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during resource search")
-	}
-
+	resources := r.findResourcesByHost(uri)
 	resource, err := r.selectResouceByHost(uri, resources)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during resource select")
@@ -212,22 +193,15 @@ func (r *Resource) Partitions(ctx context.Context, id string) ([]string, error) 
 	return partitions, nil
 }
 
-func (r *Resource) findResourcesByHost(uri *url.URL) ([]flare.Resource, error) {
+func (r *Resource) findResourcesByHost(uri *url.URL) []flare.Resource {
 	var resources []flare.Resource
 	for _, resource := range r.resources {
-		for _, rawAddress := range resource.base.Addresses {
-			address, err := url.Parse(rawAddress)
-			if err != nil {
-				return nil, errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", address))
-			}
-
-			if address.Host == uri.Host {
-				resources = append(resources, resource.base)
-				break
-			}
+		if resource.base.Endpoint.Host == uri.Host {
+			resources = append(resources, resource.base)
+			break
 		}
 	}
-	return resources, nil
+	return resources
 }
 
 func (r *Resource) selectResouceByHost(
@@ -302,7 +276,7 @@ func (r *Resource) genResourceSegments(resources []flare.Resource, qtySegments i
 	result := make([][]string, 0)
 
 	for _, resource := range resources {
-		segments := strings.Split(resource.Path, "/")
+		segments := strings.Split(resource.Endpoint.Path, "/")
 		if len(segments) != qtySegments {
 			continue
 		}
@@ -313,17 +287,6 @@ func (r *Resource) genResourceSegments(resources []flare.Resource, qtySegments i
 		sort.Sort(segment(result))
 	}
 	return result
-}
-
-func sliceIntersection(a, b []string, a1, b1 string) bool {
-	for _, aValue := range a {
-		for _, bValue := range b {
-			if aValue+a1 == bValue+b1 {
-				return true
-			}
-		}
-	}
-	return false
 }
 
 func (r *Resource) init(options ...func(*Resource)) {

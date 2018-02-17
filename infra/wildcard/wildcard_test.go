@@ -60,19 +60,21 @@ func TestValid(t *testing.T) {
 	})
 }
 
-func TestValidWithoutDuplication(t *testing.T) {
-	Convey("Feature: Validate wildcards without duplications", t, func() {
+func TestValidURL(t *testing.T) {
+	Convey("Feature: Validate endpoints with wildcards", t, func() {
 		Convey("Given a list of invalid wildcards", func() {
 			tests := []string{
 				"/{ id }/{ id}",
 				"/{*}{*}",
 				"/{*}/{*}",
 				"/{wildcard}/{*}/{wildcard}",
+				"/content-{id}",
+				"/content/{id}/user-{guid}",
 			}
 
 			Convey("Should return a error", func() {
 				for _, tt := range tests {
-					result := ValidWithoutDuplication(tt)
+					result := ValidURL(tt)
 					So(result, ShouldNotBeNil)
 				}
 			})
@@ -325,7 +327,7 @@ func TestNormalize(t *testing.T) {
 
 			Convey("Should have the expected output", func() {
 				for _, tt := range tests {
-					So(tt.expected, ShouldEqual, Normalize(tt.wildcard))
+					So(Normalize(tt.wildcard), ShouldEqual, tt.expected)
 				}
 			})
 		})

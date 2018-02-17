@@ -124,7 +124,7 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 	if err == nil {
 		return &errMemory{
 			message: fmt.Sprintf(
-				"already has a subscription '%s' with this endpoint", resourceEntity.Id,
+				"already has a subscription '%s' with this endpoint", resourceEntity.ID,
 			),
 			alreadyExists: true,
 		}

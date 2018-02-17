@@ -76,8 +76,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	content.normalize()
 	if err := content.unescape(); err != nil {
 		h.writer.Error(w, "error during content unescape", err, http.StatusBadRequest)
+		return
+	}
+
+	if err := content.init(); err != nil {
+		h.writer.Error(w, "error during content initialization", err, http.StatusBadRequest)
 		return
 	}
 
@@ -85,7 +91,6 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		h.writer.Error(w, "invalid body content", err, http.StatusBadRequest)
 		return
 	}
-	content.normalize()
 
 	result := content.toFlareResource()
 	if err := h.repository.Create(r.Context(), result); err != nil {

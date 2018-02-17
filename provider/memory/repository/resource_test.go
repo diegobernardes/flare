@@ -6,6 +6,7 @@ package repository
 
 import (
 	"context"
+	"net/url"
 	"strconv"
 	"testing"
 
@@ -34,9 +35,10 @@ func TestResourceGenResourceSegments(t *testing.T) {
 			`The result should contain a list of list of strings with the flare.Resource id and each
 path segment`,
 			[]flare.Resource{
-				{ID: "1", Path: "/product/123/stock/{*}"},
-				{ID: "2", Path: "/product/{*}/stock/{*}"},
-				{ID: "3", Path: "/product/456/stock/{*}"},
+
+				{ID: "1", Endpoint: url.URL{Path: "/product/123/stock/{*}"}},
+				{ID: "2", Endpoint: url.URL{Path: "/product/{*}/stock/{*}"}},
+				{ID: "3", Endpoint: url.URL{Path: "/product/456/stock/{*}"}},
 			},
 			5,
 			[][]string{
@@ -76,7 +78,10 @@ func TestResourceFindOne(t *testing.T) {
 
 		Convey("When a list of flare.Resource is inserted", func() {
 			for i := (int64)(0); i < 10; i++ {
-				err := r.Create(context.Background(), &flare.Resource{ID: strconv.FormatInt(i, 10)})
+				err := r.Create(context.Background(), &flare.Resource{
+					ID:       strconv.FormatInt(i, 10),
+					Endpoint: url.URL{Host: strconv.FormatInt(i, 10)},
+				})
 				So(err, ShouldBeNil)
 			}
 
@@ -114,16 +119,16 @@ func TestResourceCreate(t *testing.T) {
 
 		Convey("It should be possible to insert a flare.Resource with app.com address", func() {
 			err := r.Create(context.Background(), &flare.Resource{
-				ID:        "1",
-				Addresses: []string{"http://app.com"},
+				ID:       "1",
+				Endpoint: url.URL{Scheme: "http", Host: "app.com"},
 			})
 			So(err, ShouldBeNil)
 
 			msg := "It should not be possible to insert another flare.Resource at the same address"
 			Convey(msg, func() {
 				err := r.Create(context.Background(), &flare.Resource{
-					ID:        "2",
-					Addresses: []string{"http://app.com"},
+					ID:       "2",
+					Endpoint: url.URL{Scheme: "http", Host: "app.com"},
 				})
 				So(err, ShouldNotBeNil)
 

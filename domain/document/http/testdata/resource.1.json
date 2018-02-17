@@ -1,11 +1,7 @@
 [
   {
     "id": "1",
-    "addresses": [
-      "http://app.com",
-      "https://app.io"
-    ],
-    "path": "/users/{*}",
+    "endpoint": "http://app.com/users/{*}",
     "change": {
       "field": "updatedAt",
       "format": "2006-01-02T15:04:05Z07:00"

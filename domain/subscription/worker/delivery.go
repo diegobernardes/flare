@@ -143,7 +143,7 @@ func (d *Delivery) buildContent(
 			"updatedAt": document.UpdatedAt.String(),
 		}
 		if len(sub.Data) > 0 {
-			values := wildcard.ExtractValue(resource.Path, documentEndpoint.Path)
+			values := wildcard.ExtractValue(resource.Endpoint.Path, documentEndpoint.Path)
 
 			for key, rawValue := range sub.Data {
 				value, ok := rawValue.(string)
@@ -282,7 +282,7 @@ func (d *Delivery) buildEndpoint(
 	endpoint *url.URL,
 	rawSubscriptionEndpoint fmt.Stringer,
 ) (string, error) {
-	values := wildcard.ExtractValue(resource.Path, endpoint.Path)
+	values := wildcard.ExtractValue(resource.Endpoint.Path, endpoint.Path)
 	subscriptionEndpoint, err := url.QueryUnescape(rawSubscriptionEndpoint.String())
 	if err != nil {
 		return "", errors.Wrap(err, "error during subscription endpoint unescape")

@@ -6,6 +6,7 @@ package flare
 
 import (
 	"context"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,8 +15,7 @@ import (
 // Resource represents the apis Flare track and the info to detect changes on documents.
 type Resource struct {
 	ID        string
-	Addresses []string
-	Path      string
+	Endpoint  url.URL
 	Change    ResourceChange
 	CreatedAt time.Time
 }

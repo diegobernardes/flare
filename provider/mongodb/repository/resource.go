@@ -30,17 +30,23 @@ type resourceRepositorier interface {
 }
 
 type resourceEntity struct {
-	Id        string               `bson:"id"`
-	Addresses []string             `bson:"addresses"`
-	Path      string               `bson:"path"`
-	Change    resourceChangeEntity `bson:"change"`
-	Partition map[string]int       `bson:"partitions"`
-	CreatedAt time.Time            `bson:"createdAt"`
+	ID        string                 `bson:"id"`
+	Endpoint  resourceEndpointEntity `bson:"endpoint"`
+	Change    resourceChangeEntity   `bson:"change"`
+	Partition map[string]int         `bson:"partitions,omitempty"`
+	CreatedAt time.Time              `bson:"createdAt"`
+}
+
+type resourceEndpointEntity struct {
+	Scheme       string   `bson:"scheme"`
+	Host         string   `bson:"host"`
+	Path         string   `bson:"path"`
+	PathSegments []string `bson:"pathSegments,omitempty"`
 }
 
 type resourceChangeEntity struct {
 	Field  string `bson:"field"`
-	Format string `bson:"format"`
+	Format string `bson:"format,omitempty"`
 }
 
 // Resource implements the data layer for the resource service.
@@ -187,10 +193,7 @@ func (r *Resource) FindByURI(_ context.Context, rawAddress string) (*flare.Resou
 		return nil, errors.Wrap(err, fmt.Sprintf("error during url '%s' parse", rawAddress))
 	}
 
-	query, err := r.findResourceByURI(
-		[]string{fmt.Sprintf("%s://%s", address.Scheme, address.Host)},
-		address.Path,
-	)
+	query, err := r.findResourceByURI(*address)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during resource find")
 	}
@@ -224,7 +227,7 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 		return &errMemory{message: "resource already exists", alreadyExists: true}
 	}
 
-	_, err = r.findResourceByURI(res.Addresses, res.Path)
+	_, err = r.findResourceByURI(res.Endpoint)
 	if err == nil {
 		return &errMemory{message: "resource already exists", alreadyExists: true}
 	}
@@ -239,18 +242,19 @@ func (r *Resource) Create(_ context.Context, res *flare.Resource) error {
 	}
 
 	res.CreatedAt = time.Now()
-	contentChange := bson.M{"field": res.Change.Field}
-	if res.Change.Format != "" {
-		contentChange["format"] = res.Change.Format
-	}
-
-	content := bson.M{
-		"id":           res.ID,
-		"addresses":    res.Addresses,
-		"path":         res.Path,
-		"pathSegments": r.pathSegments(res.Path),
-		"change":       contentChange,
-		"createdAt":    res.CreatedAt,
+	content := resourceEntity{
+		ID: res.ID,
+		Endpoint: resourceEndpointEntity{
+			Scheme:       res.Endpoint.Scheme,
+			Host:         res.Endpoint.Host,
+			Path:         res.Endpoint.Path,
+			PathSegments: r.pathSegments(res.Endpoint.Path),
+		},
+		Change: resourceChangeEntity{
+			Field:  res.Change.Field,
+			Format: res.Change.Format,
+		},
+		CreatedAt: res.CreatedAt,
 	}
 
 	session := r.client.Session()
@@ -278,23 +282,21 @@ func (r *Resource) findByID(_ context.Context, id string) (*resourceEntity, erro
 	return result, nil
 }
 
-func (r *Resource) findResourceByURI(addresses []string, path string) (bson.M, error) {
+func (r *Resource) findResourceByURI(endpoint url.URL) (bson.M, error) {
 	session := r.client.Session()
 	defer session.Close()
 
-	segments := strings.Split(path, "/")
+	segments := strings.Split(endpoint.Path, "/")
 	segments = segments[1:]
 
-	query := bson.M{"pathSegments": bson.M{"$size": len(segments)}}
-	if len(addresses) > 1 {
-		query["addresses"] = bson.M{"$in": addresses}
-	} else if len(addresses) == 1 {
-		query["addresses"] = addresses[0]
+	query := bson.M{
+		"endpoint.pathSegments": bson.M{"$size": len(segments)},
+		"endpoint.host":         endpoint.Host,
 	}
 	count := func() (int, error) { return session.DB(r.database).C(r.collection).Find(query).Count() }
 
 	for i, segment := range segments {
-		query[fmt.Sprintf("pathSegments.%d", i)] = segment
+		query[fmt.Sprintf("endpoint.pathSegments.%d", i)] = segment
 
 		qtd, err := count()
 		if err != nil {
@@ -302,7 +304,7 @@ func (r *Resource) findResourceByURI(addresses []string, path string) (bson.M, e
 		}
 
 		if qtd == 0 {
-			query[fmt.Sprintf("pathSegments.%d", i)] = wildcard
+			query[fmt.Sprintf("endpoint.pathSegments.%d", i)] = wildcard
 			qtd, err = count()
 			if err != nil {
 				return nil, errors.Wrap(err, "error during resource find")
@@ -370,9 +372,12 @@ func (r *Resource) Delete(_ context.Context, id string) error {
 
 func (r *Resource) resourceEntityToFlareResource(content *resourceEntity) *flare.Resource {
 	return &flare.Resource{
-		ID:        content.Id,
-		Addresses: content.Addresses,
-		Path:      content.Path,
+		ID: content.ID,
+		Endpoint: url.URL{
+			Scheme: content.Endpoint.Scheme,
+			Host:   content.Endpoint.Host,
+			Path:   content.Endpoint.Path,
+		},
 		CreatedAt: content.CreatedAt,
 		Change: flare.ResourceChange{
 			Format: content.Change.Format,

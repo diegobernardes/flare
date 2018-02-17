@@ -241,7 +241,7 @@ func (s *subscriptionCreate) validEndpointURLWildcard(
 		return errors.Wrap(err, "invalid wildcard")
 	}
 
-	resourceWildcards := wildcard.Extract(resource.Path)
+	resourceWildcards := wildcard.Extract(resource.Endpoint.Path)
 	resourceWildcards = append(resourceWildcards, wildcard.Reserved...)
 
 	endpointWildcards := wildcard.Extract(endpoint)
@@ -329,7 +329,7 @@ func (s *subscriptionCreate) validData(resource *flare.Resource) error {
 }
 
 func (s *subscriptionCreate) validDataWildcard(resource *flare.Resource) error {
-	resourceWildcards := wildcard.Extract(resource.Path)
+	resourceWildcards := wildcard.Extract(resource.Endpoint.Path)
 	resourceWildcards = append(resourceWildcards, wildcard.Reserved...)
 
 	for key, rawData := range s.Data {

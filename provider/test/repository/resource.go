@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -144,7 +145,7 @@ func ResourceLoadSliceByteResource(content []byte) func(*Resource) {
 	return func(r *Resource) {
 		resources := make([]struct {
 			Id        string    `json:"id"`
-			Addresses []string  `json:"addresses"`
+			Endpoint  string    `json:"endpoint"`
 			CreatedAt time.Time `json:"createdAt"`
 			Path      string    `json:"path"`
 			Change    struct {
@@ -159,10 +160,14 @@ func ResourceLoadSliceByteResource(content []byte) func(*Resource) {
 		}
 
 		for _, rawResource := range resources {
-			err := r.Create(context.Background(), &flare.Resource{
+			endpoint, err := url.Parse(rawResource.Endpoint)
+			if err != nil {
+				panic(errors.Wrap(err, "error during endpoint parse"))
+			}
+
+			err = r.Create(context.Background(), &flare.Resource{
 				ID:        rawResource.Id,
-				Addresses: rawResource.Addresses,
-				Path:      rawResource.Path,
+				Endpoint:  *endpoint,
 				CreatedAt: rawResource.CreatedAt,
 				Change: flare.ResourceChange{
 					Format: rawResource.Change.Format,

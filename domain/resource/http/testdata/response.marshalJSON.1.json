@@ -1,10 +1,6 @@
 {
   "id": "123",
-  "addresses": [
-    "http://address1",
-    "https://address2"
-  ],
-  "path": "/products/{*}",
+  "endpoint": "http://flare.com/products/{*}",
   "change": {
     "field": "version"
   },

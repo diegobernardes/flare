@@ -1,6 +1,6 @@
 {
   "error": {
     "title": "error during resource create",
-    "detail": "address+path already associated to another resource '123'"
+    "detail": "endpoint already associated to another resource '123'"
   }
 }

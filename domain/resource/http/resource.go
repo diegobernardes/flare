@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -42,37 +43,36 @@ func (r *resource) MarshalJSON() ([]byte, error) {
 		change["format"] = r.Change.Format
 	}
 
+	endpoint, err := url.QueryUnescape(r.Endpoint.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "error during endpoint unescape")
+	}
+
 	return json.Marshal(&struct {
 		Id        string            `json:"id"`
-		Addresses []string          `json:"addresses"`
-		Path      string            `json:"path"`
+		Endpoint  string            `json:"endpoint"`
 		Change    map[string]string `json:"change"`
 		CreatedAt string            `json:"createdAt"`
 	}{
 		Id:        r.ID,
-		Addresses: r.Addresses,
-		Path:      r.Path,
+		Endpoint:  endpoint,
 		Change:    change,
 		CreatedAt: r.CreatedAt.Format(time.RFC3339),
 	})
 }
 
 type resourceCreate struct {
-	Path      string   `json:"path"`
-	Addresses []string `json:"addresses"`
-	Change    struct {
+	endpoint    url.URL
+	RawEndpoint string `json:"endpoint"`
+	Change      struct {
 		Field  string `json:"field"`
 		Format string `json:"format"`
 	} `json:"change"`
 }
 
 func (r *resourceCreate) valid() error {
-	if err := r.validAddresses(); err != nil {
-		return err
-	}
-
-	if err := r.validPath(); err != nil {
-		return err
+	if err := r.validEndpoint(); err != nil {
+		return errors.Wrap(err, "invalid endpoint")
 	}
 
 	if r.Change.Field == "" {
@@ -81,81 +81,42 @@ func (r *resourceCreate) valid() error {
 	return nil
 }
 
-func (r *resourceCreate) validPath() error {
-	if r.Path == "" {
+func (r *resourceCreate) validEndpoint() error {
+	if r.endpoint.Path == "" {
 		return errors.New("missing path")
 	}
 
-	if r.Path[0] != '/' {
-		return errors.New("path should start with a slash")
+	if r.endpoint.RawQuery != "" {
+		return fmt.Errorf("should not have query string '%s'", r.endpoint.RawQuery)
 	}
 
-	if r.Path[len(r.Path)-1] == '/' {
-		return errors.New("path should not end with a slash")
+	if r.endpoint.Fragment != "" {
+		return fmt.Errorf("should not have fragment '%s'", r.endpoint.Fragment)
 	}
 
-	if !wildcard.Present(r.Path) {
-		return errors.New("path is missing a wildcard")
-	}
-
-	if err := wildcard.ValidWithoutDuplication(r.Path); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *resourceCreate) validAddresses() error {
-	if len(r.Addresses) == 0 {
-		return errors.New("missing addresses")
-	}
-
-	for _, address := range r.Addresses {
-		if err := r.validAddressUnit(address); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (r *resourceCreate) validAddressUnit(addr string) error {
-	d, err := url.Parse(addr)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error during address parse '%s'", addr))
-	}
-
-	if d.Path != "" {
-		return fmt.Errorf("address is invalid because it has a path '%s'", d.Path)
-	}
-
-	if d.RawQuery != "" {
-		return fmt.Errorf("address is invalid because it has query string '%s'", d.RawQuery)
-	}
-
-	if d.Fragment != "" {
-		return fmt.Errorf("address is invalid because it has fragment '%s'", d.Fragment)
-	}
-
-	if wildcard.Present(addr) {
-		return errors.New("address cannot have wildcard")
-	}
-
-	switch d.Scheme {
+	switch r.endpoint.Scheme {
 	case "http", "https":
-		return nil
 	case "":
-		return errors.Errorf("missing scheme on address '%s'", addr)
+		return errors.New("missing scheme")
 	default:
-		return errors.Errorf("invalid scheme on address '%s'", addr)
+		return errors.New("unknown scheme")
 	}
+
+	if !wildcard.Present(r.endpoint.Path) {
+		return errors.New("missing wildcard")
+	}
+
+	if err := wildcard.ValidURL(r.endpoint.Path); err != nil {
+		return errors.Wrap(err, "can't have duplicated wildcards")
+	}
+
+	return nil
 }
 
 func (r *resourceCreate) toFlareResource() *flare.Resource {
 	return &flare.Resource{
-		ID:        uuid.NewV4().String(),
-		Addresses: r.Addresses,
-		Path:      r.Path,
+		ID:       uuid.NewV4().String(),
+		Endpoint: r.endpoint,
 		Change: flare.ResourceChange{
 			Field:  r.Change.Field,
 			Format: r.Change.Format,
@@ -164,24 +125,32 @@ func (r *resourceCreate) toFlareResource() *flare.Resource {
 }
 
 func (r *resourceCreate) normalize() {
-	r.Path = wildcard.Normalize(r.Path)
+	if r.RawEndpoint == "" {
+		return
+	}
+
+	r.RawEndpoint = strings.TrimSpace(r.RawEndpoint)
+	r.RawEndpoint = wildcard.Normalize(r.RawEndpoint)
+	if r.RawEndpoint[len(r.RawEndpoint)-1] == '/' {
+		r.RawEndpoint = r.RawEndpoint[:len(r.RawEndpoint)-1]
+	}
 }
 
 func (r *resourceCreate) unescape() error {
-	for i, rawAddr := range r.Addresses {
-		addr, err := url.QueryUnescape(rawAddr)
-		if err != nil {
-			return errors.Wrap(err, "error during addresses unescape")
-		}
-		r.Addresses[i] = addr
-	}
-
-	path, err := url.QueryUnescape(r.Path)
+	endpoint, err := url.QueryUnescape(r.RawEndpoint)
 	if err != nil {
 		return errors.Wrap(err, "error during path unescape")
 	}
-	r.Path = path
+	r.RawEndpoint = endpoint
+	return nil
+}
 
+func (r *resourceCreate) init() error {
+	endpoint, err := url.Parse(r.RawEndpoint)
+	if err != nil {
+		return errors.Wrap(err, "error during endpoint parse")
+	}
+	r.endpoint = *endpoint
 	return nil
 }
 

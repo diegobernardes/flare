@@ -1,6 +1,6 @@
 {
   "error": {
     "title": "invalid body content",
-    "detail": "missing addresses"
+    "detail": "invalid endpoint: missing path"
   }
 }

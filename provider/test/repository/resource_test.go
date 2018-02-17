@@ -7,6 +7,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -103,18 +104,16 @@ func testResourceFindOneWithError(repo flare.ResourceRepositorier) {
 func testResourceCreate(repo flare.ResourceRepositorier) {
 	Convey("It should be possible to insert a resource", func() {
 		err := repo.Create(context.Background(), &flare.Resource{
-			ID:        "1",
-			Addresses: []string{"http://app.com"},
-			Path:      "/users/{*}",
+			ID:       "1",
+			Endpoint: url.URL{Scheme: "http", Host: "app.com", Path: "/users/{*}"},
 		})
 		So(err, ShouldBeNil)
 	})
 
 	Convey("It should not be possible to insert another resource with same id", func() {
 		err := repo.Create(context.Background(), &flare.Resource{
-			ID:        "1",
-			Addresses: []string{"http://app.com"},
-			Path:      "/sample/{*}",
+			ID:       "1",
+			Endpoint: url.URL{Scheme: "http", Host: "app.com", Path: "/sample/{*}"},
 		})
 		So(err, ShouldNotBeNil)
 
@@ -123,15 +122,16 @@ func testResourceCreate(repo flare.ResourceRepositorier) {
 		So(nErr.AlreadyExists(), ShouldBeTrue)
 	})
 
-	for i, wildcard := range []string{"id", "*"} {
+	for i, wildcard := range []string{"*"} {
 		msg := fmt.Sprintf(
 			"It should not be possible to insert a resource with the same address %d", i,
 		)
 		Convey(msg, func() {
 			err := repo.Create(context.Background(), &flare.Resource{
-				ID:        "2",
-				Addresses: []string{"http://app.com"},
-				Path:      fmt.Sprintf("/users/{%s}", wildcard),
+				ID: "2",
+				Endpoint: url.URL{
+					Scheme: "http", Host: "app.com", Path: fmt.Sprintf("/users/{%s}", wildcard),
+				},
 			})
 			So(err, ShouldNotBeNil)
 

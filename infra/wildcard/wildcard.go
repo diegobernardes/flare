@@ -7,6 +7,7 @@ package wildcard
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -23,10 +24,34 @@ func Valid(content string) error {
 	return valid(content, false)
 }
 
-// ValidWithoutDuplication check if a given content has valid wildcards and don't have any wildcard
-// duplication.
-func ValidWithoutDuplication(content string) error {
-	return valid(content, true)
+// ValidURL check whenever a endpoint is valid.
+func ValidURL(rawEndpoint string) error {
+	if err := valid(rawEndpoint, true); err != nil {
+		return err
+	}
+
+	endpoint, err := url.Parse(rawEndpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, fragment := range strings.Split(endpoint.Path, "/") {
+		if fragment == "" {
+			continue
+		}
+
+		if !Present(fragment) {
+			continue
+		}
+
+		if fragment[0] == '{' && fragment[len(fragment)-1] == '}' {
+			continue
+		}
+
+		return fmt.Errorf("wildcard must appear alone at a path fragment '%s'", fragment)
+	}
+
+	return nil
 }
 
 // Replace the wildcard tag for it's value.
@@ -154,6 +179,10 @@ func ExtractValue(a, b string) map[string]string {
 
 // Normalize is used to normalize the wildcards.
 func Normalize(content string) string {
+	if content == "" {
+		return content
+	}
+
 	var offset int
 	for {
 		start := strings.Index(content[offset:], "{") + offset

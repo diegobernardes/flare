@@ -5,6 +5,7 @@
 package http
 
 import (
+	"net/url"
 	"testing"
 	"time"
 
@@ -53,8 +54,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 					resource{
 						ID:        "id",
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Addresses: []string{"http://flare.io", "https://flare.com"},
-						Path:      "/resources/{*}",
+						Endpoint:  url.URL{Scheme: "http", Host: "flare.com", Path: "/resources/{*}"},
 						Change:    flare.ResourceChange{Field: "version"},
 					},
 					infraTest.Load("resource.1.json"),
@@ -63,8 +63,7 @@ func TestResourceMarshalJSON(t *testing.T) {
 					resource{
 						ID:        "id",
 						CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
-						Addresses: []string{"http://flare.io", "https://flare.com"},
-						Path:      "/resources/{*}",
+						Endpoint:  url.URL{Scheme: "http", Host: "flare.com", Path: "/resources/{*}"},
 						Change: flare.ResourceChange{
 							Field:  "updatedAt",
 							Format: "2006-01-02",
@@ -96,8 +95,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 					response{
 						Resource: &resource{
 							ID:        "123",
-							Addresses: []string{"http://address1", "https://address2"},
-							Path:      "/products/{*}",
+							Endpoint:  url.URL{Scheme: "http", Host: "flare.com", Path: "/products/{*}"},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							Change:    flare.ResourceChange{Field: "version"},
 						},
@@ -110,8 +108,7 @@ func TestResponseMarshalJSON(t *testing.T) {
 						Resources: []resource{
 							{
 								ID:        "123",
-								Addresses: []string{"http://address1", "https://address2"},
-								Path:      "/products/{*}",
+								Endpoint:  url.URL{Scheme: "http", Host: "flare.com", Path: "/products/{*}"},
 								CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 								Change:    flare.ResourceChange{Field: "version"},
 							},
@@ -132,44 +129,6 @@ func TestResponseMarshalJSON(t *testing.T) {
 	})
 }
 
-func TestResourceCreateValidAddresses(t *testing.T) {
-	Convey("Feature: Validate resourceCreate.addresses", t, func() {
-		Convey("Given a list of valid addresses", func() {
-			tests := []resourceCreate{
-				{Addresses: []string{"http://app.io"}},
-				{Addresses: []string{"https://app.com"}},
-				{Addresses: []string{"http://app.io", "https://app.com"}},
-			}
-
-			Convey("Should not output a error", func() {
-				for _, tt := range tests {
-					result := tt.validAddresses()
-					So(result, ShouldBeNil)
-				}
-			})
-		})
-
-		Convey("Given a list of invalid addresses", func() {
-			tests := []resourceCreate{
-				{},
-				{Addresses: []string{""}},
-				{Addresses: []string{"tcp://127.0.0.1:8080"}},
-				{Addresses: []string{"%zzzzz"}},
-				{Addresses: []string{"http://app,com/teste"}},
-				{Addresses: []string{"http://app,com#fragment"}},
-				{Addresses: []string{"http://app,com?project=flare"}},
-			}
-
-			Convey("Should output a error", func() {
-				for _, tt := range tests {
-					result := tt.validAddresses()
-					So(result, ShouldNotBeNil)
-				}
-			})
-		})
-	})
-}
-
 func TestResourceCreateValid(t *testing.T) {
 	type resourceCreateChange struct {
 		Field  string `json:"field"`
@@ -180,22 +139,19 @@ func TestResourceCreateValid(t *testing.T) {
 		Convey("Given a list of valid resourceCreate", func() {
 			tests := []resourceCreate{
 				{
-					Addresses: []string{"http://app.com"},
-					Path:      "/users/{*}",
+					endpoint: url.URL{Scheme: "http", Host: "flare.com", Path: "/users/{*}"},
 					Change: resourceCreateChange{
 						Field:  "updatedAt",
 						Format: "2006-01-02T15:04:05Z07:00",
 					},
 				},
 				{
-					Addresses: []string{"http://app.com"},
-					Path:      "/users/{*}",
-					Change:    resourceCreateChange{Field: "sequence"},
+					endpoint: url.URL{Scheme: "http", Host: "flare.com", Path: "/users/{*}"},
+					Change:   resourceCreateChange{Field: "sequence"},
 				},
 				{
-					Addresses: []string{"http://app.com"},
-					Path:      "/users/{*}/{id}",
-					Change:    resourceCreateChange{Field: "sequence"},
+					endpoint: url.URL{Scheme: "http", Host: "flare.com", Path: "/users/{*}/{id}"},
+					Change:   resourceCreateChange{Field: "sequence"},
 				},
 			}
 
@@ -210,13 +166,14 @@ func TestResourceCreateValid(t *testing.T) {
 		Convey("Given a list of invalid resourceCreate", func() {
 			tests := []resourceCreate{
 				{},
-				{Addresses: []string{"http://app.com"}},
-				{Addresses: []string{"http://app.com"}, Path: "users"},
-				{Addresses: []string{"http://app.com"}, Path: "/users"},
-				{Addresses: []string{"http://app.com"}, Path: "/users/"},
-				{Addresses: []string{"http://app.com"}, Path: "/users/{*}-path/posts/{*}"},
-				{Addresses: []string{"http://app.com"}, Path: "/users/{*}"},
-				{Addresses: []string{"http://app.com"}, Change: resourceCreateChange{Field: "sequence"}},
+				{endpoint: url.URL{Scheme: "http", Host: "flare.com"}},
+				{endpoint: url.URL{Scheme: "http", Host: "flare.com", Path: "/users"}},
+				{endpoint: url.URL{Scheme: "http", Host: "flare.com", Path: "/users/{*}-path/posts/{*}"}},
+				{endpoint: url.URL{Scheme: "http", Host: "flare.com", Path: "/users/{*}"}},
+				{
+					endpoint: url.URL{Scheme: "http", Host: "flare.com"},
+					Change:   resourceCreateChange{Field: "sequence"},
+				},
 			}
 
 			Convey("Should return a error", func() {

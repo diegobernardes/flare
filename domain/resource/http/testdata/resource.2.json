@@ -1,10 +1,6 @@
 {
   "id": "id",
-  "addresses": [
-    "http://flare.io",
-    "https://flare.com"
-  ],
-  "path": "/resources/{*}",
+  "endpoint": "http://flare.com/resources/{*}",
   "change": {
     "field": "updatedAt",
     "format": "2006-01-02"

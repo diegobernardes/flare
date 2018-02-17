@@ -7,11 +7,7 @@
   "resources": [
     {
       "id": "2",
-      "addresses": [
-        "http://app2.com",
-        "https://app2.io"
-      ],
-      "path": "/resources/{*}",
+      "endpoint": "http://app2.com/resources/{*}",
       "change": {
         "format": "2006-01-02T15:04:05Z07:00",
         "field": "updatedAt"
