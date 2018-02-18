@@ -14,6 +14,7 @@ func TestValid(t *testing.T) {
 	Convey("Feature: Validate wildcards", t, func() {
 		Convey("Given a list of valid wildcards", func() {
 			tests := []string{
+				"",
 				"/",
 				"/users",
 				"/users/{*}",
@@ -91,6 +92,11 @@ func TestReplace(t *testing.T) {
 				expected string
 			}{
 				{
+					"",
+					nil,
+					"",
+				},
+				{
 					"sample",
 					nil,
 					"sample",
@@ -146,6 +152,10 @@ func TestPresent(t *testing.T) {
 				expected bool
 			}{
 				{
+					"",
+					false,
+				},
+				{
 					"sample",
 					false,
 				},
@@ -179,6 +189,10 @@ func TestExtract(t *testing.T) {
 				wildcard string
 				expected []string
 			}{
+				{
+					"",
+					nil,
+				},
 				{
 					"sample",
 					nil,
@@ -241,6 +255,11 @@ func TestExtractValue(t *testing.T) {
 				expected map[string]string
 			}{
 				{
+					"",
+					"",
+					map[string]string{},
+				},
+				{
 					"sample",
 					"sample",
 					map[string]string{},
@@ -299,6 +318,10 @@ func TestNormalize(t *testing.T) {
 				wildcard string
 				expected string
 			}{
+				{
+					"",
+					"",
+				},
 				{
 					"sample",
 					"sample",
