@@ -7,6 +7,8 @@ package repository
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -17,6 +19,41 @@ import (
 	"github.com/diegobernardes/flare"
 	mongodb "github.com/diegobernardes/flare/provider/mongodb"
 )
+
+type subscriptionEntity struct {
+	ID         string                     `bson:"id"`
+	ResourceID string                     `bson:"resourceID"`
+	Endpoint   subscriptionEndpointEntity `bson:"endpoint"`
+	Delivery   subscriptionDeliveryEntity `bson:"delivery"`
+	Partition  string                     `bson:"partition"`
+	Data       map[string]interface{}     `bson:"data"`
+	Content    subscriptionContentEntity  `bson:"content"`
+	CreatedAt  time.Time                  `bson:"createdAt"`
+}
+
+type subscriptionEndpointEntity struct {
+	URLS    []subscriptionURLEntity               `bson:"urls,omitempty"`
+	Method  string                                `bson:"method,omitempty"`
+	Headers http.Header                           `bson:"headers,omitempty"`
+	Action  map[string]subscriptionEndpointEntity `bson:"action,omitempty"`
+}
+
+type subscriptionDeliveryEntity struct {
+	Success []int `bson:"success"`
+	Discard []int `bson:"discard"`
+}
+
+type subscriptionContentEntity struct {
+	Document bool `bson:"document"`
+	Envelope bool `bson:"envelope"`
+}
+
+type subscriptionURLEntity struct {
+	Scheme string `bson:"scheme"`
+	Host   string `bson:"host"`
+	Path   string `bson:"path"`
+	Action string `bson:"action,omitempty"`
+}
 
 // Subscription implements the data layer for the subscription service.
 type Subscription struct {
@@ -34,7 +71,7 @@ func (s *Subscription) Find(
 ) ([]flare.Subscription, *flare.Pagination, error) {
 	var (
 		group         errgroup.Group
-		subscriptions []flare.Subscription
+		subscriptions []subscriptionEntity
 		total         int
 	)
 
@@ -42,7 +79,7 @@ func (s *Subscription) Find(
 		session := s.client.Session()
 		defer session.Close()
 
-		totalResult, err := session.DB(s.database).C(s.collection).Find(bson.M{"resource.id": id}).Count()
+		totalResult, err := session.DB(s.database).C(s.collection).Find(bson.M{"resourceID": id}).Count()
 		if err != nil {
 			return err
 		}
@@ -57,7 +94,7 @@ func (s *Subscription) Find(
 		q := session.
 			DB(s.database).
 			C(s.collection).
-			Find(bson.M{"resource.id": id}).
+			Find(bson.M{"resourceID": id}).
 			Sort("createdAt").
 			Limit(pagination.Limit)
 		if pagination.Offset != 0 {
@@ -71,7 +108,7 @@ func (s *Subscription) Find(
 		return nil, nil, errors.Wrap(err, "error during MongoDB access")
 	}
 
-	return subscriptions, &flare.Pagination{
+	return s.marshalSlice(subscriptions), &flare.Pagination{
 		Limit:  pagination.Limit,
 		Offset: pagination.Offset,
 		Total:  total,
@@ -85,14 +122,15 @@ func (s *Subscription) FindByID(
 	session := s.client.Session()
 	defer session.Close()
 
-	result := &flare.Subscription{}
+	result := &subscriptionEntity{}
 	err := session.DB(s.database).C(s.collection).Find(bson.M{"id": id}).One(result)
 	if err == mgo.ErrNotFound {
 		return nil, &errMemory{message: fmt.Sprintf(
 			"subscription '%s' at resource '%s' not found", id, resourceId,
 		), notFound: true}
 	}
-	return result, errors.Wrap(err, "error during subscription search")
+	return s.marshal(result),
+		errors.Wrap(err, "error during subscription search")
 }
 
 // Create a subscription.
@@ -102,7 +140,14 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 
 	var queryEndpoint []bson.M
 	if subscription.Endpoint.URL != nil {
-		queryEndpoint = append(queryEndpoint, bson.M{"endpoint.url": subscription.Endpoint.URL.String()})
+		queryEndpoint = append(
+			queryEndpoint,
+			bson.M{
+				"endpoint.urls.scheme": subscription.Endpoint.URL.Scheme,
+				"endpoint.urls.host":   subscription.Endpoint.URL.Host,
+				"endpoint.urls.path":   subscription.Endpoint.URL.Path,
+			},
+		)
 	}
 
 	for action, endpoint := range subscription.Endpoint.Action {
@@ -112,20 +157,23 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 
 		queryEndpoint = append(
 			queryEndpoint,
-			bson.M{fmt.Sprintf("endpoint.action.%s.url", action): endpoint.URL.String()},
+			bson.M{
+				"endpoint.urls.scheme": endpoint.URL.Scheme,
+				"endpoint.urls.host":   endpoint.URL.Host,
+				"endpoint.urls.path":   endpoint.URL.Path,
+				"endpoint.urls.action": action,
+			},
 		)
 	}
 
-	resourceEntity := &resourceEntity{}
+	sub := &subscriptionEntity{}
 	err := session.DB(s.database).C(s.collection).Find(bson.M{
-		"resource.id": subscription.Resource.ID,
-		"$or":         queryEndpoint,
-	}).One(resourceEntity)
+		"resourceID": subscription.Resource.ID,
+		"$or":        queryEndpoint,
+	}).Select(bson.M{"id": 1}).One(sub)
 	if err == nil {
 		return &errMemory{
-			message: fmt.Sprintf(
-				"already has a subscription '%s' with this endpoint", resourceEntity.ID,
-			),
+			message:       fmt.Sprintf("already has a subscription '%s' with this endpoint", sub.ID),
 			alreadyExists: true,
 		}
 	}
@@ -140,10 +188,8 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 	subscription.Partition = partition
 
 	subscription.CreatedAt = time.Now()
-	return errors.Wrap(
-		session.DB(s.database).C(s.collection).Insert(subscription),
-		"error during subscription create",
-	)
+	err = session.DB(s.database).C(s.collection).Insert(s.unmarshal(subscription))
+	return errors.Wrap(err, "error during subscription create")
 }
 
 // FindByPartition find all subscriptions that belongs to a given partition.
@@ -160,7 +206,7 @@ func (s *Subscription) FindByPartition(
 		iter := session.
 			DB(s.database).
 			C(s.collection).
-			Find(bson.M{"partition": partition, "resource.id": resourceID}).
+			Find(bson.M{"partition": partition, "resourceID": resourceID}).
 			Iter()
 		defer func() { _ = iter.Close() }()
 
@@ -196,7 +242,7 @@ func (s *Subscription) Delete(ctx context.Context, resourceId, id string) error 
 	}
 
 	c := session.DB(s.database).C(s.collection)
-	if err = c.Remove(bson.M{"id": id, "resource.id": resourceId}); err != nil {
+	if err = c.Remove(bson.M{"id": id, "resourceID": resourceId}); err != nil {
 		if err == mgo.ErrNotFound {
 			return &errMemory{message: fmt.Sprintf(
 				"subscription '%s' at resource '%s' not found", id, resourceId,
@@ -225,7 +271,7 @@ func (s *Subscription) Trigger(
 	err := session.
 		DB(s.database).
 		C(s.collection).
-		Find(bson.M{"resource.id": doc.Resource.ID, "id": sub.ID}).
+		Find(bson.M{"resourceID": doc.Resource.ID, "id": sub.ID}).
 		One(subscription)
 	if err != nil {
 		return errors.Wrap(err, "error while subscription search")
@@ -376,6 +422,128 @@ func (s *Subscription) triggerProcess(
 	return nil
 }
 
+func (s *Subscription) unmarshal(entity *flare.Subscription) subscriptionEntity {
+	return subscriptionEntity{
+		ID:         entity.ID,
+		ResourceID: entity.Resource.ID,
+		Data:       entity.Data,
+		CreatedAt:  entity.CreatedAt,
+		Partition:  entity.Partition,
+		Content: subscriptionContentEntity{
+			Document: entity.Content.Document,
+			Envelope: entity.Content.Envelope,
+		},
+		Delivery: subscriptionDeliveryEntity{
+			Success: entity.Delivery.Success,
+			Discard: entity.Delivery.Discard,
+		},
+		Endpoint: s.unmarshalEndpoint(entity.Endpoint),
+	}
+}
+
+func (s *Subscription) unmarshalEndpoint(
+	rawEntity flare.SubscriptionEndpoint,
+) subscriptionEndpointEntity {
+	entity := subscriptionEndpointEntity{
+		Method:  rawEntity.Method,
+		Headers: rawEntity.Headers,
+	}
+
+	if len(rawEntity.Action) > 0 {
+		entity.Action = make(map[string]subscriptionEndpointEntity)
+	}
+
+	var urls []subscriptionURLEntity
+	if rawEntity.URL != nil {
+		urls = append(urls, subscriptionURLEntity{
+			Scheme: rawEntity.URL.Scheme,
+			Host:   rawEntity.URL.Host,
+			Path:   rawEntity.URL.Path,
+		})
+	}
+
+	for action, endpoint := range rawEntity.Action {
+		entity.Action[action] = subscriptionEndpointEntity{
+			Method:  endpoint.Method,
+			Headers: endpoint.Headers,
+		}
+
+		if endpoint.URL == nil {
+			continue
+		}
+
+		urls = append(urls, subscriptionURLEntity{
+			Scheme: endpoint.URL.Scheme,
+			Host:   endpoint.URL.Host,
+			Path:   endpoint.URL.Path,
+			Action: action,
+		})
+	}
+
+	entity.URLS = urls
+	return entity
+}
+
+func (s *Subscription) marshal(entity *subscriptionEntity) *flare.Subscription {
+	return &flare.Subscription{
+		ID:        entity.ID,
+		Endpoint:  s.marshalEndpoint(entity.Endpoint),
+		Resource:  flare.Resource{ID: entity.ResourceID},
+		Partition: entity.Partition,
+		Data:      entity.Data,
+		CreatedAt: entity.CreatedAt,
+		Delivery: flare.SubscriptionDelivery{
+			Success: entity.Delivery.Success,
+			Discard: entity.Delivery.Discard,
+		},
+		Content: flare.SubscriptionContent{
+			Document: entity.Content.Document,
+			Envelope: entity.Content.Envelope,
+		},
+	}
+}
+
+func (s *Subscription) marshalEndpoint(
+	rawEntity subscriptionEndpointEntity,
+) flare.SubscriptionEndpoint {
+	fetch := func(action string) *url.URL {
+		for _, u := range rawEntity.URLS {
+			if u.Action == action {
+				return &url.URL{Scheme: u.Scheme, Host: u.Host, Path: u.Path}
+			}
+		}
+		return nil
+	}
+
+	entity := flare.SubscriptionEndpoint{
+		URL:     fetch(""),
+		Method:  rawEntity.Method,
+		Headers: rawEntity.Headers,
+	}
+
+	if len(rawEntity.Action) > 0 {
+		entity.Action = make(map[string]flare.SubscriptionEndpoint)
+	}
+
+	for action, value := range rawEntity.Action {
+		entity.Action[action] = flare.SubscriptionEndpoint{
+			URL:     fetch(action),
+			Method:  value.Method,
+			Headers: value.Headers,
+		}
+	}
+
+	return entity
+}
+
+func (s *Subscription) marshalSlice(entities []subscriptionEntity) []flare.Subscription {
+	result := make([]flare.Subscription, len(entities))
+	for i, entity := range entities {
+		result[i] = *s.marshal(&entity)
+	}
+	return result
+}
+
 func (s *Subscription) ensureIndex() error {
 	session := s.client.Session()
 	defer session.Close()
@@ -388,7 +556,7 @@ func (s *Subscription) ensureIndex() error {
 			mgo.Index{
 				Background: true,
 				Unique:     true,
-				Key:        []string{"id", "resource.id"},
+				Key:        []string{"id", "resourceID"},
 			},
 			s.collection,
 		},
