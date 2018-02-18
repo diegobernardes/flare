@@ -28,13 +28,12 @@ func (c *Client) Push(_ context.Context, content []byte) error {
 // Pull fetch a message from queue.
 func (c *Client) Pull(ctx context.Context, fn func(context.Context, []byte) error) error {
 	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	if len(c.messages) == 0 {
-		c.mutex.Unlock()
-		<-time.After(1 * time.Second)
+		<-time.After(100 * time.Millisecond)
 		return nil
 	}
-	defer c.mutex.Unlock()
 
 	if err := fn(ctx, c.messages[0]); err != nil {
 		return err
