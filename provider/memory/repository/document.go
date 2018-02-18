@@ -7,6 +7,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -18,26 +19,24 @@ import (
 // Document implements the data layer for the document service.
 type Document struct {
 	mutex     sync.RWMutex
-	documents map[string]flare.Document
+	documents map[url.URL]flare.Document
 }
 
 // FindByID return the document that match the id.
-func (d *Document) FindByID(ctx context.Context, id string) (*flare.Document, error) {
+func (d *Document) FindByID(ctx context.Context, id url.URL) (*flare.Document, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
 	document, ok := d.documents[id]
 	if !ok {
-		return nil, &errMemory{message: fmt.Sprintf("document '%s' not found", id), notFound: true}
+		idString, err := url.QueryUnescape(id.String())
+		if err != nil {
+			return nil, errors.Wrap(err, "error during transform and escape id to string")
+		}
+
+		return nil, &errMemory{message: fmt.Sprintf("document '%s' not found", idString), notFound: true}
 	}
 	return &document, nil
-}
-
-// FindByIDAndRevision return the document that match the id and the revision.
-func (d *Document) FindByIDAndRevision(
-	context.Context, string, int64,
-) (*flare.Document, error) {
-	return nil, errors.New("not implemented")
 }
 
 // Update a document.
@@ -51,7 +50,7 @@ func (d *Document) Update(ctx context.Context, doc *flare.Document) error {
 }
 
 // Delete a given document.
-func (d *Document) Delete(ctx context.Context, id string) error {
+func (d *Document) Delete(ctx context.Context, id url.URL) error {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -59,4 +58,4 @@ func (d *Document) Delete(ctx context.Context, id string) error {
 	return nil
 }
 
-func (d *Document) init() { d.documents = make(map[string]flare.Document) }
+func (d *Document) init() { d.documents = make(map[url.URL]flare.Document) }

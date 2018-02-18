@@ -6,12 +6,13 @@ package flare
 
 import (
 	"context"
+	"net/url"
 	"time"
 )
 
 // Document represents the documents from a resource.
 type Document struct {
-	ID        string
+	ID        url.URL
 	Revision  int64
 	Resource  Resource
 	Content   map[string]interface{}
@@ -28,9 +29,9 @@ func (doc *Document) Newer(reference *Document) bool {
 
 // DocumentRepositorier used to interact with document data storage.
 type DocumentRepositorier interface {
-	FindByID(ctx context.Context, id string) (*Document, error)
+	FindByID(ctx context.Context, id url.URL) (*Document, error)
 	Update(context.Context, *Document) error
-	Delete(ctx context.Context, id string) error
+	Delete(ctx context.Context, id url.URL) error
 }
 
 // DocumentRepositoryError implements all the errrors the repository can return.

@@ -150,29 +150,26 @@ func (r *Resource) Delete(ctx context.Context, id string) error {
 }
 
 // FindByURI take a URI and find the resource that match.
-func (r *Resource) FindByURI(_ context.Context, rawURI string) (*flare.Resource, error) {
+func (r *Resource) FindByURI(_ context.Context, uri url.URL) (*flare.Resource, error) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
-	if !strings.HasPrefix(rawURI, "http") {
-		rawURI = "//" + rawURI
-	}
-
-	uri, err := url.Parse(rawURI)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error during url.Parse with '%s'", rawURI))
-	}
-
-	resources := r.findResourcesByHost(uri)
-	resource, err := r.selectResouceByHost(uri, resources)
+	resources := r.findResourcesByHost(&uri)
+	resource, err := r.selectResouceByHost(&uri, resources)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during resource select")
 	}
 	if resource != nil {
 		return resource, nil
 	}
+
+	us, err := url.QueryUnescape(uri.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "error during transform url to string and escape")
+	}
+
 	return nil, &errMemory{
-		notFound: true, message: fmt.Sprintf("could not found a resource for this uri '%s'", rawURI),
+		notFound: true, message: fmt.Sprintf("could not found a resource for this uri '%s'", us),
 	}
 }
 

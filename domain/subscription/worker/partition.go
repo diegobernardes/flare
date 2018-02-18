@@ -7,11 +7,13 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/diegobernardes/flare"
+	infraURL "github.com/diegobernardes/flare/infra/url"
 	"github.com/diegobernardes/flare/infra/worker"
 )
 
@@ -29,9 +31,14 @@ type Partition struct {
 }
 
 func (t *Partition) marshal(document *flare.Document, action string) ([]byte, error) {
+	documentID, err := infraURL.String(document.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during document.ID unmarshal")
+	}
+
 	rawContent := map[string]interface{}{
 		"action":     action,
-		"documentID": document.ID,
+		"documentID": documentID,
 		"resourceID": document.Resource.ID,
 	}
 
@@ -54,8 +61,13 @@ func (t *Partition) unmarshal(rawContent []byte) (*flare.Document, string, error
 		return nil, "", errors.Wrap(err, "error during parse content to json")
 	}
 
+	id, err := url.Parse(value.DocumentID)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "error on parse documentID")
+	}
+
 	return &flare.Document{
-		ID: value.DocumentID,
+		ID: *id,
 		Resource: flare.Resource{
 			ID: value.ResourceID,
 		},

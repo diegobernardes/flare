@@ -6,8 +6,8 @@ package http
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,7 +27,12 @@ type Handler struct {
 
 // Show receive the request to show a given document.
 func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
-	d, err := h.documentRepository.FindByID(r.Context(), h.getDocumentID(r))
+	id := h.parseID(w, r)
+	if id == nil {
+		return
+	}
+
+	document, err := h.documentRepository.FindByID(r.Context(), *id)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errRepo, ok := err.(flare.ResourceRepositoryError); ok && errRepo.NotFound() {
@@ -37,39 +42,44 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.writer.Response(w, (*document)(d), http.StatusOK, nil)
+	h.writer.Response(w, unmarshal(document), http.StatusOK, nil)
 }
 
 // Update process the request to update a document.
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	if r.URL.RawQuery != "" {
-		h.writer.Error(
-			w,
-			"error during document update",
-			fmt.Errorf("query string not allowed '%s'", r.URL.RawQuery),
-			http.StatusBadRequest,
-		)
+	id := h.parseID(w, r)
+	if id == nil {
 		return
 	}
 
-	documentID := h.getDocumentID(r)
-	resource := h.fetchResource(r.Context(), documentID, w)
+	resource := h.fetchResource(r.Context(), id, w)
 	if resource == nil {
 		return
 	}
 
-	doc, err := parseDocument(r.Body, documentID, resource)
-	if err != nil {
-		h.writer.Error(w, "error during document parse", err, http.StatusBadRequest)
+	rawDoc := &document{
+		ID:        *id,
+		Resource:  *resource,
+		UpdatedAt: time.Now(),
+	}
+
+	if err := rawDoc.parseBody(r.Body); err != nil {
+		h.writer.Error(w, "invalid body", err, http.StatusBadRequest)
 		return
 	}
 
-	if err = h.documentRepository.Update(r.Context(), doc); err != nil {
+	if err := rawDoc.parseRevision(); err != nil {
+		h.writer.Error(w, "invalid body", err, http.StatusBadRequest)
+		return
+	}
+
+	doc := marshal(rawDoc)
+	if err := h.documentRepository.Update(r.Context(), doc); err != nil {
 		h.writer.Error(w, "error during document update", err, http.StatusInternalServerError)
 		return
 	}
 
-	err = h.subscriptionTrigger.Push(r.Context(), doc, flare.SubscriptionTriggerUpdate)
+	err := h.subscriptionTrigger.Push(r.Context(), doc, flare.SubscriptionTriggerUpdate)
 	if err != nil {
 		h.writer.Error(w, "error during subscription trigger", err, http.StatusInternalServerError)
 		return
@@ -80,27 +90,24 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete receive the request to delete a document.
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	if r.URL.RawQuery != "" {
-		h.writer.Error(
-			w,
-			"error during document delete",
-			fmt.Errorf("query string not allowed '%s'", r.URL.RawQuery),
-			http.StatusBadRequest,
-		)
+	id := h.parseID(w, r)
+	if id == nil {
 		return
 	}
 
-	documentID := h.getDocumentID(r)
-	resource := h.fetchResource(r.Context(), documentID, w)
+	resource := h.fetchResource(r.Context(), id, w)
 	if resource == nil {
 		return
 	}
 
-	if err := h.subscriptionTrigger.Push(r.Context(), &flare.Document{
-		ID:        documentID,
+	doc := &flare.Document{
+		ID:        *id,
 		UpdatedAt: time.Now(),
 		Resource:  *resource,
-	}, flare.SubscriptionTriggerDelete); err != nil {
+	}
+	action := flare.SubscriptionTriggerDelete
+
+	if err := h.subscriptionTrigger.Push(r.Context(), doc, action); err != nil {
 		h.writer.Error(w, "error during subscription trigger", err, http.StatusInternalServerError)
 		return
 	}
@@ -109,11 +116,9 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) fetchResource(
-	ctx context.Context,
-	documentID string,
-	w http.ResponseWriter,
+	ctx context.Context, id *url.URL, w http.ResponseWriter,
 ) *flare.Resource {
-	doc, err := h.documentRepository.FindByID(ctx, documentID)
+	doc, err := h.documentRepository.FindByID(ctx, *id)
 	if err != nil {
 		if errRepo := err.(flare.DocumentRepositoryError); !errRepo.NotFound() {
 			h.writer.Error(w, "error during document search", err, http.StatusInternalServerError)
@@ -123,7 +128,7 @@ func (h *Handler) fetchResource(
 
 	var resource *flare.Resource
 	if doc == nil {
-		resource, err = h.resourceRepository.FindByURI(ctx, documentID)
+		resource, err = h.resourceRepository.FindByURI(ctx, *id)
 	} else {
 		resource, err = h.resourceRepository.FindByID(ctx, doc.Resource.ID)
 	}
@@ -137,6 +142,21 @@ func (h *Handler) fetchResource(
 	}
 
 	return resource
+}
+
+func (h *Handler) parseID(w http.ResponseWriter, r *http.Request) *url.URL {
+	id, err := url.Parse(h.getDocumentID(r))
+	if err != nil {
+		h.writer.Error(w, "error during id parse", err, http.StatusBadRequest)
+		return nil
+	}
+
+	if err := validEndpoint(id); err != nil {
+		h.writer.Error(w, "invalid id", err, http.StatusBadRequest)
+		return nil
+	}
+
+	return id
 }
 
 // NewHandler initialize the service to handle HTTP requests.

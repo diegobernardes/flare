@@ -1,6 +1,6 @@
 {
   "error": {
     "title": "error during document search",
-    "detail": "document '123' not found"
+    "detail": "document 'http://documents/123' not found"
   }
 }

@@ -17,6 +17,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 
 	"github.com/diegobernardes/flare"
+	infraURL "github.com/diegobernardes/flare/infra/url"
 	mongodb "github.com/diegobernardes/flare/provider/mongodb"
 )
 
@@ -287,7 +288,15 @@ func (s *Subscription) Trigger(
 
 	doc, err = s.documentRepository.FindByID(ctx, doc.ID)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error during document '%s' find", doc.ID))
+		id, err := infraURL.String(doc.ID)
+		if err != nil {
+			return errors.Wrap(err, "error during id transform to string")
+		}
+
+		return errors.Wrap(err, fmt.Sprintf("error during document '%s' find", id))
+	}
+	if doc == nil {
+		return nil
 	}
 	doc.Resource = *resource
 

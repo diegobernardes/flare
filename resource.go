@@ -38,7 +38,7 @@ func (rc *ResourceChange) Valid() error {
 type ResourceRepositorier interface {
 	Find(context.Context, *Pagination) ([]Resource, *Pagination, error)
 	FindByID(context.Context, string) (*Resource, error)
-	FindByURI(context.Context, string) (*Resource, error)
+	FindByURI(context.Context, url.URL) (*Resource, error)
 	Partitions(ctx context.Context, id string) (partitions []string, err error)
 	Create(context.Context, *Resource) error
 	Delete(context.Context, string) error

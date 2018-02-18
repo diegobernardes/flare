@@ -7,6 +7,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"sync"
 	"time"
 
@@ -25,7 +26,7 @@ type Subscription struct {
 	subscriptions map[string][]flare.Subscription
 
 	// subscriptionID -> documentID -> document revision
-	changes map[string]map[string]int64
+	changes map[string]map[url.URL]int64
 }
 
 // Find returns a list of subscriptions.
@@ -227,6 +228,9 @@ func (s *Subscription) Trigger(
 	if err != nil {
 		return err
 	}
+	if doc == nil {
+		return nil
+	}
 
 	subscriptionMap, ok := s.changes[subscription.ID]
 	if !ok {
@@ -282,6 +286,9 @@ func (s *Subscription) triggerDocumentAndSubscription(
 		}
 		return nil, nil, err
 	}
+	if doc == nil {
+		return nil, nil, nil
+	}
 
 	return subscription, doc, nil
 }
@@ -299,7 +306,7 @@ func (s *Subscription) triggerProcess(
 
 	subscriptionMap, ok := s.changes[subs.ID]
 	if !ok {
-		subscriptionMap = make(map[string]int64)
+		subscriptionMap = make(map[url.URL]int64)
 		s.changes[subs.ID] = subscriptionMap
 	}
 
@@ -314,5 +321,5 @@ func (s *Subscription) triggerProcess(
 
 func (s *Subscription) init() {
 	s.subscriptions = make(map[string][]flare.Subscription)
-	s.changes = make(map[string]map[string]int64)
+	s.changes = make(map[string]map[url.URL]int64)
 }

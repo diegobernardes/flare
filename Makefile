@@ -85,7 +85,6 @@ lint-slow:
 			--disable-all \
 			--enable=megacheck \
 			--enable=deadcode \
-			--enable=interfacer \
 			--enable=structcheck \
 			--enable=test \
 			--enable=testify \

@@ -62,7 +62,7 @@ func (r *Resource) FindByID(ctx context.Context, id string) (*flare.Resource, er
 }
 
 // FindByURI mock flare.ResourceRepositorier.FindByURI.
-func (r *Resource) FindByURI(ctx context.Context, uri string) (*flare.Resource, error) {
+func (r *Resource) FindByURI(ctx context.Context, uri url.URL) (*flare.Resource, error) {
 	if r.findByURIErr != nil {
 		return nil, r.findByURIErr
 	} else if r.err != nil {

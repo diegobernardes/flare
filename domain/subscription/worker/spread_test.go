@@ -82,13 +82,13 @@ func TestSpreadMarshal(t *testing.T) {
 				expected  []byte
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					"1",
 					infraTest.Load("spread.marshal.1.json"),
 				},
 				{
-					&flare.Document{ID: "3", Resource: flare.Resource{ID: "4"}},
+					&flare.Document{ID: url.URL{Path: "3"}, Resource: flare.Resource{ID: "4"}},
 					flare.SubscriptionTriggerDelete,
 					"2",
 					infraTest.Load("spread.marshal.2.json"),
@@ -117,13 +117,13 @@ func TestSpreadUnmarshal(t *testing.T) {
 				input     []byte
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					"1",
 					infraTest.Load("spread.marshal.1.json"),
 				},
 				{
-					&flare.Document{ID: "3", Resource: flare.Resource{ID: "4"}},
+					&flare.Document{ID: url.URL{Path: "3"}, Resource: flare.Resource{ID: "4"}},
 					flare.SubscriptionTriggerDelete,
 					"2",
 					infraTest.Load("spread.marshal.2.json"),
@@ -169,13 +169,13 @@ func TestSpreadPush(t *testing.T) {
 				expected  []byte
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					"1",
 					infraTest.Load("spread.marshal.1.json"),
 				},
 				{
-					&flare.Document{ID: "3", Resource: flare.Resource{ID: "4"}},
+					&flare.Document{ID: url.URL{Path: "3"}, Resource: flare.Resource{ID: "4"}},
 					flare.SubscriptionTriggerDelete,
 					"2",
 					infraTest.Load("spread.marshal.2.json"),
@@ -201,7 +201,7 @@ func TestSpreadPush(t *testing.T) {
 				err       error
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					"1",
 					errors.New("error during push"),
@@ -231,7 +231,7 @@ func TestSpreadProcess(t *testing.T) {
 				messages                      []spreadOutputMessage
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "123"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "123"}},
 					flare.SubscriptionTriggerUpdate,
 					[]func(*testRepository.Subscription){
 						testRepository.SubscriptionLoadSliceByteSubscription(
@@ -246,7 +246,7 @@ func TestSpreadProcess(t *testing.T) {
 					},
 					[]spreadOutputMessage{
 						{
-							document: flare.Document{ID: "1", Resource: flare.Resource{ID: "123"}},
+							document: flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "123"}},
 							subscription: flare.Subscription{
 								ID: "1",
 								Endpoint: flare.SubscriptionEndpoint{

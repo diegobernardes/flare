@@ -15,6 +15,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare"
+	infraURL "github.com/diegobernardes/flare/infra/url"
 	"github.com/diegobernardes/flare/infra/wildcard"
 	"github.com/diegobernardes/flare/infra/worker"
 )
@@ -85,6 +86,11 @@ func (d *Delivery) Init(options ...func(*Delivery)) error {
 func (d *Delivery) marshal(
 	subscription *flare.Subscription, document *flare.Document, action string,
 ) ([]byte, error) {
+	id, err := infraURL.String(document.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during document.ID unmarshal")
+	}
+
 	rawContent := struct {
 		Action         string `json:"action"`
 		DocumentID     string `json:"documentID"`
@@ -92,7 +98,7 @@ func (d *Delivery) marshal(
 		SubscriptionID string `json:"subscriptionID"`
 	}{
 		Action:         action,
-		DocumentID:     document.ID,
+		DocumentID:     id,
 		ResourceID:     document.Resource.ID,
 		SubscriptionID: subscription.ID,
 	}
@@ -119,8 +125,13 @@ func (d *Delivery) unmarshal(
 		return nil, nil, "", errors.Wrap(err, "error during content unmarshal")
 	}
 
+	id, err := url.Parse(value.DocumentID)
+	if err != nil {
+		return nil, nil, "", errors.Wrap(err, "error during parse documentID")
+	}
+
 	return &flare.Subscription{ID: value.SubscriptionID},
-		&flare.Document{ID: value.DocumentID, Resource: flare.Resource{ID: value.ResourceID}},
+		&flare.Document{ID: *id, Resource: flare.Resource{ID: value.ResourceID}},
 		value.Action,
 		nil
 }
@@ -137,8 +148,13 @@ func (d *Delivery) buildContent(
 	if !sub.Content.Envelope {
 		content = document.Content
 	} else {
+		id, err := infraURL.String(document.ID)
+		if err != nil {
+			return nil, errors.Wrap(err, "error during document.ID unmarshal")
+		}
+
 		content = map[string]interface{}{
-			"id":        document.ID,
+			"id":        id,
 			"action":    kind,
 			"updatedAt": document.UpdatedAt.String(),
 		}
@@ -207,17 +223,12 @@ func (d *Delivery) buildRequest(
 	subscription *flare.Subscription,
 	action string,
 ) (*http.Request, error) {
-	endpoint, err := url.Parse(document.ID)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error during url parse of '%s'", document.ID))
-	}
-
 	resource, err := d.resourceRepository.FindByID(ctx, document.Resource.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	content, err := d.buildContent(resource, document, endpoint, *subscription, action)
+	content, err := d.buildContent(resource, document, &document.ID, *subscription, action)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during content build")
 	}
@@ -240,7 +251,7 @@ func (d *Delivery) buildRequest(
 		}
 	}
 
-	addr, err := d.buildEndpoint(resource, endpoint, rawAddr)
+	addr, err := d.buildEndpoint(resource, &document.ID, rawAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during endpoint generate")
 	}

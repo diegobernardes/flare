@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ type Document struct {
 }
 
 // FindByID mock flare.DocumentRepositorier.FindOne.
-func (d *Document) FindByID(ctx context.Context, id string) (*flare.Document, error) {
+func (d *Document) FindByID(ctx context.Context, id url.URL) (*flare.Document, error) {
 	if d.findOneErr != nil {
 		return nil, d.findOneErr
 	} else if d.err != nil {
@@ -65,7 +66,7 @@ func (d *Document) Update(ctx context.Context, document *flare.Document) error {
 }
 
 // Delete mock flare.DocumentRepositorier.Delete.
-func (d *Document) Delete(ctx context.Context, id string) error {
+func (d *Document) Delete(ctx context.Context, id url.URL) error {
 	if d.deleteErr != nil {
 		return d.deleteErr
 	} else if d.err != nil {
@@ -133,8 +134,13 @@ func DocumentLoadSliceByteDocument(content []byte) func(*Document) {
 		}
 
 		for _, rawDocument := range documents {
-			err := d.Update(context.Background(), &flare.Document{
-				ID:       rawDocument.ID,
+			id, err := url.Parse(rawDocument.ID)
+			if err != nil {
+				panic(errors.Wrap(err, "error during parse of string to url.URL"))
+			}
+
+			err = d.Update(context.Background(), &flare.Document{
+				ID:       *id,
 				Revision: (int64)(rawDocument.Revision),
 				Content:  rawDocument.Content,
 				Resource: flare.Resource{

@@ -9,7 +9,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
+	"net/url"
 	"testing"
 	"time"
 
@@ -90,6 +90,14 @@ func TestServiceHandlerShow(t *testing.T) {
 				options []func(*testRepository.Document)
 			}{
 				{
+					"return a error because it has a query string",
+					httptest.NewRequest(http.MethodGet, "http://documents/123?key=value", nil),
+					http.StatusBadRequest,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.show.invalidQueryString.json"),
+					nil,
+				},
+				{
 					"return a not found",
 					httptest.NewRequest(http.MethodGet, "http://documents/123", nil),
 					http.StatusNotFound,
@@ -109,7 +117,7 @@ func TestServiceHandlerShow(t *testing.T) {
 				},
 				{
 					"return a document",
-					httptest.NewRequest(http.MethodGet, "http://documents/456", nil),
+					httptest.NewRequest(http.MethodGet, "http://documents/123", nil),
 					http.StatusOK,
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.show.found.json"),
@@ -129,150 +137,12 @@ func TestServiceHandlerShow(t *testing.T) {
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
-						HandlerGetDocumentID(func(r *http.Request) string {
-							return strings.Replace(r.URL.Path, "/", "", -1)
-						}),
+						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 						HandlerWriter(writer),
 					)
 					So(err, ShouldBeNil)
 					test.Runner(tt.status, tt.header, handler.Show, tt.req, tt.body)
-				})
-			}
-		})
-	})
-}
-
-func TestServiceHandlerUpdate(t *testing.T) {
-	Convey("Feature: Serve a HTTP request to update a given document", t, func() {
-		Convey("Given a list of requests", func() {
-			tests := []struct {
-				title           string
-				req             *http.Request
-				status          int
-				header          http.Header
-				body            []byte
-				documentOptions []func(*testRepository.Document)
-				resourceOptions []func(*testRepository.Resource)
-				triggerError    error
-			}{
-				{
-					"return a error because it has a query string",
-					httptest.NewRequest(
-						http.MethodPut, "http://documents/http://app.com/users/123?key=value", nil,
-					),
-					http.StatusBadRequest,
-					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.update.invalidQueryString.json"),
-					nil,
-					nil,
-					nil,
-				},
-				{
-					"return a error because of a repository document find error",
-					httptest.NewRequest(
-						http.MethodPut,
-						"http://documents/http://app.com/users/123",
-						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
-					),
-					http.StatusInternalServerError,
-					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.update.documentFindError.json"),
-					[]func(*testRepository.Document){
-						testRepository.DocumentFindOneError(
-							&testRepository.DocumentErr{Message: "generic error"},
-						),
-					},
-					nil,
-					nil,
-				},
-				{
-					"return a error because of a document parse error",
-					httptest.NewRequest(
-						http.MethodPut,
-						"http://documents/http://app.com/users/123",
-						bytes.NewBuffer([]byte("{}")),
-					),
-					http.StatusBadRequest,
-					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.update.parseError.json"),
-					nil,
-					[]func(*testRepository.Resource){
-						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
-					},
-					nil,
-				},
-				{
-					"return a error because of a repository document update error",
-					httptest.NewRequest(
-						http.MethodPut,
-						"http://documents/http://app.com/users/123",
-						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
-					),
-					http.StatusInternalServerError,
-					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.update.updateError.json"),
-					[]func(*testRepository.Document){
-						testRepository.DocumentUpdateError(errors.New("error during update")),
-					},
-					[]func(*testRepository.Resource){
-						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
-					},
-					nil,
-				},
-				{
-					"return a error because of a subscription trigger error",
-					httptest.NewRequest(
-						http.MethodPut,
-						"http://documents/http://app.com/users/123",
-						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
-					),
-					http.StatusInternalServerError,
-					http.Header{"Content-Type": []string{"application/json"}},
-					infraTest.Load("handler.update.triggerError.json"),
-					nil,
-					[]func(*testRepository.Resource){
-						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
-					},
-					errors.New("error during push"),
-				},
-				{
-					"update the document",
-					httptest.NewRequest(
-						http.MethodPut,
-						"http://documents/http://app.com/users/123",
-						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
-					),
-					http.StatusAccepted,
-					http.Header{},
-					nil,
-					nil,
-					[]func(*testRepository.Resource){
-						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
-					},
-					nil,
-				},
-			}
-
-			for _, tt := range tests {
-				Convey("Should "+tt.title, func() {
-					writer, err := infraHTTP.NewWriter(log.NewNopLogger())
-					So(err, ShouldBeNil)
-
-					repo := testRepository.NewClient(
-						testRepository.ClientDocumentOptions(tt.documentOptions...),
-						testRepository.ClientResourceOptions(tt.resourceOptions...),
-					)
-					handler, err := NewHandler(
-						HandlerDocumentRepository(repo.Document()),
-						HandlerResourceRepository(repo.Resource()),
-						HandlerGetDocumentID(func(r *http.Request) string { return "http://app.com/users/123" }),
-						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(tt.triggerError)),
-						HandlerWriter(writer),
-					)
-					So(err, ShouldBeNil)
-
-					test.Runner(tt.status, tt.header, handler.Update, tt.req, tt.body)
 				})
 			}
 		})
@@ -295,7 +165,7 @@ func TestServiceHandlerDelete(t *testing.T) {
 				{
 					"return a error because it has a query string",
 					httptest.NewRequest(
-						http.MethodDelete, "http://documents/http://app.com/users/123?key=value", nil,
+						http.MethodDelete, "http://documents/123?key=value", nil,
 					),
 					http.StatusBadRequest,
 					http.Header{"Content-Type": []string{"application/json"}},
@@ -308,7 +178,7 @@ func TestServiceHandlerDelete(t *testing.T) {
 					"return a error because of a repository document find error",
 					httptest.NewRequest(
 						http.MethodDelete,
-						"http://documents/http://app.com/users/123",
+						"http://documents/123",
 						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
 					),
 					http.StatusInternalServerError,
@@ -324,7 +194,7 @@ func TestServiceHandlerDelete(t *testing.T) {
 				},
 				{
 					"return a error because of a subscription trigger error",
-					httptest.NewRequest(http.MethodDelete, "http://documents/http://app1.com/users/123", nil),
+					httptest.NewRequest(http.MethodDelete, "http://documents/123", nil),
 					http.StatusInternalServerError,
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.delete.triggerError.json"),
@@ -336,7 +206,7 @@ func TestServiceHandlerDelete(t *testing.T) {
 				},
 				{
 					"delete the document",
-					httptest.NewRequest(http.MethodDelete, "http://documents/http://app1.com/users/123", nil),
+					httptest.NewRequest(http.MethodDelete, "http://documents/123", nil),
 					http.StatusAccepted,
 					http.Header{},
 					nil,
@@ -360,13 +230,165 @@ func TestServiceHandlerDelete(t *testing.T) {
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
-						HandlerGetDocumentID(func(r *http.Request) string { return "http://app.com/users/123" }),
+						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(tt.triggerError)),
 						HandlerWriter(writer),
 					)
 					So(err, ShouldBeNil)
 
 					test.Runner(tt.status, tt.header, handler.Delete, tt.req, tt.body)
+				})
+			}
+		})
+	})
+}
+
+func TestServiceHandlerUpdate(t *testing.T) {
+	Convey("Feature: Serve a HTTP request to update a given document", t, func() {
+		Convey("Given a list of requests", func() {
+			tests := []struct {
+				title           string
+				req             *http.Request
+				status          int
+				header          http.Header
+				body            []byte
+				documentOptions []func(*testRepository.Document)
+				resourceOptions []func(*testRepository.Resource)
+				triggerError    error
+			}{
+				{
+					"return a error because it has a query string",
+					httptest.NewRequest(
+						http.MethodPut, "http://documents/123?key=value", nil,
+					),
+					http.StatusBadRequest,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.invalidQueryString.json"),
+					nil,
+					nil,
+					nil,
+				},
+				{
+					"return a error because of a repository document find error",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
+					),
+					http.StatusInternalServerError,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.documentFindError.json"),
+					[]func(*testRepository.Document){
+						testRepository.DocumentFindOneError(
+							&testRepository.DocumentErr{Message: "generic error"},
+						),
+					},
+					nil,
+					nil,
+				},
+				{
+					"return a error because of a body parse error",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer([]byte("")),
+					),
+					http.StatusBadRequest,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.invalidBody.json"),
+					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					nil,
+				},
+				{
+					"return a error because of a document parse error",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer([]byte("{}")),
+					),
+					http.StatusBadRequest,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.parseError.json"),
+					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					nil,
+				},
+				{
+					"return a error because of a repository document update error",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
+					),
+					http.StatusInternalServerError,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.updateError.json"),
+					[]func(*testRepository.Document){
+						testRepository.DocumentUpdateError(errors.New("error during update")),
+					},
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					nil,
+				},
+				{
+					"return a error because of a subscription trigger error",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
+					),
+					http.StatusInternalServerError,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.triggerError.json"),
+					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					errors.New("error during push"),
+				},
+				{
+					"update the document",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
+					),
+					http.StatusAccepted,
+					http.Header{},
+					nil,
+					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					nil,
+				},
+			}
+
+			for _, tt := range tests {
+				Convey("Should "+tt.title, func() {
+					writer, err := infraHTTP.NewWriter(log.NewNopLogger())
+					So(err, ShouldBeNil)
+
+					repo := testRepository.NewClient(
+						testRepository.ClientDocumentOptions(tt.documentOptions...),
+						testRepository.ClientResourceOptions(tt.resourceOptions...),
+					)
+					handler, err := NewHandler(
+						HandlerDocumentRepository(repo.Document()),
+						HandlerResourceRepository(repo.Resource()),
+						HandlerGetDocumentID(getDocumentID),
+						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(tt.triggerError)),
+						HandlerWriter(writer),
+					)
+					So(err, ShouldBeNil)
+
+					test.Runner(tt.status, tt.header, handler.Update, tt.req, tt.body)
 				})
 			}
 		})
@@ -381,7 +403,7 @@ func TestHandlerFetchResource(t *testing.T) {
 				status          int
 				header          http.Header
 				body            []byte
-				documentID      string
+				documentID      url.URL
 				resource        *flare.Resource
 				documentOptions []func(*testRepository.Document)
 				resourceOptions []func(*testRepository.Resource)
@@ -391,7 +413,7 @@ func TestHandlerFetchResource(t *testing.T) {
 					http.StatusInternalServerError,
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.fetchResource.documentError.json"),
-					"http://app1.com/users/123",
+					url.URL{Scheme: "http", Host: "documents", Path: "/123"},
 					nil,
 					[]func(*testRepository.Document){
 						testRepository.DocumentFindOneError(
@@ -405,7 +427,7 @@ func TestHandlerFetchResource(t *testing.T) {
 					http.StatusNotFound,
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.fetchResource.resourceNotFound.json"),
-					"http://app1.com/users/123",
+					url.URL{Scheme: "http", Host: "documents", Path: "/123"},
 					nil,
 					nil,
 					nil,
@@ -415,7 +437,7 @@ func TestHandlerFetchResource(t *testing.T) {
 					http.StatusInternalServerError,
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.fetchResource.resourceError.json"),
-					"http://app1.com/users/123",
+					url.URL{Scheme: "http", Host: "documents", Path: "/123"},
 					nil,
 					nil,
 					[]func(*testRepository.Resource){
@@ -427,7 +449,7 @@ func TestHandlerFetchResource(t *testing.T) {
 					0,
 					nil,
 					nil,
-					"456",
+					url.URL{Scheme: "http", Host: "documents", Path: "/123"},
 					nil,
 					[]func(*testRepository.Document){
 						testRepository.DocumentLoadSliceByteDocument(infraTest.Load("document.1.json")),
@@ -442,7 +464,7 @@ func TestHandlerFetchResource(t *testing.T) {
 					0,
 					nil,
 					nil,
-					"http://app.com/users/123",
+					url.URL{Scheme: "http", Host: "documents", Path: "/123"},
 					nil,
 					nil,
 					[]func(*testRepository.Resource){
@@ -463,14 +485,14 @@ func TestHandlerFetchResource(t *testing.T) {
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
-						HandlerGetDocumentID(func(r *http.Request) string { return "http://app.com/users/123" }),
+						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 						HandlerWriter(writer),
 					)
 					So(err, ShouldBeNil)
 
 					w := httptest.NewRecorder()
-					resource := handler.fetchResource(context.Background(), tt.documentID, w)
+					resource := handler.fetchResource(context.Background(), &tt.documentID, w)
 					if resource == nil {
 						So(w.Code, ShouldEqual, tt.status)
 						So(w.HeaderMap, ShouldResemble, tt.header)
@@ -482,4 +504,11 @@ func TestHandlerFetchResource(t *testing.T) {
 			}
 		})
 	})
+}
+
+func getDocumentID(r *http.Request) string {
+	var id string
+	id, err := url.QueryUnescape(r.URL.String())
+	So(err, ShouldBeNil)
+	return id
 }

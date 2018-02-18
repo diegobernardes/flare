@@ -7,6 +7,7 @@ package worker
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -71,15 +72,15 @@ func TestDeliveryMarshal(t *testing.T) {
 			}{
 				{
 					&flare.Subscription{ID: "3"},
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "/1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
-					`{"action": "update", "documentID": "1", "resourceID": "2", "subscriptionID": "3"}`,
+					`{"action": "update", "documentID": "/1", "resourceID": "2", "subscriptionID": "3"}`,
 				},
 				{
 					&flare.Subscription{ID: "6"},
-					&flare.Document{ID: "4", Resource: flare.Resource{ID: "5"}},
+					&flare.Document{ID: url.URL{Path: "/4"}, Resource: flare.Resource{ID: "5"}},
 					flare.SubscriptionTriggerDelete,
-					`{"action": "delete", "documentID": "4", "resourceID": "5", "subscriptionID": "6"}`,
+					`{"action": "delete", "documentID": "/4", "resourceID": "5", "subscriptionID": "6"}`,
 				},
 			}
 
@@ -106,15 +107,15 @@ func TestDeliveryUnmarshal(t *testing.T) {
 			}{
 				{
 					&flare.Subscription{ID: "3"},
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "/1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
-					`{"action": "update", "documentID": "1", "resourceID": "2", "subscriptionID": "3"}`,
+					`{"action": "update", "documentID": "/1", "resourceID": "2", "subscriptionID": "3"}`,
 				},
 				{
 					&flare.Subscription{ID: "6"},
-					&flare.Document{ID: "4", Resource: flare.Resource{ID: "5"}},
+					&flare.Document{ID: url.URL{Path: "/4"}, Resource: flare.Resource{ID: "5"}},
 					flare.SubscriptionTriggerDelete,
-					`{"action": "delete", "documentID": "4", "resourceID": "5", "subscriptionID": "6"}`,
+					`{"action": "delete", "documentID": "/4", "resourceID": "5", "subscriptionID": "6"}`,
 				},
 			}
 
@@ -158,15 +159,15 @@ func TestDeliveryPush(t *testing.T) {
 			}{
 				{
 					&flare.Subscription{ID: "3"},
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "/1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
-					`{"action": "update", "documentID": "1", "resourceID": "2", "subscriptionID": "3"}`,
+					`{"action": "update", "documentID": "/1", "resourceID": "2", "subscriptionID": "3"}`,
 				},
 				{
 					&flare.Subscription{ID: "6"},
-					&flare.Document{ID: "4", Resource: flare.Resource{ID: "5"}},
+					&flare.Document{ID: url.URL{Path: "/4"}, Resource: flare.Resource{ID: "5"}},
 					flare.SubscriptionTriggerDelete,
-					`{"action": "delete", "documentID": "4", "resourceID": "5", "subscriptionID": "6"}`,
+					`{"action": "delete", "documentID": "/4", "resourceID": "5", "subscriptionID": "6"}`,
 				},
 			}
 
@@ -190,7 +191,7 @@ func TestDeliveryPush(t *testing.T) {
 			}{
 				{
 					&flare.Subscription{ID: "3"},
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "/1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					errors.New("error during push"),
 				},

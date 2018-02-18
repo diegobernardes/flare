@@ -66,7 +66,9 @@ func testResourceRun(repo flare.ResourceRepositorier) func(*testing.T) {
 
 func testResourceFindByURIPreFeed(repo flare.ResourceRepositorier) {
 	Convey("It should return error during FindByURI", func() {
-		resource, err := repo.FindByURI(context.Background(), "http://app.com/users/123")
+		resource, err := repo.FindByURI(
+			context.Background(), url.URL{Scheme: "http", Host: "app.com", Path: "/users/123"},
+		)
 		So(err, ShouldNotBeNil)
 		So(resource, ShouldBeNil)
 	})
@@ -74,7 +76,9 @@ func testResourceFindByURIPreFeed(repo flare.ResourceRepositorier) {
 
 func testResourceFindByURI(repo flare.ResourceRepositorier) {
 	Convey("It should return a resource by uri", func() {
-		resource, err := repo.FindByURI(context.Background(), "http://app.com/users/123")
+		resource, err := repo.FindByURI(
+			context.Background(), url.URL{Scheme: "http", Host: "app.com", Path: "/users/123"},
+		)
 		So(err, ShouldBeNil)
 		So(resource, ShouldNotBeNil)
 	})

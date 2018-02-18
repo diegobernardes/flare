@@ -7,11 +7,13 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/diegobernardes/flare"
+	infraURL "github.com/diegobernardes/flare/infra/url"
 	"github.com/diegobernardes/flare/infra/worker"
 )
 
@@ -114,6 +116,11 @@ func (s *Spread) Init(options ...func(*Spread)) error {
 }
 
 func (s *Spread) marshal(document *flare.Document, action, partition string) ([]byte, error) {
+	id, err := infraURL.String(document.ID)
+	if err != nil {
+		return nil, errors.Wrap(err, "error during document.ID unmarshal")
+	}
+
 	rawContent := struct {
 		Action     string `json:"action"`
 		DocumentID string `json:"documentID"`
@@ -121,7 +128,7 @@ func (s *Spread) marshal(document *flare.Document, action, partition string) ([]
 		Partition  string `json:"partition"`
 	}{
 		Action:     action,
-		DocumentID: document.ID,
+		DocumentID: id,
 		ResourceID: document.Resource.ID,
 		Partition:  partition,
 	}
@@ -146,8 +153,13 @@ func (s *Spread) unmarshal(rawContent []byte) (*flare.Document, string, string, 
 		return nil, "", "", errors.Wrap(err, "error during content unmarshal")
 	}
 
+	id, err := url.Parse(value.DocumentID)
+	if err != nil {
+		return nil, "", "", errors.Wrap(err, "error on parse documentID")
+	}
+
 	return &flare.Document{
-		ID:       value.DocumentID,
+		ID:       *id,
 		Resource: flare.Resource{ID: value.ResourceID},
 	}, value.Action, value.Partition, nil
 }

@@ -187,13 +187,8 @@ func (r *Resource) FindByID(ctx context.Context, id string) (*flare.Resource, er
 }
 
 // FindByURI take a URI and find the resource that match.
-func (r *Resource) FindByURI(_ context.Context, rawAddress string) (*flare.Resource, error) {
-	address, err := url.Parse(rawAddress)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("error during url '%s' parse", rawAddress))
-	}
-
-	query, err := r.findResourceByURI(*address)
+func (r *Resource) FindByURI(_ context.Context, address url.URL) (*flare.Resource, error) {
+	query, err := r.findResourceByURI(address)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during resource find")
 	}
@@ -204,13 +199,18 @@ func (r *Resource) FindByURI(_ context.Context, rawAddress string) (*flare.Resou
 	result := &resourceEntity{}
 	err = session.DB(r.database).C(r.collection).Find(query).One(result)
 	if err != nil {
+		addr, err := url.QueryUnescape(address.String())
+		if err != nil {
+			return nil, errors.Wrap(err, "error during url.URL parse to string and unescape")
+		}
+
 		if err == mgo.ErrNotFound {
 			return nil, &errMemory{
-				message: fmt.Sprintf("resource not found with address '%s'", rawAddress), notFound: true,
+				message: fmt.Sprintf("resource not found with address '%s'", addr), notFound: true,
 			}
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf(
-			"error during find resource by uri '%s'", rawAddress,
+			"error during find resource by uri '%s'", addr,
 		))
 	}
 

@@ -6,6 +6,7 @@ package worker
 
 import (
 	"context"
+	"net/url"
 	"sync"
 	"testing"
 	"time"
@@ -78,12 +79,12 @@ func TestPartitionMarshal(t *testing.T) {
 				expected []byte
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					infraTest.Load("partition.marshal.1.json"),
 				},
 				{
-					&flare.Document{ID: "3", Resource: flare.Resource{ID: "4"}},
+					&flare.Document{ID: url.URL{Path: "3"}, Resource: flare.Resource{ID: "4"}},
 					flare.SubscriptionTriggerDelete,
 					infraTest.Load("partition.marshal.2.json"),
 				},
@@ -110,12 +111,12 @@ func TestPartitionUnmarshal(t *testing.T) {
 				input    []byte
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					infraTest.Load("partition.marshal.1.json"),
 				},
 				{
-					&flare.Document{ID: "3", Resource: flare.Resource{ID: "4"}},
+					&flare.Document{ID: url.URL{Path: "3"}, Resource: flare.Resource{ID: "4"}},
 					flare.SubscriptionTriggerDelete,
 					infraTest.Load("partition.marshal.2.json"),
 				},
@@ -158,12 +159,12 @@ func TestPartitionPush(t *testing.T) {
 				expected []byte
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					infraTest.Load("partition.marshal.1.json"),
 				},
 				{
-					&flare.Document{ID: "3", Resource: flare.Resource{ID: "4"}},
+					&flare.Document{ID: url.URL{Path: "3"}, Resource: flare.Resource{ID: "4"}},
 					flare.SubscriptionTriggerDelete,
 					infraTest.Load("partition.marshal.2.json"),
 				},
@@ -187,7 +188,7 @@ func TestPartitionPush(t *testing.T) {
 				err      error
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					errors.New("error during push"),
 				},
@@ -215,7 +216,7 @@ func TestPartitionProcess(t *testing.T) {
 				messages          []partitionOutputMessage
 			}{
 				{
-					&flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+					&flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 					flare.SubscriptionTriggerUpdate,
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.input.1.json")),
@@ -224,17 +225,17 @@ func TestPartitionProcess(t *testing.T) {
 					},
 					[]partitionOutputMessage{
 						{
-							document:  flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+							document:  flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 							action:    flare.SubscriptionTriggerUpdate,
 							partition: "1",
 						},
 						{
-							document:  flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+							document:  flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 							action:    flare.SubscriptionTriggerUpdate,
 							partition: "2",
 						},
 						{
-							document:  flare.Document{ID: "1", Resource: flare.Resource{ID: "2"}},
+							document:  flare.Document{ID: url.URL{Path: "1"}, Resource: flare.Resource{ID: "2"}},
 							action:    flare.SubscriptionTriggerUpdate,
 							partition: "3",
 						},
