@@ -40,7 +40,7 @@ test:
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
-		gotest -v -race -failfast -covermode=atomic -coverprofile=profile.cov ./...
+		gotest -v -race -failfast ./...
 
 lint-fast:
 	@docker run \
