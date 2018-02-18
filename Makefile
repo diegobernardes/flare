@@ -27,7 +27,7 @@ coveralls:
 		-e TRAVIS_BRANCH=$(TRAVIS_BRANCH) \
 		-e COVERALLS_TOKEN=$(COVERALLS_TOKEN) \
 		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
-		gotest -race -failfast -covermode=atomic -coverprofile=profile.cov ./... && goveralls -coverprofile=profile.cov
+		/bin/bash -c "gotest -race -failfast -covermode=atomic -coverprofile=profile.cov ./...; goveralls -coverprofile=profile.cov"
 
 pre-pr: test lint-fast lint-slow
 
