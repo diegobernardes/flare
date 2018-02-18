@@ -292,6 +292,7 @@ func (r *Resource) findResourceByURI(endpoint url.URL) (bson.M, error) {
 	query := bson.M{
 		"endpoint.pathSegments": bson.M{"$size": len(segments)},
 		"endpoint.host":         endpoint.Host,
+		"endpoint.scheme":       endpoint.Scheme,
 	}
 	count := func() (int, error) { return session.DB(r.database).C(r.collection).Find(query).Count() }
 
