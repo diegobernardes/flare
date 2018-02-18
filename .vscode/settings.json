@@ -65,6 +65,5 @@
     "-all",
     "-shadow"
   ],
-  "go.autocompleteUnimportedPackages": true,
-  "go.docsTool": "gogetdoc"
+  "go.autocompleteUnimportedPackages": true
 }
