@@ -79,8 +79,10 @@ func (s *SQS) Pull(ctx context.Context, fn func(context.Context, []byte) error) 
 	return nil
 }
 
-func (s *SQS) sqsEndpoint() (string, error) {
-	result, err := s.client.GetQueueUrl(&sqs.GetQueueUrlInput{QueueName: aws.String(s.name)})
+func (s *SQS) sqsEndpoint(ctx context.Context) (string, error) {
+	result, err := s.client.GetQueueUrlWithContext(
+		ctx, &sqs.GetQueueUrlInput{QueueName: aws.String(s.name)},
+	)
 	if err != nil {
 		awsErr, ok := err.(interface {
 			Code() string
@@ -94,16 +96,18 @@ func (s *SQS) sqsEndpoint() (string, error) {
 	return *result.QueueUrl, nil
 }
 
-func (s *SQS) createSQS() (string, error) {
-	output, err := s.client.CreateQueue(&sqs.CreateQueueInput{QueueName: aws.String(s.name)})
+func (s *SQS) createSQS(ctx context.Context) error {
+	_, err := s.client.CreateQueueWithContext(
+		ctx, &sqs.CreateQueueInput{QueueName: aws.String(s.name)},
+	)
 	if err != nil {
-		return "", errors.Wrap(err, fmt.Sprintf("error during queue '%s' create", s.name))
+		return errors.Wrap(err, fmt.Sprintf("error during queue '%s' create", s.name))
 	}
 
 	for {
-		queue, err := s.sqsEndpoint()
+		queue, err := s.sqsEndpoint(ctx)
 		if err != nil {
-			return "", errors.Wrap(err, "error during waiting for SQS queue to be created")
+			return errors.Wrap(err, "error during waiting for SQS queue to be created")
 		}
 
 		if queue != "" {
@@ -113,17 +117,17 @@ func (s *SQS) createSQS() (string, error) {
 		<-time.After(1 * time.Second)
 	}
 
-	return output.String(), nil
+	return nil
 }
 
 // SQSSetup is used to create the queues if not exists.
-func SQSSetup(options ...func(*SQS)) error {
+func SQSSetup(ctx context.Context, options ...func(*SQS)) error {
 	s, err := initSQS(options...)
 	if err != nil {
 		return err
 	}
 
-	endpoint, err := s.sqsEndpoint()
+	endpoint, err := s.sqsEndpoint(ctx)
 	if err != nil {
 		return errors.Wrap(err, "error during queue find")
 	}
@@ -131,7 +135,7 @@ func SQSSetup(options ...func(*SQS)) error {
 		return nil
 	}
 
-	if _, err := s.createSQS(); err != nil {
+	if err := s.createSQS(ctx); err != nil {
 		return errors.Wrap(err, "error during queue create")
 	}
 	return nil
@@ -144,7 +148,7 @@ func NewSQS(options ...func(*SQS)) (*SQS, error) {
 		return nil, err
 	}
 
-	endpoint, err := s.sqsEndpoint()
+	endpoint, err := s.sqsEndpoint(context.Background())
 	if err != nil {
 		return nil, errors.Wrap(err, "error during queue find")
 	}

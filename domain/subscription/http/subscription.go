@@ -166,7 +166,7 @@ func (s *subscriptionCreate) valid(resource *flare.Resource) error {
 		return errors.Wrap(err, "invalid endpoint")
 	}
 
-	if err := s.validEndpointMethod(resource); err != nil {
+	if err := s.validEndpointMethod(); err != nil {
 		return errors.Wrap(err, "invalid method")
 	}
 
@@ -295,7 +295,7 @@ outer:
 	return nil
 }
 
-func (s *subscriptionCreate) validEndpointMethod(resource *flare.Resource) error {
+func (s *subscriptionCreate) validEndpointMethod() error {
 	valid := func(method string) bool {
 		switch method {
 		case "", http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:

@@ -240,12 +240,12 @@ func (d *Delivery) buildRequest(
 		}
 	}
 
-	addr, err := d.buildEndpoint(resource, subscription, endpoint, rawAddr)
+	addr, err := d.buildEndpoint(resource, endpoint, rawAddr)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during endpoint generate")
 	}
 
-	req, err := d.buildRequestHTTP(ctx, content, subscription, addr, method, headers)
+	req, err := d.buildRequestHTTP(ctx, content, addr, method, headers)
 	if err != nil {
 		return nil, err
 	}
@@ -256,7 +256,6 @@ func (d *Delivery) buildRequest(
 func (d *Delivery) buildRequestHTTP(
 	ctx context.Context,
 	content []byte,
-	subscription *flare.Subscription,
 	addr, method string,
 	headers http.Header,
 ) (*http.Request, error) {
@@ -267,7 +266,7 @@ func (d *Delivery) buildRequestHTTP(
 	}
 	req = req.WithContext(ctx)
 
-	req.Header = subscription.Endpoint.Headers
+	req.Header = headers
 	contentType := req.Header.Get("content-type")
 	if contentType == "" && len(content) > 0 {
 		req.Header.Add("Content-Type", "application/json")
@@ -278,7 +277,6 @@ func (d *Delivery) buildRequestHTTP(
 
 func (d *Delivery) buildEndpoint(
 	resource *flare.Resource,
-	subscription *flare.Subscription,
 	endpoint *url.URL,
 	rawSubscriptionEndpoint fmt.Stringer,
 ) (string, error) {

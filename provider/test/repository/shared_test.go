@@ -82,7 +82,7 @@ func ensureDockerImage(client *docker.Client) error {
 
 	var hasImage bool
 	for _, img := range imgs {
-		if hasDockerImage(img.RepoTags, dockerImage, dockerTag) {
+		if hasDockerImage(img.RepoTags) {
 			hasImage = true
 			break
 		}
@@ -101,8 +101,8 @@ func ensureDockerImage(client *docker.Client) error {
 	return nil
 }
 
-func hasDockerImage(images []string, name, tag string) bool {
-	key := fmt.Sprintf("%s:%s", name, tag)
+func hasDockerImage(images []string) bool {
+	key := fmt.Sprintf("%s:%s", dockerImage, dockerTag)
 	for _, image := range images {
 		if image == key {
 			return true

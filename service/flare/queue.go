@@ -72,13 +72,13 @@ func (q *queue) setup(ctx context.Context) error {
 	switch q.cfg.GetString("provider.queue") {
 	case providerMemory:
 	case providerAWSSQS:
-		return q.setupAWSSQS()
+		return q.setupAWSSQS(ctx)
 	}
 
 	return nil
 }
 
-func (q *queue) setupAWSSQS() error {
+func (q *queue) setupAWSSQS(ctx context.Context) error {
 	names := []string{"subscription.partition", "subscription.spread", "subscription.delivery"}
 
 	logger := level.Info(q.logger)
@@ -88,6 +88,7 @@ func (q *queue) setupAWSSQS() error {
 		logger.Log("message", fmt.Sprintf("creating SQS queue for worker '%s' with name '%s'", name, qn))
 
 		err := sqsQueue.SQSSetup(
+			ctx,
 			sqsQueue.SQSQueueName(qn),
 			sqsQueue.SQSSession(q.awsSession),
 		)

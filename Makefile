@@ -91,6 +91,8 @@ lint-slow:
 			--enable=testify \
 			--enable=unconvert \
 			--enable=varcheck \
+			--enable=nakedret \
+			--enable=unparam \
 			--deadline=20m \
 			--aggregate \
 			--line-length=100 \

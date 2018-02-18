@@ -177,7 +177,7 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 }
 
 // HasSubscription check if a resource has subscriptions.
-func (s *Subscription) HasSubscription(ctx context.Context, resourceId string) (bool, error) {
+func (s *Subscription) HasSubscription(_ context.Context, resourceId string) (bool, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -223,9 +223,7 @@ func (s *Subscription) Trigger(
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	subscription, doc, err := s.triggerDocumentAndSubscription(
-		ctx, action, rawDocument, rawSubscription,
-	)
+	subscription, doc, err := s.triggerDocumentAndSubscription(ctx, rawDocument, rawSubscription)
 	if err != nil {
 		return err
 	}
@@ -266,7 +264,6 @@ func (s *Subscription) Trigger(
 
 func (s *Subscription) triggerDocumentAndSubscription(
 	ctx context.Context,
-	action string,
 	rawDocument *flare.Document,
 	rawSubscription *flare.Subscription,
 ) (*flare.Subscription, *flare.Document, error) {

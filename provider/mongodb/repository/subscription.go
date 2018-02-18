@@ -343,7 +343,6 @@ func (s *Subscription) newEntry(
 
 func (s *Subscription) triggerProcessDelete(
 	groupCtx context.Context,
-	kind string,
 	session *mgo.Session,
 	subs *flare.Subscription,
 	doc *flare.Document,
@@ -407,7 +406,7 @@ func (s *Subscription) triggerProcess(
 	referenceDocument.Resource = subs.Resource
 
 	if kind == flare.SubscriptionTriggerDelete {
-		return s.triggerProcessDelete(groupCtx, kind, session, subs, doc, fn)
+		return s.triggerProcessDelete(groupCtx, session, subs, doc, fn)
 	}
 
 	if newer := doc.Newer(referenceDocument); !newer {

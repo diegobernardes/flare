@@ -251,14 +251,14 @@ func validContentStruct(content string, offset, indexStart, indexEnd int) (strin
 	}
 
 	value := strings.TrimSpace(content[offset+indexStart+1 : offset+indexEnd])
-	if err := validFragment(content, value, offset, indexStart, indexEnd); err != nil {
+	if err := validFragment(content, value, offset, indexStart); err != nil {
 		return "", err
 	}
 
 	return value, nil
 }
 
-func validFragment(content, value string, offset, indexStart, indexEnd int) error {
+func validFragment(content, value string, offset, index int) error {
 	if strings.Contains(value, "{") {
 		return errors.New("found a '{' inside a wildcard")
 	}
@@ -271,7 +271,7 @@ func validFragment(content, value string, offset, indexStart, indexEnd int) erro
 		return errors.New("missing the wildcard id")
 	}
 
-	if offset > 0 && (content[offset+indexStart-1] == '}' && content[offset+indexStart] == '{') {
+	if offset > 0 && (content[offset+index] == '{' && content[offset+index-1] == '}') {
 		return errors.New("there must be at least one char between wildcard")
 	}
 	return nil

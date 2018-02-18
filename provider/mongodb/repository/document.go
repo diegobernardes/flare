@@ -69,7 +69,7 @@ func (d *Document) Delete(_ context.Context, id string) error {
 }
 
 func (d *Document) findByIDAndRevision(
-	ctx context.Context, id string, revision *int64,
+	_ context.Context, id string, revision *int64,
 ) (*flare.Document, error) {
 	session := d.client.Session()
 	defer session.Close()
