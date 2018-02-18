@@ -566,6 +566,36 @@ func (s *Subscription) ensureIndex() error {
 		{
 			mgo.Index{
 				Background: true,
+				Unique:     false,
+				Key:        []string{"resourceID"},
+			},
+			s.collection,
+		},
+		{
+			mgo.Index{
+				Background: true,
+				Unique:     false,
+				Key:        []string{"partition", "resourceID"},
+			},
+			s.collection,
+		},
+		{
+			mgo.Index{
+				Background: true,
+				Unique:     true,
+				Key: []string{
+					"endpoint.urls.scheme",
+					"endpoint.urls.host",
+					"endpoint.urls.path",
+					"endpoint.urls.action",
+					"resourceID",
+				},
+			},
+			s.collection,
+		},
+		{
+			mgo.Index{
+				Background: true,
 				Unique:     true,
 				Key:        []string{"subscriptionID", "document.id"},
 			},
