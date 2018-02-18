@@ -416,7 +416,12 @@ func (r *Resource) ensureIndex() error {
 		EnsureIndex(mgo.Index{
 			Background: true,
 			Unique:     true,
-			Key:        []string{"addresses", "path"},
+			Key: []string{
+				"endpoint.scheme",
+				"endpoint.host",
+				"endpoint.path",
+				"endpoint.pathSegments",
+			},
 		})
 	if err != nil {
 		return errors.Wrap(err, "error during index creation")
