@@ -196,13 +196,13 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 func (s *Subscription) FindByPartition(
 	_ context.Context, resourceID, partition string,
 ) (<-chan flare.Subscription, <-chan error, error) {
-	session := s.client.Session()
-
 	chanSubscriptions := make(chan flare.Subscription)
 	chanError := make(chan error)
 
 	go func() {
+		session := s.client.Session()
 		defer session.Close()
+
 		iter := session.
 			DB(s.database).
 			C(s.collection).
@@ -211,8 +211,8 @@ func (s *Subscription) FindByPartition(
 		defer func() { _ = iter.Close() }()
 
 		for {
-			var result flare.Subscription
-			next := iter.Next(&result)
+			rawResult := &subscriptionEntity{}
+			next := iter.Next(rawResult)
 			if !next {
 				if iter.Timeout() {
 					continue
@@ -224,8 +224,11 @@ func (s *Subscription) FindByPartition(
 				break
 			}
 
-			chanSubscriptions <- result
+			result := s.marshal(rawResult)
+			chanSubscriptions <- *result
 		}
+
+		close(chanSubscriptions)
 	}()
 
 	return chanSubscriptions, chanError, nil
@@ -267,7 +270,7 @@ func (s *Subscription) Trigger(
 	session := s.client.Session()
 	defer session.Close()
 
-	subscription := &flare.Subscription{}
+	subscription := &subscriptionEntity{}
 	err := session.
 		DB(s.database).
 		C(s.collection).
@@ -288,7 +291,7 @@ func (s *Subscription) Trigger(
 	}
 	doc.Resource = *resource
 
-	return s.triggerProcess(ctx, subscription, doc, kind, fn)
+	return s.triggerProcess(ctx, s.marshal(subscription), doc, kind, fn)
 }
 
 func (s *Subscription) loadReferenceDocument(
