@@ -30,7 +30,7 @@ type resourceRepositorier interface {
 }
 
 type resourceEntity struct {
-	ID        string                 `bson:"id"`
+	ID        string                 `bson:"_id"`
 	Endpoint  resourceEndpointEntity `bson:"endpoint"`
 	Change    resourceChangeEntity   `bson:"change"`
 	Partition map[string]int         `bson:"partitions,omitempty"`
@@ -70,7 +70,7 @@ func (r *Resource) Partitions(ctx context.Context, id string) ([]string, error) 
 	err := session.
 		DB(r.database).
 		C(r.collection).
-		Find(bson.M{"id": id}).
+		Find(bson.M{"_id": id}).
 		Select(bson.M{"partitions": 1}).
 		One(&result)
 	if err != nil {
@@ -92,7 +92,7 @@ func (r *Resource) leavePartition(ctx context.Context, id, partition string) err
 	err := session.
 		DB(r.database).
 		C(r.collection).
-		Update(bson.M{"id": id}, bson.M{"$inc": bson.M{fmt.Sprintf("partitions.%s", partition): -1}})
+		Update(bson.M{"_id": id}, bson.M{"$inc": bson.M{fmt.Sprintf("partitions.%s", partition): -1}})
 	if err != nil {
 		return errors.Wrap(err, "error during leave partition")
 	}
@@ -122,7 +122,7 @@ func (r *Resource) joinPartition(ctx context.Context, id string) (string, error)
 	err = session.
 		DB(r.database).
 		C(r.collection).
-		Update(bson.M{"id": id}, bson.M{"$inc": bson.M{fmt.Sprintf("partitions.%s", partition): 1}})
+		Update(bson.M{"_id": id}, bson.M{"$inc": bson.M{fmt.Sprintf("partitions.%s", partition): 1}})
 	if err != nil {
 		return "", errors.Wrap(err, "error during join partition")
 	}
@@ -272,7 +272,7 @@ func (r *Resource) findByID(_ context.Context, id string) (*resourceEntity, erro
 	defer session.Close()
 
 	result := &resourceEntity{}
-	if err := session.DB(r.database).C(r.collection).Find(bson.M{"id": id}).One(result); err != nil {
+	if err := session.DB(r.database).C(r.collection).Find(bson.M{"_id": id}).One(result); err != nil {
 		if err == mgo.ErrNotFound {
 			return nil, &errMemory{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
 		}
@@ -349,7 +349,7 @@ func (r *Resource) existsResourceByID(id string) (bool, error) {
 	session := r.client.Session()
 	defer session.Close()
 
-	count, err := session.DB(r.database).C(r.collection).Find(bson.M{"id": id}).Count()
+	count, err := session.DB(r.database).C(r.collection).Find(bson.M{"_id": id}).Count()
 	if err != nil {
 		return false, err
 	}
@@ -361,7 +361,7 @@ func (r *Resource) Delete(_ context.Context, id string) error {
 	session := r.client.Session()
 	defer session.Close()
 
-	if err := session.DB(r.database).C(r.collection).Remove(bson.M{"id": id}); err != nil {
+	if err := session.DB(r.database).C(r.collection).Remove(bson.M{"_id": id}); err != nil {
 		if err == mgo.ErrNotFound {
 			return &errMemory{message: fmt.Sprintf("resource '%s' not found", id), notFound: true}
 		}

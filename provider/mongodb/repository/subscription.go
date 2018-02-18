@@ -21,7 +21,7 @@ import (
 )
 
 type subscriptionEntity struct {
-	ID         string                     `bson:"id"`
+	ID         string                     `bson:"_id"`
 	ResourceID string                     `bson:"resourceID"`
 	Endpoint   subscriptionEndpointEntity `bson:"endpoint"`
 	Delivery   subscriptionDeliveryEntity `bson:"delivery"`
@@ -123,7 +123,7 @@ func (s *Subscription) FindByID(
 	defer session.Close()
 
 	result := &subscriptionEntity{}
-	err := session.DB(s.database).C(s.collection).Find(bson.M{"id": id}).One(result)
+	err := session.DB(s.database).C(s.collection).Find(bson.M{"_id": id}).One(result)
 	if err == mgo.ErrNotFound {
 		return nil, &errMemory{message: fmt.Sprintf(
 			"subscription '%s' at resource '%s' not found", id, resourceId,
@@ -170,7 +170,7 @@ func (s *Subscription) Create(ctx context.Context, subscription *flare.Subscript
 	err := session.DB(s.database).C(s.collection).Find(bson.M{
 		"resourceID": subscription.Resource.ID,
 		"$or":        queryEndpoint,
-	}).Select(bson.M{"id": 1}).One(sub)
+	}).Select(bson.M{"_id": 1}).One(sub)
 	if err == nil {
 		return &errMemory{
 			message:       fmt.Sprintf("already has a subscription '%s' with this endpoint", sub.ID),
@@ -245,7 +245,7 @@ func (s *Subscription) Delete(ctx context.Context, resourceId, id string) error 
 	}
 
 	c := session.DB(s.database).C(s.collection)
-	if err = c.Remove(bson.M{"id": id, "resourceID": resourceId}); err != nil {
+	if err = c.Remove(bson.M{"_id": id, "resourceID": resourceId}); err != nil {
 		if err == mgo.ErrNotFound {
 			return &errMemory{message: fmt.Sprintf(
 				"subscription '%s' at resource '%s' not found", id, resourceId,
@@ -274,7 +274,7 @@ func (s *Subscription) Trigger(
 	err := session.
 		DB(s.database).
 		C(s.collection).
-		Find(bson.M{"resourceID": doc.Resource.ID, "id": sub.ID}).
+		Find(bson.M{"resourceID": doc.Resource.ID, "_id": sub.ID}).
 		One(subscription)
 	if err != nil {
 		return errors.Wrap(err, "error while subscription search")
@@ -559,7 +559,7 @@ func (s *Subscription) ensureIndex() error {
 			mgo.Index{
 				Background: true,
 				Unique:     true,
-				Key:        []string{"id", "resourceID"},
+				Key:        []string{"_id", "resourceID"},
 			},
 			s.collection,
 		},
