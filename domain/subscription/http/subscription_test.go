@@ -334,3 +334,81 @@ func TestSubscriptionCreateValidData(t *testing.T) {
 		})
 	})
 }
+
+func TestSubscriptionValidEndpointURLPresence(t *testing.T) {
+	Convey("Feature: Check if the endpoint has a url", t, func() {
+		Convey("Given a list of valid parameters", func() {
+			tests := []subscriptionCreate{
+				{
+					Endpoint: subscriptionCreateEndpoint{
+						URL: "http://flare.com/users/{*}",
+					},
+				},
+				{
+					Endpoint: subscriptionCreateEndpoint{
+						URL: "http://flare.com/users/{*}",
+						Action: map[string]subscriptionCreateEndpoint{
+							flare.SubscriptionTriggerCreate: {
+								URL: "http://flare.com/users/{*}/create",
+							},
+						},
+					},
+				},
+				{
+					Endpoint: subscriptionCreateEndpoint{
+						Action: map[string]subscriptionCreateEndpoint{
+							flare.SubscriptionTriggerCreate: {
+								URL: "http://flare.com/users/{*}/create",
+							},
+							flare.SubscriptionTriggerUpdate: {
+								URL: "http://flare.com/users/{*}.update",
+							},
+							flare.SubscriptionTriggerDelete: {
+								URL: "http://flare.com/users/{*}/delete",
+							},
+						},
+					},
+				},
+			}
+
+			Convey("Should not return a error", func() {
+				for _, tt := range tests {
+					So(tt.validEndpointURLPresence(), ShouldBeNil)
+				}
+			})
+		})
+	})
+
+	Convey("Given a list of invalid parameters", t, func() {
+		tests := []subscriptionCreate{
+			{},
+			{
+				Endpoint: subscriptionCreateEndpoint{
+					Action: map[string]subscriptionCreateEndpoint{
+						flare.SubscriptionTriggerCreate: {
+							URL: "http://flare.com/users/{*}/create",
+						},
+					},
+				},
+			},
+			{
+				Endpoint: subscriptionCreateEndpoint{
+					Action: map[string]subscriptionCreateEndpoint{
+						flare.SubscriptionTriggerCreate: {
+							URL: "http://flare.com/users/{*}/create",
+						},
+						flare.SubscriptionTriggerUpdate: {
+							URL: "http://flare.com/users/{*}.update",
+						},
+					},
+				},
+			},
+		}
+
+		Convey("Should return a error", func() {
+			for _, tt := range tests {
+				So(tt.validEndpointURLPresence(), ShouldNotBeNil)
+			}
+		})
+	})
+}

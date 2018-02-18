@@ -203,18 +203,8 @@ func (s *subscriptionCreate) normalize() {
 }
 
 func (s *subscriptionCreate) validEndpointURL(resource *flare.Resource) error {
-	var missingURL string
-	for key, action := range s.Endpoint.Action {
-		if action.URL == "" {
-			missingURL = key
-			break
-		}
-	}
-
-	if s.Endpoint.URL == "" && missingURL != "" {
-		return fmt.Errorf(
-			"'endpoint.url' not found while the 'endpoint.actions.%s.url' is not present", missingURL,
-		)
+	if err := s.validEndpointURLPresence(); err != nil {
+		return err
 	}
 
 	if err := s.validEndpointURLWildcard(resource, s.Endpoint.URL, ""); err != nil {
@@ -225,6 +215,38 @@ func (s *subscriptionCreate) validEndpointURL(resource *flare.Resource) error {
 		if err := s.validEndpointURLWildcard(resource, endpoint.URL, action); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (s *subscriptionCreate) validEndpointURLPresence() error {
+	actions := []string{
+		flare.SubscriptionTriggerCreate,
+		flare.SubscriptionTriggerUpdate,
+		flare.SubscriptionTriggerDelete,
+	}
+
+	var missingURL string
+	for _, action := range actions {
+		endpoint, ok := s.Endpoint.Action[action]
+		if !ok {
+			missingURL = action
+			break
+		}
+
+		if endpoint.URL == "" {
+			missingURL = action
+			break
+		}
+	}
+
+	if s.Endpoint.URL == "" && len(s.Endpoint.Action) == 0 {
+		return errors.New("'endpoint.url' not found")
+	} else if s.Endpoint.URL == "" && missingURL != "" {
+		return fmt.Errorf(
+			"'endpoint.url' not found while the 'endpoint.actions.%s.url' is not present", missingURL,
+		)
 	}
 
 	return nil
