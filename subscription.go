@@ -11,6 +11,20 @@ import (
 	"time"
 )
 
+// All kinds of actions a subscription trigger has.
+const (
+	SubscriptionTriggerCreate = "create"
+	SubscriptionTriggerUpdate = "update"
+	SubscriptionTriggerDelete = "delete"
+)
+
+// All kinds of retry algorithms.
+const (
+	SubscriptionDeliveryRetryProgressionLinear     = "linear"
+	SubscriptionDeliveryRetryProgressionArithmetic = "arithmetic"
+	SubscriptionDeliveryRetryProgressionGeometric  = "geometric"
+)
+
 // Subscription has all the information needed to notify the clients from changes on documents.
 type Subscription struct {
 	ID        string
@@ -42,14 +56,22 @@ type SubscriptionEndpoint struct {
 type SubscriptionDelivery struct {
 	Success []int
 	Discard []int
+	Retry   SubscriptionDeliveryRetry
 }
 
-// All kinds of actions a subscription trigger has.
-const (
-	SubscriptionTriggerCreate = "create"
-	SubscriptionTriggerUpdate = "update"
-	SubscriptionTriggerDelete = "delete"
-)
+// SubscriptionDeliveryRetry is the policy that controls the retries in case of a error during
+// subscription trigger.
+type SubscriptionDeliveryRetry struct {
+	Interval time.Duration
+	TTL      time.Duration
+	Quantity int
+
+	// The default progression is linear.
+	Progression string
+
+	// If progression is using other algorihtm then linear, this field is required.
+	Ratio float64
+}
 
 // SubscriptionRepositorier is used to interact with the subscription data storage.
 type SubscriptionRepositorier interface {

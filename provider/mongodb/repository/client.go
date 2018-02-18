@@ -15,12 +15,12 @@ import (
 
 // Client that implements the repository interface.
 type Client struct {
-	base            *mongodb.Client
-	resource        Resource
-	resourceOptions []func(*Resource)
-
-	subscription Subscription
-	document     Document
+	base                *mongodb.Client
+	resource            Resource
+	resourceOptions     []func(*Resource)
+	subscription        Subscription
+	subscriptionTrigger subscriptionTrigger
+	document            Document
 }
 
 // Resource return a resource repository.
@@ -73,9 +73,11 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 	c.resource.subscriptionRepository = &c.subscription
 	c.subscription.resourceRepository = &c.resource
 	c.subscription.documentRepository = &c.document
+	c.subscription.subscriptionTriggerRepository = &c.subscriptionTrigger
 	c.resource.client = c.base
 	c.subscription.client = c.base
 	c.document.client = c.base
+	c.subscriptionTrigger.client = c.base
 
 	if err := c.resource.init(c.resourceOptions...); err != nil {
 		return nil, errors.Wrap(err, "error during resource repository initialization")
@@ -87,6 +89,10 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 
 	if err := c.document.init(); err != nil {
 		return nil, errors.Wrap(err, "error during document repository initialization")
+	}
+
+	if err := c.subscriptionTrigger.init(); err != nil {
+		return nil, errors.Wrap(err, "error during subscription trigger repository initialization")
 	}
 
 	return c, nil

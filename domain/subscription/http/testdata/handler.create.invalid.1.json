@@ -1,6 +1,6 @@
 {
   "error": {
     "title": "error during body parse",
-    "detail": "EOF"
+    "detail": "error during body unmarshal: EOF"
   }
 }

@@ -14,7 +14,10 @@
     ],
     "discard": [
       500
-    ]
-  },
-  "skipEnvelope": true
+    ],
+    "retry": {
+      "interval": "200ms",
+      "progression": "linear"
+    }
+  }
 }

@@ -15,7 +15,11 @@
       ],
       "success": [
         200
-      ]
+      ],
+      "retry": {
+        "interval": "200ms",
+        "progression": "linear"
+      }
     },
     "createdAt": "2009-11-10T23:00:00Z",
     "content": {

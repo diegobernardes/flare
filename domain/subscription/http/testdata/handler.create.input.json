@@ -9,7 +9,10 @@
     ],
     "discard": [
       500
-    ]
+    ],
+    "retry": {
+      "interval": "1s"
+    }
   },
   "resource": {
     "id": "123"

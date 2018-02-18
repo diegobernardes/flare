@@ -168,6 +168,13 @@ func SubscriptionLoadSliceByteSubscription(content []byte) func(*Subscription) {
 			Delivery struct {
 				Success []int `json:"success"`
 				Discard []int `json:"discard"`
+				Retry   struct {
+					Interval    string
+					TTL         string
+					Quantity    int
+					Progression string
+					Ratio       float64
+				} `json:"retry"`
 			} `json:"delivery"`
 			Resource struct {
 				Id string `json:"id"`
@@ -188,6 +195,26 @@ func SubscriptionLoadSliceByteSubscription(content []byte) func(*Subscription) {
 				)
 			}
 
+			retry := flare.SubscriptionDeliveryRetry{
+				Progression: rawSubscription.Delivery.Retry.Progression,
+				Quantity:    rawSubscription.Delivery.Retry.Quantity,
+				Ratio:       rawSubscription.Delivery.Retry.Ratio,
+			}
+
+			if rawSubscription.Delivery.Retry.Interval != "" {
+				retry.Interval, err = time.ParseDuration(rawSubscription.Delivery.Retry.Interval)
+				if err != nil {
+					panic(err)
+				}
+			}
+
+			if rawSubscription.Delivery.Retry.TTL != "" {
+				retry.TTL, err = time.ParseDuration(rawSubscription.Delivery.Retry.TTL)
+				if err != nil {
+					panic(err)
+				}
+			}
+
 			err = s.Create(context.Background(), &flare.Subscription{
 				ID:        rawSubscription.Id,
 				CreatedAt: rawSubscription.CreatedAt,
@@ -195,6 +222,7 @@ func SubscriptionLoadSliceByteSubscription(content []byte) func(*Subscription) {
 				Delivery: flare.SubscriptionDelivery{
 					Discard: rawSubscription.Delivery.Discard,
 					Success: rawSubscription.Delivery.Success,
+					Retry:   retry,
 				},
 				Endpoint: flare.SubscriptionEndpoint{
 					URL:     uriParsed,

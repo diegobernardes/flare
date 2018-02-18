@@ -1,6 +1,6 @@
 {
   "error": {
-    "title": "error during body parse",
-    "detail": "error during content unescape: error during endpoint.url unescape: invalid URL escape \"%zz\""
+    "detail": "error during subscription create delivery endpoint unescape: error during endpoint.url unescape: invalid URL escape \"%zz\"",
+    "title": "error during body parse"
   }
 }

@@ -14,6 +14,10 @@
     ],
     "discard": [
       500
-    ]
+    ],
+    "retry": {
+      "interval": "200ms",
+      "progression": "linear"
+    }
   }
 }

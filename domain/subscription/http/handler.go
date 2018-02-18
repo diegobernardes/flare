@@ -5,10 +5,7 @@
 package http
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
-	"strings"
 
 	"github.com/pkg/errors"
 
@@ -47,8 +44,8 @@ func (h *Handler) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writer.Response(w, &response{
-		Subscriptions: transformSubscriptions(subs),
-		Pagination:    transformPagination(subsPag),
+		Subscriptions: unmarshalSubscriptions(subs),
+		Pagination:    unmarshalPagination(subsPag),
 	}, http.StatusOK, nil)
 }
 
@@ -67,7 +64,7 @@ func (h *Handler) Show(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.writer.Response(w, transformSubscription(subs), http.StatusOK, nil)
+	h.writer.Response(w, unmarshalSubscription(subs), http.StatusOK, nil)
 }
 
 // Create receive the request to create a subscription.
@@ -83,13 +80,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	content, err := h.parseSubscriptionCreateAndValidate(r.Body, resource)
-	if err != nil {
+	var sc subscriptionCreate
+	if err = sc.parse(r.Body); err != nil {
 		h.writer.Error(w, "error during body parse", err, http.StatusBadRequest)
 		return
 	}
 
-	result, err := content.toFlareSubscription()
+	if err = sc.valid(resource); err != nil {
+		h.writer.Error(w, "error during subscription create validation", err, http.StatusBadRequest)
+		return
+	}
+
+	result, err := sc.marshal()
 	if err != nil {
 		h.writer.Error(w, "invalid subscription", err, http.StatusBadRequest)
 		return
@@ -108,7 +110,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	header := make(http.Header)
 	header.Set("Location", h.getSubscriptionURI(result.Resource.ID, result.ID))
-	resp := &response{Subscription: transformSubscription(result)}
+	resp := &response{Subscription: unmarshalSubscription(result)}
 	h.writer.Response(w, resp, http.StatusCreated, header)
 }
 
@@ -126,37 +128,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.writer.Response(w, nil, http.StatusNoContent, nil)
-}
-
-func (h *Handler) parseSubscriptionCreateAndValidate(
-	body io.Reader,
-	resource *flare.Resource,
-) (*subscriptionCreate, error) {
-	var (
-		d       = json.NewDecoder(body)
-		content = &subscriptionCreate{}
-	)
-
-	if err := d.Decode(content); err != nil {
-		return nil, err
-	}
-
-	if err := content.unescape(); err != nil {
-		return nil, errors.Wrap(err, "error during content unescape")
-	}
-
-	content.Endpoint.Method = strings.ToUpper(content.Endpoint.Method)
-	for action, endpoint := range content.Endpoint.Action {
-		endpoint.Method = strings.ToUpper(endpoint.Method)
-		content.Endpoint.Action[action] = endpoint
-	}
-
-	if err := content.valid(resource); err != nil {
-		return nil, errors.Wrap(err, "invalid body content")
-	}
-	content.normalize()
-
-	return content, nil
 }
 
 // NewHandler initialize the service to handle HTTP Requests.

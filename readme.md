@@ -1,3 +1,40 @@
+durante a verificacao do cara.
+tem que verificar se ele ja tem essa atualizacao ou algo mais nvo, se tiver, cancelar a merda toda.
+
+500×(10^1.1)
+intervalo * ( retry ^ ratio ) (pg)
+
+
+intervalo + ( retry - 1) * ratio
+
+
+
+fazer o parse melhor e colocar os valores default!
+colocar testes tb.
+agora a melhor parte, fazer a marcacao....
+
+
+esse pr resolve esses 2 problemas
+https://github.com/diegobernardes/flare/issues/134
+https://github.com/diegobernardes/flare/issues/92
+
+
+
+incrementar os contadores corretamente agora!
+tipo, se der erro, estiver no delay, etc..., incrementar que tentou
+se conseguir, tem que zerar o retry.
+se por acaso nao achar o subscription e o document, ao inves de dar erro direto, limpar a base, mandar um delete no subscription trigger para caso tenha algo la.
+
+definir os indices de consulta do subscription trigger.
+
+
+modificar o queue para receber mais informacoes, tipo, podemos retornar um erro com um delay dentro.
+entao, a mensagem na fila tem que sofrer um delay na prox entrega. no sqs vamos gerar outra mensagem na fila e deletar a antiga.
+
+
+
+o subscription e o resource, que tme listagem, tem que ordenar por createdAt.
+
 # <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>

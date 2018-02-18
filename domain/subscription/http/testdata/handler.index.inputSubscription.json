@@ -16,7 +16,11 @@
       ],
       "discard": [
         500
-      ]
+      ],
+      "retry": {
+        "interval": "100ms",
+        "progression": "linear"
+      }
     },
     "resource": {
       "id": "123"
@@ -39,7 +43,11 @@
       ],
       "discard": [
         500
-      ]
+      ],
+      "retry": {
+        "interval": "200ms",
+        "progression": "linear"
+      }
     },
     "resource": {
       "id": "123"
@@ -62,7 +70,11 @@
       ],
       "discard": [
         500
-      ]
+      ],
+      "retry": {
+        "interval": "300ms",
+        "progression": "linear"
+      }
     },
     "resource": {
       "id": "123"

@@ -5,6 +5,7 @@
 package http
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -64,6 +65,10 @@ func TestResponseMarshalJSON(t *testing.T) {
 							Delivery: flare.SubscriptionDelivery{
 								Success: []int{200},
 								Discard: []int{500},
+								Retry: flare.SubscriptionDeliveryRetry{
+									Interval:    200 * time.Millisecond,
+									Progression: flare.SubscriptionDeliveryRetryProgressionLinear,
+								},
 							},
 							CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 						},
@@ -84,6 +89,10 @@ func TestResponseMarshalJSON(t *testing.T) {
 								Delivery: flare.SubscriptionDelivery{
 									Success: []int{200},
 									Discard: []int{500},
+									Retry: flare.SubscriptionDeliveryRetry{
+										Interval:    200 * time.Millisecond,
+										Progression: flare.SubscriptionDeliveryRetryProgressionLinear,
+									},
 								},
 								CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							},
@@ -97,6 +106,10 @@ func TestResponseMarshalJSON(t *testing.T) {
 								Delivery: flare.SubscriptionDelivery{
 									Success: []int{200},
 									Discard: []int{500},
+									Retry: flare.SubscriptionDeliveryRetry{
+										Interval:    200 * time.Millisecond,
+										Progression: flare.SubscriptionDeliveryRetryProgressionLinear,
+									},
 								},
 								CreatedAt: time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC),
 							},
@@ -136,7 +149,7 @@ func TestSubscriptionCreateValid(t *testing.T) {
 			Convey("Should be valid", func() {
 				for _, tt := range tests {
 					var content subscriptionCreate
-					err := json.Unmarshal([]byte(tt), &content)
+					err := content.parse(bytes.NewBuffer(tt))
 					So(err, ShouldBeNil)
 
 					err = content.valid(&flare.Resource{})
@@ -259,7 +272,7 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 					err := json.Unmarshal([]byte(tt.input), &content)
 					So(err, ShouldBeNil)
 
-					result, err := content.toFlareSubscription()
+					result, err := content.marshal()
 					So(err, ShouldBeNil)
 					result.ID = ""
 
@@ -285,7 +298,7 @@ func TestSubscriptionCreateToFlareSubscription(t *testing.T) {
 					err := json.Unmarshal([]byte(tt.input), &content)
 					So(err, ShouldBeNil)
 
-					_, err = content.toFlareSubscription()
+					_, err = content.marshal()
 					So(err, ShouldNotBeNil)
 				}
 			})

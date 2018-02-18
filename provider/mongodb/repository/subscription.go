@@ -40,8 +40,9 @@ type subscriptionEndpointEntity struct {
 }
 
 type subscriptionDeliveryEntity struct {
-	Success []int `bson:"success"`
-	Discard []int `bson:"discard"`
+	Success []int                           `bson:"success"`
+	Discard []int                           `bson:"discard"`
+	Retry   subscriptionDeliveryRetryEntity `bson:"retry"`
 }
 
 type subscriptionContentEntity struct {
@@ -56,14 +57,22 @@ type subscriptionURLEntity struct {
 	Action string `bson:"action,omitempty"`
 }
 
+type subscriptionDeliveryRetryEntity struct {
+	Interval    time.Duration `bson:"interval"`
+	TTL         time.Duration `bson:"ttl,omitempty"`
+	Quantity    int           `bson:"quantity,omitempty"`
+	Progression string        `bson:"progression,omitempty"`
+	Ratio       float64       `bson:"ratio,omitempty"`
+}
+
 // Subscription implements the data layer for the subscription service.
 type Subscription struct {
-	resourceRepository resourceRepositorier
-	documentRepository flare.DocumentRepositorier
-	client             *mongodb.Client
-	database           string
-	collection         string
-	collectionTrigger  string
+	resourceRepository            resourceRepositorier
+	documentRepository            flare.DocumentRepositorier
+	subscriptionTriggerRepository *subscriptionTrigger
+	client                        *mongodb.Client
+	database                      string
+	collection                    string
 }
 
 // Find returns a list of subscriptions.
@@ -261,6 +270,10 @@ func (s *Subscription) Delete(ctx context.Context, resourceId, id string) error 
 }
 
 // Trigger process the update on a document.
+/*
+	sempre que tentar executar e nao conseguir, qualquer montivo, incrementar o runs.
+	se executar antes do tempo, nao incrementar, soh retornar sem fazer nada.
+*/
 func (s *Subscription) Trigger(
 	ctx context.Context,
 	kind string,
@@ -308,22 +321,14 @@ func (s *Subscription) loadReferenceDocument(
 	subs *flare.Subscription,
 	doc *flare.Document,
 ) (*flare.Document, error) {
-	content := make(map[string]interface{})
-	err := session.
-		DB(s.database).
-		C(s.collectionTrigger).
-		Find(bson.M{"subscriptionID": subs.ID, "document.id": doc.ID}).
-		One(&content)
+	revision, err := s.subscriptionTriggerRepository.revision(subs.ID, doc.ID)
 	if err != nil {
-		if err == mgo.ErrNotFound {
-			return nil, nil
-		}
-		return nil, errors.Wrap(err, "error during search")
+		return nil, err
 	}
 
 	return &flare.Document{
 		ID:       doc.ID,
-		Revision: content["document"].(map[string]interface{})["revision"].(int64),
+		Revision: (int64)(revision),
 	}, nil
 }
 
@@ -361,12 +366,8 @@ func (s *Subscription) triggerProcessDelete(
 		return errors.Wrap(err, "error during document subscription processing")
 	}
 
-	err := session.
-		DB(s.database).
-		C(s.collectionTrigger).
-		Remove(bson.M{"subscriptionID": subs.ID, "document.id": doc.ID})
-	if err != nil {
-		return errors.Wrap(err, "error during subscriptionTriggers delete")
+	if err := s.subscriptionTriggerRepository.delete(subs.ID, doc.ID); err != nil {
+		return err
 	}
 
 	return nil
@@ -377,18 +378,8 @@ func (s *Subscription) upsertSubscriptionTrigger(
 	subs *flare.Subscription,
 	doc *flare.Document,
 ) error {
-	_, err := session.
-		DB(s.database).
-		C(s.collectionTrigger).
-		Upsert(
-			bson.M{"subscriptionID": subs.ID, "document.id": doc.ID},
-			bson.M{"subscriptionID": subs.ID, "document": bson.M{
-				"id":        doc.ID,
-				"revision":  doc.Revision,
-				"updatedAt": time.Now(),
-			}},
-		)
-	if err != nil {
+
+	if err := s.subscriptionTriggerRepository.incr(doc, subs); err != nil {
 		return errors.Wrap(err, "error during update subscriptionTriggers")
 	}
 	return nil
@@ -447,6 +438,13 @@ func (s *Subscription) unmarshal(entity *flare.Subscription) subscriptionEntity 
 		Delivery: subscriptionDeliveryEntity{
 			Success: entity.Delivery.Success,
 			Discard: entity.Delivery.Discard,
+			Retry: subscriptionDeliveryRetryEntity{
+				TTL:         entity.Delivery.Retry.TTL,
+				Quantity:    entity.Delivery.Retry.Quantity,
+				Interval:    entity.Delivery.Retry.Interval,
+				Progression: entity.Delivery.Retry.Progression,
+				Ratio:       entity.Delivery.Retry.Ratio,
+			},
 		},
 		Endpoint: s.unmarshalEndpoint(entity.Endpoint),
 	}
@@ -506,6 +504,13 @@ func (s *Subscription) marshal(entity *subscriptionEntity) *flare.Subscription {
 		Delivery: flare.SubscriptionDelivery{
 			Success: entity.Delivery.Success,
 			Discard: entity.Delivery.Discard,
+			Retry: flare.SubscriptionDeliveryRetry{
+				TTL:         entity.Delivery.Retry.TTL,
+				Quantity:    entity.Delivery.Retry.Quantity,
+				Interval:    entity.Delivery.Retry.Interval,
+				Progression: entity.Delivery.Retry.Progression,
+				Ratio:       entity.Delivery.Retry.Ratio,
+			},
 		},
 		Content: flare.SubscriptionContent{
 			Document: entity.Content.Document,
@@ -601,14 +606,6 @@ func (s *Subscription) ensureIndex() error {
 			},
 			s.collection,
 		},
-		{
-			mgo.Index{
-				Background: true,
-				Unique:     true,
-				Key:        []string{"subscriptionID", "document.id"},
-			},
-			s.collectionTrigger,
-		},
 	}
 
 	for _, index := range indexes {
@@ -637,8 +634,11 @@ func (s *Subscription) init() error {
 		return errors.New("invalid document repository")
 	}
 
+	if s.subscriptionTriggerRepository == nil {
+		return errors.New("invalid subscription trigger repository")
+	}
+
 	s.collection = "subscriptions"
-	s.collectionTrigger = "subscriptionTriggers"
 	s.database = s.client.Database
 
 	return nil

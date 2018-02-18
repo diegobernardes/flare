@@ -9,7 +9,11 @@
     ],
     "discard": [
       500
-    ]
+    ],
+    "retry": {
+      "interval": "1s",
+      "progression": "linear"
+    }
   },
   "createdAt": "2009-11-10T23:00:00Z",
   "id": "456",
