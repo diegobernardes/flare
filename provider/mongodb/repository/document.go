@@ -17,6 +17,14 @@ import (
 	mongodb "github.com/diegobernardes/flare/provider/mongodb"
 )
 
+type documentEntity struct {
+	ID         string                 `bson:"id"`
+	Revision   int64                  `bson:"revision"`
+	ResourceID string                 `bson:"resourceID"`
+	Content    map[string]interface{} `bson:"content"`
+	UpdatedAt  time.Time              `bson:"updatedAt"`
+}
+
 // Document implements the data layer for the document service.
 type Document struct {
 	client     *mongodb.Client
@@ -71,7 +79,7 @@ func (d *Document) findByIDAndRevision(
 		query["revision"] = *revision
 	}
 
-	rawResult := make(map[string]interface{})
+	var rawResult documentEntity
 	err := session.
 		DB(d.database).
 		C(d.collection).
@@ -84,57 +92,27 @@ func (d *Document) findByIDAndRevision(
 		}
 		return nil, errors.Wrap(err, fmt.Sprintf("error during document '%s' find", id))
 	}
-
-	result, err := d.unmarshal(rawResult)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during document unmarshal")
-	}
-	return result, nil
+	return d.unmarshal(rawResult), nil
 }
 
-func (d *Document) marshal(document *flare.Document) map[string]interface{} {
-	return map[string]interface{}{
-		"id":         document.ID,
-		"revision":   document.Revision,
-		"resourceID": document.Resource.ID,
-		"updatedAt":  document.UpdatedAt,
-		"content":    document.Content,
+func (d *Document) marshal(document *flare.Document) documentEntity {
+	return documentEntity{
+		ID:         document.ID,
+		Revision:   document.Revision,
+		ResourceID: document.Resource.ID,
+		Content:    document.Content,
+		UpdatedAt:  document.UpdatedAt,
 	}
 }
 
-func (d *Document) unmarshal(content map[string]interface{}) (*flare.Document, error) {
-	id, ok := content["id"].(string)
-	if !ok {
-		return nil, errors.New("missing id")
-	}
-
-	revision, ok := content["revision"].(int64)
-	if !ok {
-		return nil, errors.New("missing revision")
-	}
-
-	resourceID, ok := content["resourceID"].(string)
-	if !ok {
-		return nil, errors.New("missing resourceID")
-	}
-
-	updatedAt, ok := content["updatedAt"].(time.Time)
-	if !ok {
-		return nil, errors.New("missing updatedAt")
-	}
-
-	docContent, ok := content["content"].(map[string]interface{})
-	if !ok {
-		return nil, errors.New("missing content")
-	}
-
+func (d *Document) unmarshal(rawResult documentEntity) *flare.Document {
 	return &flare.Document{
-		ID:        id,
-		Revision:  revision,
-		Resource:  flare.Resource{ID: resourceID},
-		UpdatedAt: updatedAt,
-		Content:   docContent,
-	}, nil
+		ID:        rawResult.ID,
+		Revision:  rawResult.Revision,
+		Resource:  flare.Resource{ID: rawResult.ResourceID},
+		Content:   rawResult.Content,
+		UpdatedAt: rawResult.UpdatedAt,
+	}
 }
 
 func (d *Document) ensureIndex() error {
