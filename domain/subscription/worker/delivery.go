@@ -278,6 +278,11 @@ func (d *Delivery) buildRequestHTTP(
 	req = req.WithContext(ctx)
 
 	req.Header = headers
+
+	if req.Header == nil {
+		req.Header = make(http.Header)
+	}
+
 	contentType := req.Header.Get("content-type")
 	if contentType == "" && len(content) > 0 {
 		req.Header.Add("Content-Type", "application/json")
