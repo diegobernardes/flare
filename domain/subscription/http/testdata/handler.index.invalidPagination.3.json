@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "invalid pagination",
-    "detail": "invalid limit '-1'"
-  }
-}

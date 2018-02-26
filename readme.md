@@ -1,73 +1,139 @@
-# <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
-<a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
-<a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>
-<a href="https://godoc.org/github.com/diegobernardes/flare"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
+---
+GET    /consumers
+GET    /consumers/:id
+PUT    /consumers/:id
+DELETE /consumers/:id
+POST   /consumers
 
-Flare is a service that listen to changes on HTTP endpoints and notify subscripted clients about the changes. It help reduce the pressure on APIs by avoiding the clients to do pooling requests to search for new/changed content and the need of the APIs to develop workers to notify the clients about document changes.
+GET    /consumers/:consumer_id/producers
+GET    /consumers/:consumer_id/producers/:id
+PUT    /consumers/:consumer_id/producers/:id
+DELETE /consumers/:consumer_id/producers/:id
+POST   /consumers/:consumer_id/producers
 
-There is no need to the the service know anything about who is consuming it's updates, this is abstracted and lead to a simpler design on APIs. Problems like scaling the workers to notify the changes if the number of subscriptions increase, need to control the delivery success of the messages, include/update/delete the clients on your subscription list and so on are just solved.
+---
+stats vamos usar o que? prometheus? redis?
+de alguma forma queria dizer o status dos consumers, tipo, qual node está prcessando.
+quants req por seguindo ou mensagem por segundo, etc.. etc..
 
-## How to run
-```bash
-go get github.com/diegobernardes/flare/services/flare/cmd
-cd github.com/diegobernardes/flare/services/flare/cmd
-go run flare.go start
-```
+a mesma coisa nos producers, queria fazer a mesma coisa.
+vamos fazer isso mais para frente.
 
-## How it works
-Flare has 3 basic entities: `Resource`, `Subscription` and `Document`. The origin of content is responsible for `Resource` and `Document` entities and the clients are responsible for `Subscription`.
+---
+o que queremos?
 
-### Resource
-<p align="center">
-	<img src="misc/doc/resource.jpg">
-<p>
+- election
+quero eleger um master dentro dos nós.
 
-Resource represents the entity you want to track. It cannot be updated, only deleted, and to delete, first you need to remove all the associated subscriptions.
+- quero poder lockar chaves
+e caso o nó responsável saia, quero que o lock seja liberado.
+como que eu sei o que um nó esta processando? fazendo um range query e mantendo um estado no master.
+
+---
+oq podemos trocar? tipo, o banco e a fila é facil, o etcd, vai ser absurdamente dificil.
+
+---
+- registra no cluster (ok)
+  - processar consumers
+  - eleicao master (ok)
+    - dispatch de consumers
+
+se o primeiro falhar, todos embaixo tem que ser reiniciados.
+
+---
+aceitar o 'with replication' na configuracao.
+
+---
+pegar o status de um consumer.
+outra coisa eh, poder pausar um consumer.
+
+---
+se inspirar um pouco nos endpoints de cluster do elasticsearch: https://www.elastic.co/guide/en/elasticsearch/reference/current/cluster.html
+
+---
+para o vgo, fazer um linter que verifica o codigo, compara com a versao anterior e verifica se precisa fazer um bump na versao.
+nada impede do cara quebrar dentro da propria versao, massss, ai ja eh outra historia.
+
+---
+{
+  version: "",
+  startTimeEpochSecs: ""
+  currentTimeEpochSecs: "",
+  uptime: "131232seconds"
+}
+
+version: <major>.<minor>.<commit#>.<git sha>.<date>.<time> 
+how this play nice with semver?
+
+/status
+exibir quantidade de servidores conectados, status detalhados por servidor.
+exibir quantidade de consumers sendo processados.
+
+gerar as metricas no newrelic, prometheus, infrluxdb, etc...
+https://github.com/go-kit/kit/tree/master/metrics
+mas como fazer o error handling!? tipo do new relic, nesse caso teriamos que ter outra coisa.
+
+---
+profile em producao!
+
+---
+adicionar suporte para notificacao, qnd um consumer for criado, vamos notificar diretamente o master do cara, ele vai ver quem vai calcular e em seguida
+vai notificar diretamente a pessoa resposnavel.
+
+---
+olhar o https://github.com/victorcoder/dkron
+entender as configs, como o serf funciona, etc...
+
+olhar tb os concorrentes dele.
+
+---
+em tese eu teria que varrer todo o codigo de tempos em tempos procurando por coisas que eu ja nao preciso processar.
+tipo nos que sairam, etc....
+pensar em um event log da vida.
+
+o node de x em x tempos vai ter que varrer todos os consumers e pegar as ids.
+se por acaso achar algo que nao esteja no estado, tem que mandar deletar.
+
+isso precisa rodar pelo menos 1x qnd o cara inicia como master.
+mas como fazer isso!? acho que nao vai ter como sem quebrar a abstracao...
+
+como podemos monitorar os dados no cassandra?
+
+criar outra tabela com consumer_id e node_id, o consumer qnd for rodar, gerar um lock mesmo assim.
 
 
-| Field  | Description |
-| ------------- | ------------- |
-| `addresses` | All the addresses a resource can have. Very useful when the same API is exposed to the internet and intranet with different hosts. |
-| `path` | Is the actual document that gonna be tracked. `wildcards` are required to track the collection and they can be later used at subscriptions. |
-| `change.field` | The field that is used to track changes on a document. It can be a string containing a date or a auto incremented integer. |
-| `change.format` | If the field is a date, this fields has the format to parse the document date. More info about the format [here](https://golang.org/pkg/time/#pkg-constants). |
+de x em x tempos, um tempo maior. 
+varrer os consumers e depois varrer os nodes e ver quem nao ta e falar que saiu.
 
 
-### Subscription
-<p align="center">
-	<img src="misc/doc/subscription.jpg">
-<p>
+o node no cassandra, de tempos em tempos vai varrer os leases e vai varrer tb os consumers.
+dai ele vai pegar as ids e ver quem mudou pra passar pra frente.
+espero que isso nao seja lento no futuro qnd tiver muitos consumers.
+podemos colocar o discovery para uns 5 minutos, algo assim. nao precisa ser instantaneo.
+
+---
+ainda esta quebrada a logica. posso avisar que um node saiu, ok, isso vai funcionar.
+mas nao vou garantir que os consumers vao ser associados para o cara certo.
+
+posso gerar um log.
+os nós consomem os logs, o master limpa os logs. mas qnd limpar os logs?
+
+podemos criar uma tabela de associacao mesmo.
 
 
-Subscription is the responsible to notify the clients when a document from a resource changes.
+posso guardar junto com o lease. se o nó sair, automaticamente ele vai liberar o lock.
 
-| Field  | Description |
-| ------------- | ------------- |
-| `endpoint.url` | The address of the client that gonna receive the notification. |
-| `endpoint.method` | The method used on the notification request. |
-| `endpoint.headers` | A list of headers to sent within the request. |
-| `delivery.success` | List of success status code. This is used to mark the notification as delivered for the respective client. |
-| `delivery.discard` | List of status code to discard the notification. |
-| `sendDocument` | Send the whole document body as it was received. Default value is false. |
-| `skipEnvelope` | The trigger send a envelope with some useful informations. Default value is false. |
-| `data` | Only sent if the `skipEnvelope` is false. Can be used to provide aditional information to the client that gonna receive the notification. It also can interpolate wildcards used at resource path definition. |
 
-### Document
-<p align="center">
-	<img src="misc/doc/document-create.jpg">
-<p>
+acho que vou fazer o ring mesmo, dai todo mundo fica rodando procurando oq processar de x em x tempos.
 
-To update a document, a `PUT` should be done at `http://flare/documents/{endpoint}`, where the `{endpoint}` is the real document endpoint and it should match the information inserted at the resource creation. The body should contain the document.
-If the origin send the same document or older documents more then one time, the service don't gonna notify the clients again because it know the document version each client has. The notification only happens when is really needed.  
+vamos colucar os assigns de consumer para node dentro de um array.
 
-<p align="center">
-	<img src="misc/doc/document-update.jpg">
-<p>
 
-The difference from previous request is that the email has changed from `@gmail.com` to `@outlook.com` and the `updatedAt` from `08:30` to `08:35`. After this, the client receive a notifications of update.
+o cara vai se registrar.
+dps vai tentar se eleger o master.
+dps vai pegar os consumers e associar aos outros nodes.
 
-<p align="center">
-	<img src="misc/doc/document-delete.jpg">
-<p>
 
-The delete should be sent with the delete method and no body.
+
+podemos inverter, quem procura algo para processar é o node, se ele perceber que algo esta consumindo muito processo, ele pode largar o consumer.
+logo, alguem vai pegar.

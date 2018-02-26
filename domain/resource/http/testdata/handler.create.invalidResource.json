@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "invalid body content",
-    "detail": "invalid endpoint: missing host"
-  }
-}

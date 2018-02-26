@@ -1,6 +1,0 @@
-{
-  "error": {
-    "detail": "error during body unmarshal: EOF",
-    "title": "invalid body"
-  }
-}

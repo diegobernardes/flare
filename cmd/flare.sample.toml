@@ -1,0 +1,177 @@
+# --------------------------------------------------------------------------------------------------
+#   More about this configuration at: https://github.com/diegobernardes/flare/wiki/Configuration   #
+# --------------------------------------------------------------------------------------------------
+# - log.level
+#   Control the minimum log level from messages to be displayed.
+#   Possible values: "debug", "info", "warn" and "error".
+#
+# - log.output
+#   Where the logs gonna be sent.
+#   Possible values: "stdout" and "discard".
+#
+# - log.format
+#   Format of the outputed log.
+#   Possible values: "human" and "json".
+#
+[log]
+level  = "debug"
+output = "stdout"
+format = "human"
+
+# --------------------------------------------------------------------------------------------------
+# - http.server.enable
+#   Used to enable or disable the HTTP server.
+#   Possible values: true or false.
+#
+# - http.server.addr
+#   Where the HTTP server gonna listen. The value should have this format: "host:port". The host
+#   can be omited, in this case, Flare gonna bind to all available interfaces.
+#
+# - http.server.timeout
+#   The max time a request has to be processed.
+#
+[http.server]
+enable  = true
+addr    = ":8080"
+timeout = "5s"
+
+# --------------------------------------------------------------------------------------------------
+# - http.client.max-idle-connections
+#   The quantity of idle connections that are kept open.
+#
+# - http.client.max-idle-connections-per-host
+#   The quantity of idle connections per host that are kept open.
+#
+# - http.client.idle-connections-timeout
+#   The time to live of a idle connection inside the pool of idle connections. If a connection is
+#   used, this time resets.
+#
+[http.client]
+max-idle-connections          = 1000
+max-idle-connections-per-host = 100
+idle-connection-timeout       = "60s"
+
+# --------------------------------------------------------------------------------------------------
+# - pagination.default-limit
+#   The quantity of entities to be returned by default on collections.
+#
+[pagination]
+default-limit = 30
+
+# --------------------------------------------------------------------------------------------------
+# - producer.worker.enable
+#   Used to enable or disable the worker.
+#   Possible values: true or false.
+#
+# - producer.worker.{name}.timeout
+#   The time a given message has to be processed.
+#
+# - producer.worker.{name}.concurrency
+#   The quantity of goroutines to process.
+#
+# - producer.worker.{name}.concurrency-output
+#   After the worker finish the process it need to send the output to another worker. This value
+#   control the quantity of goroutines delivering the output.
+#
+[producer.worker]
+enable = true
+
+  [producer.worker.spread]
+  timeout            = "10s"
+  concurrency        = 100
+  concurrency-output = 100
+
+  [producer.worker.delivery]
+  timeout     = "10s"
+  concurrency = 1000
+
+# --------------------------------------------------------------------------------------------------
+# - election.source
+#   Possible value: "cassandra".
+#
+# - election.eligible
+#   Flag used to mark the nodes as a candidate to master.
+#   Possible values: true or false.
+#
+# - election.cassandra.ttl
+#   Control the ttl a master lease have.
+#
+# - election.cassandra.renew
+#   Control the interval the lease must be renewed to remain as master.
+#
+# - election.cassandra.delete-timeout
+#   The delete happens in background and this value set the max quantity of time it has to execute.
+#
+[election]
+source   = "cassandra"
+eligible = true
+
+  [election.cassandra]
+  ttl            = "10s"
+  renew          = "5s"
+  delete-timeout = "10s"
+
+# --------------------------------------------------------------------------------------------------
+# - registry.source
+#   Possible value: "cassandra".
+#
+# - registry.cassandra.ttl
+#   Control the ttl a master lease have.
+#
+# - registry.cassandra.renew
+#   Control the interval the lease must be renewed to remain as master.
+#
+# - registry.cassandra.delete-timeout
+#   The delete happens in background and this value set the max quantity of time it has to execute.
+#
+[registry]
+source = "cassandra"
+
+  [registry.cassandra]
+  ttl            = "10s"
+  renew          = "5s"
+  delete-timeout = "10s"
+
+# --------------------------------------------------------------------------------------------------
+# - repository.source
+#   Possible value: "cassandra".
+#
+[repository]
+source = "cassandra"
+
+# --------------------------------------------------------------------------------------------------
+# - queue.source
+#   Possible value: "sqs".
+#
+# - queue.sqs.{name}.name
+#   The SQS queue the messages gonna be delivered/consumed.
+#
+# - queue.sqs.{name}.ingress-timeout
+#   The max quantity of time to wait during a request to send the messages to SQS.
+#
+# - queue.sqs.{name}.receive-wait-time
+#   The quantity of time to wait a new message be ready to be delived.
+#
+[queue]
+source = "sqs"
+
+  [queue.sqs.producer.spread]
+  name              = "flare-producer-spread"
+  ingress-timeout   = "5s"
+  receive-wait-time = "20s"
+
+  [queue.sqs.producer.delivery]
+  name              = "flare-producer-delivery"
+  ingress-timeout   = "5s"
+  receive-wait-time = "20s"
+
+[external.aws]
+key    = ""
+secret = ""
+region = ""
+
+[external.cassandra]
+hosts    = ["127.0.0.1"]
+port     = 9042
+timeout  = "1000ms"
+keyspace = "flare"

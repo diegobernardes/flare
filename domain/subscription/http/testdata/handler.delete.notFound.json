@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "error during subscription delete",
-    "detail": "subscription '456' at resource '123', not found"
-  }
-}
