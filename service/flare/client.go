@@ -1,7 +1,3 @@
-// Copyright 2018 Diego Bernardes. All rights reserved.
-// Use of this source code is governed by a BSD-style
-// license that can be found in the LICENSE file.
-
 package flare
 
 import (
@@ -9,10 +5,10 @@ import (
 	"runtime"
 
 	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare/infra/config"
+	"github.com/diegobernardes/flare/provider/cassandra"
 )
 
 // Variables set with ldflags during compilation.
@@ -23,96 +19,85 @@ var (
 	GoVersion = runtime.Version()
 )
 
-var (
-	providerMemory  = "memory"
-	providerAWSSQS  = "aws.sqs"
-	providerMongoDB = "mongodb"
-)
-
-// Client is responsible to init Flare.
+// Client is the entrypoint to start Flare.
 type Client struct {
-	logger     log.Logger
 	config     *config.Client
-	repository *repository
-	queue      *queue
-	server     *server
-	worker     *worker
 	domain     *domain
+	provider   *provider
+	scheduler  *scheduler
+	logger     log.Logger
+	loggerInfo log.Logger
 }
 
 // Start the service.
 func (c *Client) Start() error {
-	level.Info(c.logger).Log("message", "starting service")
+	c.loggerInfo.Log("message", "starting service")
 
-	c.worker.cfg = c.config
-	c.worker.repository = c.repository
-	c.worker.queue = c.queue
-	c.worker.logger = c.logger
-	if err := c.worker.init(); err != nil {
-		return errors.Wrap(err, "error during worker initialization")
+	c.provider.cfg = c.config
+	if err := c.provider.init(); err != nil {
+		panic(err)
 	}
 
+	c.domain.provider = c.provider
 	c.domain.logger = c.logger
-	c.domain.repository = c.repository
-	c.domain.worker = c.worker
-	c.domain.cfg = c.config
 	if err := c.domain.init(); err != nil {
-		return errors.Wrap(err, "error during domain initialization")
+		panic(err)
 	}
 
-	c.server.cfg = c.config
-	c.server.logger = c.logger
-	c.server.handler.resource = c.domain.resource
-	c.server.handler.subscription = c.domain.subscription
-	c.server.handler.document = c.domain.document
-	if err := c.server.init(); err != nil {
-		return errors.Wrap(err, "error during server initialization")
+	c.scheduler.logger = c.logger
+	c.scheduler.cfg = c.config
+	c.scheduler.locker = c.provider.getCassandraSchedulerLock()
+	c.scheduler.cluster = c.provider.getCassandraSchedulerCluster()
+	c.scheduler.dispatcher = c.provider.getCassandraSchedulerDispatcher()
+	if err := c.scheduler.init(); err != nil {
+		panic(err)
 	}
 
-	level.Info(c.logger).Log("message", "service initialized")
+	s := server{}
+	s.handler.consumer = c.domain.consumer
+	s.logger = c.logger
+	s.cfg = c.config
+	if err := s.init(); err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
 // Stop the service.
 func (c *Client) Stop() error {
-	level.Info(c.logger).Log("message", "signal to close the process received")
-	level.Info(c.logger).Log("message", "closing the server")
-	if err := c.server.stop(); err != nil {
-		return errors.Wrap(err, "error during server stop")
-	}
-
-	level.Info(c.logger).Log("message", "closing the worker")
-	if err := c.worker.stop(); err != nil {
-		return errors.Wrap(err, "error during worker stop")
-	}
-
-	level.Info(c.logger).Log("message", "closing the repository")
-	if err := c.repository.stop(); err != nil {
-		return errors.Wrap(err, "error during repository stop")
-	}
-
-	level.Info(c.logger).Log("message", "bye!")
+	c.scheduler.stop()
 	return nil
 }
 
-// Setup is used to bootstrap the providers.
+// Setup is used to bootstrap the service.
 func (c *Client) Setup(ctx context.Context) error {
-	level.Info(c.logger).Log("message", "starting repository setup")
-	if err := c.repository.setup(ctx); err != nil {
-		return errors.Wrap(err, "error during repository setup")
+	cass := &cassandra.Client{
+		Hosts: []string{"127.0.0.1"},
+		Port:  9042,
+		// Timeout:       1000 * time.Millisecond,
+		Keyspace:      "flare",
+		AvoidKeyspace: true,
 	}
-	level.Info(c.logger).Log("message", "repository setup done")
 
-	level.Info(c.logger).Log("message", "starting queue setup")
-	if err := c.queue.setup(ctx); err != nil {
-		return errors.Wrap(err, "error during queue initialization")
+	if err := cass.Init(); err != nil {
+		panic(err)
 	}
-	level.Info(c.logger).Log("message", "queue setup done")
+
+	if err := cass.Setup(); err != nil {
+		panic(err)
+	}
 
 	return nil
 }
 
-func (c *Client) init() error {
+// Init is used to initialize the Client.
+func (c *Client) Init(cfg string) error {
+	c.provider = &provider{}
+	c.domain = &domain{}
+	c.scheduler = &scheduler{}
+	c.config = &config.Client{Content: cfg}
+
 	if err := c.config.Init(); err != nil {
 		return errors.Wrap(err, "error during config initialization")
 	}
@@ -120,17 +105,6 @@ func (c *Client) init() error {
 
 	if err := c.initLogger(); err != nil {
 		return errors.Wrap(err, "error during log initialization")
-	}
-
-	c.repository.cfg = c.config
-	if err := c.repository.init(); err != nil {
-		return errors.Wrap(err, "error during repository initialization")
-	}
-
-	c.queue.cfg = c.config
-	c.queue.logger = c.logger
-	if err := c.queue.init(); err != nil {
-		return errors.Wrap(err, "errors during queue initialization")
 	}
 
 	return nil
@@ -156,62 +130,34 @@ func (c *Client) loadDefaultValues() {
 	fn("http.client.max-idle-connections-per-host", 100)
 	fn("http.client.idle-connection-timeout", "60s")
 
-	fn("domain.resource.partition", 1000)
-	fn("domain.pagination.default-limit", 30)
+	fn("domain.default-limit", 30)
 
 	fn("worker.enable", true)
-	fn("worker.subscription.partition.timeout", "10s")
-	fn("worker.subscription.partition.concurrency", 10)
-	fn("worker.subscription.partition.concurrency-output", 100)
-	fn("worker.subscription.spread.timeout", "10s")
-	fn("worker.subscription.spread.concurrency", 10)
-	fn("worker.subscription.spread.concurrency-output", 100)
-	fn("worker.subscription.delivery.timeout", "10s")
-	fn("worker.subscription.delivery.concurrency", 10)
+	fn("worker.producer.spread.timeout", "10s")
+	fn("worker.producer.spread.concurrency", 100)
+	fn("worker.producer.spread.concurrency-output", 100)
+	fn("worker.producer.delivery.timeout", "10s")
+	fn("worker.producer.delivery.concurrency", 1000)
 
-	fn("provider.repository", "memory")
-	fn("provider.queue", "memory")
+	fn("node.master.eligible", true)
+	fn("node.master.election", "1m")
+	fn("node.master.exclusive", false)
+	fn("node.master.election-keep-alive", "30s")
+	fn("node.worker.register", "1m")
+	fn("node.worker.register-keep-alive", "30s")
 
-	fn("provider.aws.sqs.queue.subscription.partition.queue", "flare-subscription-partition")
-	fn("provider.aws.sqs.queue.subscription.partition.ingress.timeout", "1s")
-	fn("provider.aws.sqs.queue.subscription.partition.egress.receive-wait-time", "20s")
-	fn("provider.aws.sqs.queue.subscription.spread.queue", "flare-subscription-spread")
-	fn("provider.aws.sqs.queue.subscription.spread.ingress.timeout", "1s")
-	fn("provider.aws.sqs.queue.subscription.spread.egress.receive-wait-time", "20s")
-	fn("provider.aws.sqs.queue.subscription.delivery.queue", "flare-subscription-delivery")
-	fn("provider.aws.sqs.queue.subscription.delivery.ingress.timeout", "1s")
-	fn("provider.aws.sqs.queue.subscription.delivery.egress.receive-wait-time", "20s")
+	fn("provider.repository", "cassandra")
+	fn("provider.queue", "aws.sqs")
 
-	fn("provider.mongodb.addrs", []string{"localhost:27017"})
-	fn("provider.mongodb.database", "flare")
-	fn("provider.mongodb.pool-limit", 4096)
-	fn("provider.mongodb.timeout", "1s")
+	fn("provider.aws.sqs.producer.spread.queue", "flare-producer-spread")
+	fn("provider.aws.sqs.producer.spread.ingress.timeout", "1s")
+	fn("provider.aws.sqs.producer.spread.egress.receive-wait-time", "20s")
+	fn("provider.aws.sqs.producer.delivery.queue", "flare-producer-delivery")
+	fn("provider.aws.sqs.producer.delivery.ingress.timeout", "1s")
+	fn("provider.aws.sqs.producer.delivery.egress.receive-wait-time", "20s")
 
-}
-
-// NewClient return a initialized client.
-func NewClient(options ...func(*Client)) (*Client, error) {
-	c := &Client{
-		config:     &config.Client{},
-		repository: &repository{},
-		queue:      &queue{},
-		server:     &server{},
-		worker:     &worker{},
-		domain:     &domain{},
-	}
-
-	for _, option := range options {
-		option(c)
-	}
-
-	if err := c.init(); err != nil {
-		return nil, errors.Wrap(err, "error during client initialization")
-	}
-
-	return c, nil
-}
-
-// ClientConfig set the config on client.
-func ClientConfig(config string) func(*Client) {
-	return func(c *Client) { c.config.Content = config }
+	fn("provider.cassandra.hosts", []string{"127.0.0.1"})
+	fn("provider.cassandra.port", 9042)
+	fn("provider.cassandra.timeout", "600ms")
+	fn("provider.cassandra.keyspace", "flare")
 }

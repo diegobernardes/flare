@@ -16,9 +16,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 
-	document "github.com/diegobernardes/flare/domain/document/http"
-	resource "github.com/diegobernardes/flare/domain/resource/http"
-	subscription "github.com/diegobernardes/flare/domain/subscription/http"
+	"github.com/diegobernardes/flare/domain/consumer/api"
 	"github.com/diegobernardes/flare/infra/config"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
 	infraMiddleware "github.com/diegobernardes/flare/infra/http/middleware"
@@ -29,9 +27,7 @@ type server struct {
 	addr       string
 	httpServer http.Server
 	handler    struct {
-		resource     *resource.Handler
-		subscription *subscription.Handler
-		document     *document.Handler
+		consumer *api.Client
 	}
 	middleware struct {
 		timeout time.Duration
@@ -128,9 +124,7 @@ func (s *server) router() (http.Handler, error) {
 		s.writeResponse(w, content, http.StatusOK, nil)
 	})
 
-	r.Route("/resources", s.routerResource)
-	r.Route("/resources/{resourceID}/subscriptions", s.routerSubscription)
-	r.Route("/documents", s.routerDocument)
+	r.Route("/consumers", s.routerConsumer)
 
 	return r, nil
 }
@@ -158,24 +152,11 @@ func (s *server) initMiddleware(r chi.Router) error {
 	return nil
 }
 
-func (s *server) routerResource(r chi.Router) {
-	r.Get("/", s.handler.resource.Index)
-	r.Post("/", s.handler.resource.Create)
-	r.Get("/{id}", s.handler.resource.Show)
-	r.Delete("/{id}", s.handler.resource.Delete)
-}
-
-func (s *server) routerSubscription(r chi.Router) {
-	r.Get("/", s.handler.subscription.Index)
-	r.Post("/", s.handler.subscription.Create)
-	r.Get("/{id}", s.handler.subscription.Show)
-	r.Delete("/{id}", s.handler.subscription.Delete)
-}
-
-func (s *server) routerDocument(r chi.Router) {
-	r.Get("/*", s.handler.document.Show)
-	r.Put("/*", s.handler.document.Update)
-	r.Delete("/*", s.handler.document.Delete)
+func (s *server) routerConsumer(r chi.Router) {
+	r.Get("/", s.handler.consumer.Index)
+	r.Post("/", s.handler.consumer.Create)
+	r.Get("/{id}", s.handler.consumer.Show)
+	r.Delete("/{id}", s.handler.consumer.Delete)
 }
 
 func (s *server) init() error {
@@ -192,16 +173,8 @@ func (s *server) init() error {
 	}
 	s.middleware.timeout = timeout
 
-	if s.handler.resource == nil {
-		return errors.New("missing handler.resource")
-	}
-
-	if s.handler.subscription == nil {
-		return errors.New("missing handler.subscription")
-	}
-
-	if s.handler.document == nil {
-		return errors.New("missing handler.document")
+	if s.handler.consumer == nil {
+		return errors.New("missing handler.consumer")
 	}
 
 	if s.logger == nil {

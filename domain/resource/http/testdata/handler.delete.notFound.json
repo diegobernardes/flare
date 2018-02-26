@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "error during resource delete",
-    "detail": "resource '123' not found"
-  }
-}

@@ -32,6 +32,7 @@ func (c *Client) initLogger() error {
 	}
 
 	c.logger = log.With(logger, "time", log.DefaultTimestamp)
+	c.loggerInfo = level.Info(c.logger)
 	return nil
 }
 

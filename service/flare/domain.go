@@ -12,115 +12,45 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
-	document "github.com/diegobernardes/flare/domain/document/http"
-	resource "github.com/diegobernardes/flare/domain/resource/http"
-	subscription "github.com/diegobernardes/flare/domain/subscription/http"
+	"github.com/diegobernardes/flare/domain/consumer/api"
 	"github.com/diegobernardes/flare/infra/config"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
+	"github.com/diegobernardes/flare/infra/pagination"
 )
 
 type domain struct {
-	resource     *resource.Handler
-	subscription *subscription.Handler
-	document     *document.Handler
-	logger       log.Logger
-	repository   *repository
-	worker       *worker
-	cfg          *config.Client
+	logger   log.Logger
+	consumer *api.Client
+	provider *provider
+	cfg      *config.Client
 }
 
 func (d *domain) init() error {
-	r, err := d.initResource()
+	c, err := d.initConsumer()
 	if err != nil {
 		return err
 	}
-	d.resource = r
-
-	s, err := d.initSubscription()
-	if err != nil {
-		return err
-	}
-	d.subscription = s
-
-	doc, err := d.initDocument()
-	if err != nil {
-		return err
-	}
-	d.document = doc
+	d.consumer = c
 
 	return nil
 }
 
-func (d *domain) initResource() (*resource.Handler, error) {
+func (d *domain) initConsumer() (*api.Client, error) {
 	writer, err := infraHTTP.NewWriter(d.logger)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during http.Writer initialization")
 	}
 
-	handler, err := resource.NewHandler(
-		resource.HandlerGetResourceID(func(r *http.Request) string { return chi.URLParam(r, "id") }),
-		resource.HandlerGetResourceURI(func(id string) string {
-			return fmt.Sprintf("/resources/%s", id)
-		}),
-		resource.HandlerParsePagination(
-			infraHTTP.ParsePagination(d.cfg.GetInt("domain.pagination.default-limit")),
-		),
-		resource.HandlerWriter(writer),
-		resource.HandlerRepository(d.repository.base.Resource()),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during resource.Handler initialization")
+	client := &api.Client{
+		Writer:          writer,
+		GetID:           func(r *http.Request) string { return chi.URLParam(r, "id") },
+		GetURI:          func(id string) string { return fmt.Sprintf("/consumers/%s", id) },
+		Repository:      d.provider.cassandraDomainConsumerClient,
+		ParsePagination: pagination.Parse(30),
+	}
+	if err := client.Init(); err != nil {
+		return nil, errors.Wrap(err, "error during api initialization")
 	}
 
-	return handler, nil
-}
-
-func (d *domain) initSubscription() (*subscription.Handler, error) {
-	writer, err := infraHTTP.NewWriter(d.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during http.Writer initialization")
-	}
-
-	subscriptionService, err := subscription.NewHandler(
-		subscription.HandlerParsePagination(
-			infraHTTP.ParsePagination(d.cfg.GetInt("domain.pagination.default-limit")),
-		),
-		subscription.HandlerWriter(writer),
-		subscription.HandlerGetResourceID(func(r *http.Request) string {
-			return chi.URLParam(r, "resourceID")
-		}),
-		subscription.HandlerGetSubscriptionID(func(r *http.Request) string {
-			return chi.URLParam(r, "id")
-		}),
-		subscription.HandlerGetSubscriptionURI(func(resourceId, id string) string {
-			return fmt.Sprintf("/resources/%s/subscriptions/%s", resourceId, id)
-		}),
-		subscription.HandlerResourceRepository(d.repository.base.Resource()),
-		subscription.HandlerSubscriptionRepository(d.repository.base.Subscription()),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during subscription.Handler initialization")
-	}
-
-	return subscriptionService, nil
-}
-
-func (d *domain) initDocument() (*document.Handler, error) {
-	writer, err := infraHTTP.NewWriter(d.logger)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during http.Writer initialization")
-	}
-
-	documentHandler, err := document.NewHandler(
-		document.HandlerDocumentRepository(d.repository.base.Document()),
-		document.HandlerGetDocumentID(func(r *http.Request) string { return chi.URLParam(r, "*") }),
-		document.HandlerResourceRepository(d.repository.base.Resource()),
-		document.HandlerSubscriptionTrigger(d.worker.subscriptionPartition),
-		document.HandlerWriter(writer),
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "error during document.Handler initialization")
-	}
-
-	return documentHandler, nil
+	return client, nil
 }

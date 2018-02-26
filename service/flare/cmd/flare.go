@@ -139,8 +139,8 @@ func newClient(path string) *flare.Client {
 		os.Exit(1)
 	}
 
-	client, err := flare.NewClient(flare.ClientConfig(config))
-	if err != nil {
+	client := &flare.Client{}
+	if err := client.Init(config); err != nil {
 		fmt.Println(errors.Wrap(err, "error during client initialization"))
 		os.Exit(1)
 	}

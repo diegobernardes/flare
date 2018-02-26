@@ -53,21 +53,12 @@ format = "human"
   max-idle-connections-per-host = 100
   idle-connection-timeout       = "60s"
 
+# --------------------------------------------------------------------------------------------------
+# - domain.default-limit
+#   The quantity of entities to be returned by default on collections.
+#
 [domain]
-  # ------------------------------------------------------------------------------------------------
-  # - domain.resource.partition
-  #   The quantity of elements inside a resource partition. This is done to improve the speed to
-  #   notify a large quantity of subscriptions as it allow the resource to be parallel processed.
-  #
-  [domain.resource]
-  partition = 1000
-
-  # ------------------------------------------------------------------------------------------------
-  # - domain.pagination.default-limit
-  #   The quantity of entities to be returned by default on collections.
-  #
-  [domain.pagination]
-  default-limit = 30
+default-limit = 30
 
 # --------------------------------------------------------------------------------------------------
 # - worker.enable
@@ -87,32 +78,56 @@ format = "human"
 [worker]
 enable = true
 
-  [worker.subscription.partition]
-  timeout            = "10s"
-  concurrency        = 10
-  concurrency-output = 100
-
-  [worker.subscription.spread]
+  [worker.producer.spread]
   timeout            = "10s"
   concurrency        = 100
   concurrency-output = 100
 
-  [worker.subscription.delivery]
+  [worker.producer.delivery]
   timeout     = "10s"
   concurrency = 1000
+
+[node]
+  # ------------------------------------------------------------------------------------------------
+  # - node.master.eligible
+  #   Flag used to mark the nodes that can be elibible to be a master.
+  #
+  # - node.master.exclusive
+  #   Flag used to mark the nodes as exclusive master. In case if assume the master position, it
+  #   stop processing and act only as a coordinator node.
+  #
+  # - node.master.election
+  #   Control the time interval a election occur.
+  #
+  # - node.master.election-keep-alive
+  #   Control the time interval a master gonna send a keep alive to remain as master.
+  #
+  [node.master]
+  eligible            = true
+  exclusive           = false
+  election            = "1m"
+  election-keep-alive = "30s"
+
+  # ------------------------------------------------------------------------------------------------
+  # - node.worker.register
+  #   Control the time interval to send a keep alive to remain into the cluster.
+  #
+  [node.worker]
+  register            = "1m"
+  register-keep-alive = "30s"
 
 # --------------------------------------------------------------------------------------------------
 # - provider.repository
 #   The content location.
-#   Possible values: "memory" and "mongodb".
+#   Possible values: "cassandra".
 #
 # - provider.queue
 #   The messages location.
-#   Posssible values: "memory" or "aws.sqs".
+#   Posssible values: "aws.sqs".
 #
 [provider]
-repository = "memory"
-queue      = "memory"
+repository = "cassandra"
+queue      = "aws.sqs"
 
   # ------------------------------------------------------------------------------------------------
   # - provider.aws.key
@@ -124,13 +139,13 @@ queue      = "memory"
   # - provider.aws.region
   #   Region to connect to AWS.
   #
-  # - provider.aws.sqs.queue.{name}.queue
+  # - provider.aws.sqs.{name}.queue
   #   The SQS queue the messages gonna be delivered/consumed.
   #
-  # - provider.aws.sqs.queue.{name}.ingress.timeout
+  # - provider.aws.sqs.{name}.ingress.timeout
   #   The max quantity of time to wait during a request to send the messages to SQS.
   #
-  # - provider.aws.sqs.queue.{name}.egress.receive-wait-time
+  # - provider.aws.sqs.{name}.egress.receive-wait-time
   #   The quantity of time to wait a new message be ready to be delived.
   #
   [provider.aws]
@@ -138,63 +153,26 @@ queue      = "memory"
   secret = ""
   region = ""
 
-    [provider.aws.sqs.queue.subscription.partition]
-    queue = "flare-subscription-partition"
+    [provider.aws.sqs.producer.spread]
+    queue = "flare-producer-spread"
 
-      [provider.aws.sqs.queue.subscription.partition.ingress]
+      [provider.aws.sqs.producer.spread.ingress]
       timeout = "1s"
 
-      [provider.aws.sqs.queue.subscription.partition.egress]
+      [provider.aws.sqs.producer.spread.egress]
       receive-wait-time = "20s"
 
-    [provider.aws.sqs.queue.subscription.spread]
-    queue = "flare-subscription-spread"
+    [provider.aws.sqs.producer.delivery]
+    queue = "flare-producer-delivery"
 
-      [provider.aws.sqs.queue.subscription.spread.ingress]
+      [provider.aws.sqs.producer.delivery.ingress]
       timeout = "1s"
 
-      [provider.aws.sqs.queue.subscription.spread.egress]
+      [provider.aws.sqs.producer.delivery.egress]
       receive-wait-time = "20s"
 
-    [provider.aws.sqs.queue.subscription.delivery]
-    queue = "flare-subscription-delivery"
-
-      [provider.aws.sqs.queue.subscription.delivery.ingress]
-      timeout = "1s"
-
-      [provider.aws.sqs.queue.subscription.delivery.egress]
-      receive-wait-time = "20s"
-
-  # -------------------------------------------------------------------------------------------------
-  # - provider.mongodb.addrs
-  #   List of "host:port" to MongoDB servers.
-  #
-  # - provider.mongodb.database
-  #   Name of the database at MongoDB.
-  #
-  # - provider.mongodb.username
-  #   Username used to connect to MongoDB.
-  #
-  # - provider.mongodb.password
-  #   Password used to connect to MongoDB.
-  #
-  # - provider.mongodb.replica-set
-  #   Replica set, if specified, will prevent the obtained session from communicating with any server
-  #   which is not part of a replica set with the given name. The default is to communicate with any
-  #   server specified or discovered via the servers contacted.
-  #
-  # - provider.mongodb.pool-limit
-  #   Defines the per-server socket pool limit.
-  #
-  # - provider.mongodb.timeout
-  #   Timeout is the amount of time to wait for a server to respond when first connecting and on
-  #   follow up operations in the session.
-  #
-  [provider.mongodb]
-  addrs       = ["localhost:27017"]
-  database    = "flare"
-  username    = ""
-  password    = ""
-  replica-set = ""
-  pool-limit  = 4096
-  timeout     = "1s"
+  [provider.cassandra]
+  hosts    = ["127.0.0.1"]
+  port     = 9042
+  timeout  = "1000ms"
+  keyspace = "flare"
