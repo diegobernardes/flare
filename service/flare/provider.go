@@ -64,14 +64,14 @@ func (p *provider) getCassandraSchedulerLock() baseScheduler.Locker {
 	return nil
 }
 
-func (p *provider) getCassandraSchedulerCluster() baseScheduler.Cluster {
+func (p *provider) getCassandraSchedulerCluster() baseScheduler.ClusterStorager {
 	if p.cassandraSchedulerNodeClient != nil {
 		return p.cassandraSchedulerNodeClient
 	}
 	return nil
 }
 
-func (p *provider) getCassandraSchedulerDispatcher() baseScheduler.Dispatcher {
+func (p *provider) getCassandraSchedulerDispatcher() baseScheduler.DispatcherStorager {
 	if p.cassandraSchedulerDispatcherClient != nil {
 		return p.cassandraSchedulerDispatcherClient
 	}

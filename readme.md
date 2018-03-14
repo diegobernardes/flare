@@ -303,3 +303,7 @@ storage
 election
 consensus
 kv
+
+---
+hoje temos o createdAt, temos que avancar o createdAt para pegar os consumers que estao mudando.
+sendo que temos que ter 2 createadats, 1 para as alteracoes de usuario e um para lateracao de processamento.

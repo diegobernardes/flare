@@ -5,40 +5,27 @@ import (
 
 	"github.com/diegobernardes/flare/infra/config"
 	base "github.com/diegobernardes/flare/scheduler"
-	"github.com/diegobernardes/flare/scheduler/cluster"
-	"github.com/diegobernardes/flare/scheduler/election"
 )
 
 type scheduler struct {
 	cfg        *config.Client
-	client     *base.Client
+	client     *base.Dispatcher
 	locker     base.Locker
-	cluster    base.Cluster
-	dispatcher base.Dispatcher
+	cluster    base.ClusterStorager
+	dispatcher base.DispatcherStorager
 	logger     log.Logger
 }
 
 func (s *scheduler) init() error {
-	election := &election.Client{
-		Eligible: s.cfg.GetBool("node.master.eligible"),
-		Locker:   s.locker,
-		Logger:   s.logger,
-	}
+	var (
+		err    error
+		nodeID = base.NodeID()
+	)
 
-	var err error
-	election.Interval, err = s.cfg.GetDuration("node.master.election")
-	if err != nil {
-		panic(err)
-	}
-
-	election.KeepAlive, err = s.cfg.GetDuration("node.master.election-keep-alive")
-	if err != nil {
-		panic(err)
-	}
-
-	cluster := &cluster.Client{
-		Cluster: s.cluster,
-		Logger:  s.logger,
+	cluster := base.Cluster{
+		Storage: s.cluster,
+		Log:     s.logger,
+		NodeID:  nodeID,
 	}
 
 	cluster.Interval, err = s.cfg.GetDuration("node.worker.register")
@@ -51,26 +38,52 @@ func (s *scheduler) init() error {
 		panic(err)
 	}
 
-	cd := &base.ConsumerDispatcher{
-		Cluster: s.cluster,
-		Fetcher: s.dispatcher,
+	election := &base.Election{
+		Eligible: s.cfg.GetBool("node.master.eligible"),
+		Locker:   s.locker,
+		Logger:   s.logger,
+		NodeID:   nodeID,
 	}
 
-	s.client = &base.Client{
-		Election:           election,
-		Cluster:            cluster,
-		ConsumerDispatcher: cd,
-	}
-	if err := s.client.Init(); err != nil {
+	election.Interval, err = s.cfg.GetDuration("node.master.election")
+	if err != nil {
 		panic(err)
 	}
 
-	s.client.Start()
+	election.KeepAlive, err = s.cfg.GetDuration("node.master.election-keep-alive")
+	if err != nil {
+		panic(err)
+	}
+
+	proxy := &base.Proxy{
+		Runners: []base.Runner{election},
+	}
+	if err := proxy.Init(); err != nil {
+		panic(err)
+	}
+	cluster.Runner = proxy
+
+	dispatcher := &base.Dispatcher{
+		Cluster: s.cluster.(base.DispatcherCluster),
+		NodeID:  nodeID,
+		Fetcher: s.dispatcher,
+	}
+	election.Runner = dispatcher
+
+	if err := dispatcher.Init(); err != nil {
+		panic(err)
+	}
+
+	if err := election.Init(); err != nil {
+		panic(err)
+	}
+
+	if err := cluster.Init(); err != nil {
+		panic(err)
+	}
+
+	cluster.Start()
 	return nil
-}
-
-func (s *scheduler) initMaster() {
-
 }
 
 func (s *scheduler) stop() {

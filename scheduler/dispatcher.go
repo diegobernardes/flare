@@ -1,4 +1,4 @@
-package dispatcher
+package scheduler
 
 import (
 	"context"
@@ -12,33 +12,45 @@ import (
 	"github.com/diegobernardes/flare/scheduler/node"
 )
 
-/*
-	vai varrer todos os consumers de tempos em tempos para pegar todos que pertencem ao nó.
-	tentar lockar eles e iniciar o processamento.
-	se lockar, processar.
+type DispatcherCluster interface {
+	Nodes(ctx context.Context, time *time.Time) ([]node.Node, error)
+}
 
-	se qnd atualizar, nao existir mais na bse local, liberar o lock e parar de processar.
-*/
+type DispatcherStorager interface {
+	Fetch(ctx context.Context, time *time.Time) ([]consumer.Consumer, error)
+	Assign(ctx context.Context, consumerID, nodeID string) error
+	// Unassign(ctx context.Context, consumerID string) error
+}
 
-/*
-	no inicio pegamos todos os consumers e os nós.
-	se o consumer estiver associado a um nó que nao existe, vamos associar ele para outro nó.
-	se um nó sair do cluster, temos que tirar todos os consumers (bater a transaction no creatd at).
-*/
-
-type ConsumerDispatcher struct {
-	Fetcher   Dispatcher
-	Cluster   Cluster
-	nodeID    string
+type Dispatcher struct {
+	Fetcher   DispatcherStorager
+	Cluster   DispatcherCluster
+	NodeID    string
 	ctx       context.Context
 	ctxCancel func()
 }
 
-func (cd *ConsumerDispatcher) start() {
+func (cd *Dispatcher) Init() error {
+	if cd.NodeID == "" {
+		return errors.New("missing NodeID")
+	}
+
+	if cd.Cluster == nil {
+		return errors.New("missing Cluster")
+	}
+
+	if cd.Fetcher == nil {
+		return errors.New("missing Fetcher")
+	}
+
+	return nil
+}
+
+func (cd *Dispatcher) Start() {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
-				go cd.start()
+				go cd.Start()
 			}
 		}()
 
@@ -58,6 +70,11 @@ func (cd *ConsumerDispatcher) start() {
 				panic(err)
 			}
 
+			if len(consumers) == 0 || len(nodes) == 0 {
+				<-time.After(10 * time.Second)
+				continue
+			}
+
 			rebalance := cd.genRebalance(consumers, nodes)
 			if err := cd.execRebalance(rebalance); err != nil {
 				pretty.Println(err.Error())
@@ -71,23 +88,14 @@ func (cd *ConsumerDispatcher) start() {
 	}()
 }
 
-func (cd *ConsumerDispatcher) Stop() {
-
+func (cd *Dispatcher) Stop() {
+	// ir no banco e liberar geral que esta preso la.
+	// talvez criar uma flag no cassandra como processamento, que temos que marcar false ou true.
+	// dai o dispatcher verifica apenas esses caras, em algum momento eles vao sumir se pararem de
+	// processar.
 }
 
-func (cd *ConsumerDispatcher) init() error {
-	if cd.Cluster == nil {
-		return errors.New("missing Cluster")
-	}
-
-	if cd.Fetcher == nil {
-		return errors.New("missing Fetcher")
-	}
-
-	return nil
-}
-
-func (cd *ConsumerDispatcher) execRebalance(rebalance map[string][]string) error {
+func (cd *Dispatcher) execRebalance(rebalance map[string][]string) error {
 	for nodeID, consumersID := range rebalance {
 		for _, consumerID := range consumersID {
 			if err := cd.Fetcher.Assign(cd.ctx, nodeID, consumerID); err != nil {
@@ -99,7 +107,7 @@ func (cd *ConsumerDispatcher) execRebalance(rebalance map[string][]string) error
 	return nil
 }
 
-func (cd *ConsumerDispatcher) genRebalance(
+func (cd *Dispatcher) genRebalance(
 	consumers []consumer.Consumer, nodes []node.Node,
 ) map[string][]string {
 	result := make(map[string][]string)
@@ -127,7 +135,7 @@ func (cd *ConsumerDispatcher) genRebalance(
 	return result
 }
 
-func (cd *ConsumerDispatcher) onCluster(id string, nodes []node.Node) bool {
+func (cd *Dispatcher) onCluster(id string, nodes []node.Node) bool {
 	for _, node := range nodes {
 		if node.ID == id {
 			return true
@@ -136,7 +144,7 @@ func (cd *ConsumerDispatcher) onCluster(id string, nodes []node.Node) bool {
 	return false
 }
 
-func (cd *ConsumerDispatcher) selectNode(nodesCount map[string]int) string {
+func (cd *Dispatcher) selectNode(nodesCount map[string]int) string {
 	var (
 		key   string
 		count int

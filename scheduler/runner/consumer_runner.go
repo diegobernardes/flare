@@ -7,4 +7,8 @@ package runner
 	acho que seria interessante ter um ttl na coluna de processamento.
 */
 
-type ConsumerRunner struct{}
+type Client struct{}
+
+func (c *Client) Start() {}
+
+func (c *Client) Stop() {}
