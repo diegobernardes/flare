@@ -307,3 +307,7 @@ kv
 ---
 hoje temos o createdAt, temos que avancar o createdAt para pegar os consumers que estao mudando.
 sendo que temos que ter 2 createadats, 1 para as alteracoes de usuario e um para lateracao de processamento.
+
+---
+para processar a fila acho que faria sentido ter tipo um kafka, onde eu poderia gravar la as alteracoes e ir andando pra frente para pegar oq esta entrando.
+podemos simular isso no cassandra.

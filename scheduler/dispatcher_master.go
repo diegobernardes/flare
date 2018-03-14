@@ -12,25 +12,25 @@ import (
 	"github.com/diegobernardes/flare/scheduler/node"
 )
 
-type DispatcherCluster interface {
+type DispatcherMasterCluster interface {
 	Nodes(ctx context.Context, time *time.Time) ([]node.Node, error)
 }
 
-type DispatcherStorager interface {
+type DispatcherMasterStorager interface {
 	Fetch(ctx context.Context, time *time.Time) ([]consumer.Consumer, error)
 	Assign(ctx context.Context, consumerID, nodeID string) error
 	// Unassign(ctx context.Context, consumerID string) error
 }
 
-type Dispatcher struct {
-	Fetcher   DispatcherStorager
-	Cluster   DispatcherCluster
+type DispatcherMaster struct {
+	Fetcher   DispatcherMasterStorager
+	Cluster   DispatcherMasterCluster
 	NodeID    string
 	ctx       context.Context
 	ctxCancel func()
 }
 
-func (cd *Dispatcher) Init() error {
+func (cd *DispatcherMaster) Init() error {
 	if cd.NodeID == "" {
 		return errors.New("missing NodeID")
 	}
@@ -46,7 +46,7 @@ func (cd *Dispatcher) Init() error {
 	return nil
 }
 
-func (cd *Dispatcher) Start() {
+func (cd *DispatcherMaster) Start() {
 	go func() {
 		defer func() {
 			if err := recover(); err != nil {
@@ -82,20 +82,19 @@ func (cd *Dispatcher) Start() {
 				panic(err)
 			}
 
-			pretty.Println(consumers, nodes)
 			<-time.After(10 * time.Second)
 		}
 	}()
 }
 
-func (cd *Dispatcher) Stop() {
+func (cd *DispatcherMaster) Stop() {
 	// ir no banco e liberar geral que esta preso la.
 	// talvez criar uma flag no cassandra como processamento, que temos que marcar false ou true.
 	// dai o dispatcher verifica apenas esses caras, em algum momento eles vao sumir se pararem de
 	// processar.
 }
 
-func (cd *Dispatcher) execRebalance(rebalance map[string][]string) error {
+func (cd *DispatcherMaster) execRebalance(rebalance map[string][]string) error {
 	for nodeID, consumersID := range rebalance {
 		for _, consumerID := range consumersID {
 			if err := cd.Fetcher.Assign(cd.ctx, nodeID, consumerID); err != nil {
@@ -107,7 +106,7 @@ func (cd *Dispatcher) execRebalance(rebalance map[string][]string) error {
 	return nil
 }
 
-func (cd *Dispatcher) genRebalance(
+func (cd *DispatcherMaster) genRebalance(
 	consumers []consumer.Consumer, nodes []node.Node,
 ) map[string][]string {
 	result := make(map[string][]string)
@@ -135,7 +134,7 @@ func (cd *Dispatcher) genRebalance(
 	return result
 }
 
-func (cd *Dispatcher) onCluster(id string, nodes []node.Node) bool {
+func (cd *DispatcherMaster) onCluster(id string, nodes []node.Node) bool {
 	for _, node := range nodes {
 		if node.ID == id {
 			return true
@@ -144,7 +143,7 @@ func (cd *Dispatcher) onCluster(id string, nodes []node.Node) bool {
 	return false
 }
 
-func (cd *Dispatcher) selectNode(nodesCount map[string]int) string {
+func (cd *DispatcherMaster) selectNode(nodesCount map[string]int) string {
 	var (
 		key   string
 		count int

@@ -25,14 +25,6 @@ type Locker interface {
 	Release(ctx context.Context, key, nodeID string) error
 }
 
-// Cluster control the information about the cluster.
-// type Cluster interface {
-// 	Join(ctx context.Context, id string, ttl time.Duration) error
-// 	KeepAlive(ctx context.Context, id string, ttl time.Duration) error
-// 	Leave(ctx context.Context, id string) error
-// 	Nodes(ctx context.Context, time *time.Time) ([]node.Node, error)
-// }
-
 func NodeID() string {
 	return uuid.NewV4().String()
 }

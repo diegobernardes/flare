@@ -91,6 +91,7 @@ func (e *Election) Stop() {
 		}
 	}
 
+	e.runnerStop()
 	e.ctxCancel()
 	e.wg.Wait()
 }

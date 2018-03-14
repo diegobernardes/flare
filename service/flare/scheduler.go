@@ -8,12 +8,13 @@ import (
 )
 
 type scheduler struct {
-	cfg        *config.Client
-	client     *base.Dispatcher
-	locker     base.Locker
-	cluster    base.ClusterStorager
-	dispatcher base.DispatcherStorager
-	logger     log.Logger
+	cfg              *config.Client
+	client           *base.DispatcherMaster
+	locker           base.Locker
+	cluster          base.ClusterStorager
+	dispatcher       base.DispatcherMasterStorager
+	logger           log.Logger
+	clusterScheduler base.Cluster
 }
 
 func (s *scheduler) init() error {
@@ -63,8 +64,8 @@ func (s *scheduler) init() error {
 	}
 	cluster.Runner = proxy
 
-	dispatcher := &base.Dispatcher{
-		Cluster: s.cluster.(base.DispatcherCluster),
+	dispatcher := &base.DispatcherMaster{
+		Cluster: s.cluster.(base.DispatcherMasterCluster),
 		NodeID:  nodeID,
 		Fetcher: s.dispatcher,
 	}
@@ -83,9 +84,10 @@ func (s *scheduler) init() error {
 	}
 
 	cluster.Start()
+	s.clusterScheduler = cluster
 	return nil
 }
 
 func (s *scheduler) stop() {
-	s.client.Stop()
+	s.clusterScheduler.Stop()
 }

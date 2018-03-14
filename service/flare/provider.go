@@ -71,7 +71,7 @@ func (p *provider) getCassandraSchedulerCluster() baseScheduler.ClusterStorager 
 	return nil
 }
 
-func (p *provider) getCassandraSchedulerDispatcher() baseScheduler.DispatcherStorager {
+func (p *provider) getCassandraSchedulerDispatcher() baseScheduler.DispatcherMasterStorager {
 	if p.cassandraSchedulerDispatcherClient != nil {
 		return p.cassandraSchedulerDispatcherClient
 	}

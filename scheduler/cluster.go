@@ -138,7 +138,7 @@ func (m *Cluster) runnerStop() {
 func (m *Cluster) Stop() {
 	m.ctxCancel()
 	m.wg.Wait()
-	m.Runner.Stop()
+	m.runnerStop()
 
 	if err := m.Storage.Leave(context.Background(), m.NodeID); err != nil {
 		level.Error(m.Log).Log("message", "error during leave cluster", "err", err.Error())
