@@ -1,4 +1,4 @@
-package scheduler
+package node
 
 import (
 	"time"
@@ -11,6 +11,6 @@ type Node struct {
 	CreatedAt time.Time
 }
 
-func (n *Node) init() {
+func (n *Node) Init() {
 	n.ID = uuid.NewV4().String()
 }

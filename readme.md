@@ -295,3 +295,11 @@ na verdade, preciso de um banco de dados que tenha consistencia de dados.
 
 ---
 expor mais configuracoes: repository, lock, consensus, cluster (hj, todos estao rodando no cassandra, mas futuramente, poderiamos mudar isso)
+
+---
+tipos de provider:
+
+storage
+election
+consensus
+kv

@@ -1,4 +1,4 @@
-package scheduler
+package dispatcher
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare/domain/consumer"
+	"github.com/diegobernardes/flare/scheduler/node"
 )
 
 /*
@@ -99,7 +100,7 @@ func (cd *ConsumerDispatcher) execRebalance(rebalance map[string][]string) error
 }
 
 func (cd *ConsumerDispatcher) genRebalance(
-	consumers []consumer.Consumer, nodes []Node,
+	consumers []consumer.Consumer, nodes []node.Node,
 ) map[string][]string {
 	result := make(map[string][]string)
 	count := make(map[string]int)
@@ -126,7 +127,7 @@ func (cd *ConsumerDispatcher) genRebalance(
 	return result
 }
 
-func (cd *ConsumerDispatcher) onCluster(id string, nodes []Node) bool {
+func (cd *ConsumerDispatcher) onCluster(id string, nodes []node.Node) bool {
 	for _, node := range nodes {
 		if node.ID == id {
 			return true

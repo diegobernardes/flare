@@ -13,7 +13,7 @@ type Consumer struct {
 	ID        string
 	Source    ConsumerSource
 	Payload   ConsumerPayload
-	NodeID    string
+	NodeID    string // deveria ter isso aqui!? talvez isso seja apenas do scheduler, remover
 	CreatedAt time.Time
 }
 

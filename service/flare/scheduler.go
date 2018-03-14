@@ -5,6 +5,8 @@ import (
 
 	"github.com/diegobernardes/flare/infra/config"
 	base "github.com/diegobernardes/flare/scheduler"
+	"github.com/diegobernardes/flare/scheduler/cluster"
+	"github.com/diegobernardes/flare/scheduler/election"
 )
 
 type scheduler struct {
@@ -17,7 +19,7 @@ type scheduler struct {
 }
 
 func (s *scheduler) init() error {
-	election := &base.Election{
+	election := &election.Client{
 		Eligible: s.cfg.GetBool("node.master.eligible"),
 		Locker:   s.locker,
 		Logger:   s.logger,
@@ -34,17 +36,17 @@ func (s *scheduler) init() error {
 		panic(err)
 	}
 
-	manager := &base.Manager{
+	cluster := &cluster.Client{
 		Cluster: s.cluster,
 		Logger:  s.logger,
 	}
 
-	manager.Interval, err = s.cfg.GetDuration("node.worker.register")
+	cluster.Interval, err = s.cfg.GetDuration("node.worker.register")
 	if err != nil {
 		panic(err)
 	}
 
-	manager.KeepAlive, err = s.cfg.GetDuration("node.worker.register-keep-alive")
+	cluster.KeepAlive, err = s.cfg.GetDuration("node.worker.register-keep-alive")
 	if err != nil {
 		panic(err)
 	}
@@ -56,7 +58,7 @@ func (s *scheduler) init() error {
 
 	s.client = &base.Client{
 		Election:           election,
-		Manager:            manager,
+		Cluster:            cluster,
 		ConsumerDispatcher: cd,
 	}
 	if err := s.client.Init(); err != nil {

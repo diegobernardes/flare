@@ -59,9 +59,14 @@ func (d *Dispatcher) Fetch(ctx context.Context, time *time.Time) ([]consumer.Con
 
 // Assign a given consumer to a node to be processed.
 func (d *Dispatcher) Assign(ctx context.Context, consumerID, nodeID string) error {
-	// tem que fazer um select antes para pegar o hash
+	var hash string
+	err := d.Client.Session.Query(`SELECT hash FROM consumers WHERE id = ?`, consumerID).Scan(&hash)
+	if err != nil {
+		panic(err)
+	}
+
 	query := d.Client.Session.Query(
-		"UPDATE consumers SET node_id = ? WHERE id = ?", nodeID, consumerID,
+		"UPDATE consumers SET node_id = ? WHERE hash = ?", nodeID, hash,
 	).WithContext(ctx)
 
 	if err := query.Exec(); err != nil {
@@ -72,8 +77,15 @@ func (d *Dispatcher) Assign(ctx context.Context, consumerID, nodeID string) erro
 
 // Unassign the consumer of a node.
 func (d *Dispatcher) Unassign(ctx context.Context, consumerID string) error {
-	query := d.Client.Session.Query("UPDATE consumers SET node_id = ? WHERE id = ?", nil, consumerID)
-	query = query.WithContext(ctx)
+	var hash string
+	err := d.Client.Session.Query(`SELECT hash FROM consumers WHERE id = ?`, consumerID).Scan(&hash)
+	if err != nil {
+		panic(err)
+	}
+
+	query := d.Client.Session.Query(
+		"UPDATE consumers SET node_id = ? WHERE hash = ?", nil, hash,
+	).WithContext(ctx)
 
 	if err := query.Exec(); err != nil {
 		return errors.Wrapf(err, "error during unassign consumer '%s'", consumerID)

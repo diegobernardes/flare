@@ -5,11 +5,10 @@ import (
 	"time"
 
 	"github.com/gocql/gocql"
-
 	"github.com/pkg/errors"
 
 	"github.com/diegobernardes/flare/provider/cassandra"
-	"github.com/diegobernardes/flare/scheduler"
+	"github.com/diegobernardes/flare/scheduler/node"
 )
 
 type Node struct {
@@ -52,7 +51,7 @@ func (n *Node) Leave(ctx context.Context, id string) error {
 	return nil
 }
 
-func (n *Node) Nodes(ctx context.Context, time *time.Time) ([]scheduler.Node, error) {
+func (n *Node) Nodes(ctx context.Context, time *time.Time) ([]node.Node, error) {
 	var query *gocql.Query
 
 	if time == nil {
@@ -63,11 +62,11 @@ func (n *Node) Nodes(ctx context.Context, time *time.Time) ([]scheduler.Node, er
 
 	var (
 		iter    = query.WithContext(ctx).Iter()
-		results []scheduler.Node
+		results []node.Node
 	)
 
 	for {
-		var result scheduler.Node
+		var result node.Node
 		if ok := iter.Scan(&result.ID, &result.CreatedAt); !ok {
 			break
 		}

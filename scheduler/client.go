@@ -8,20 +8,24 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
+	"github.com/diegobernardes/flare/scheduler/cluster"
+	"github.com/diegobernardes/flare/scheduler/election"
+	"github.com/diegobernardes/flare/scheduler/node"
 )
 
 // Client implements the logic to schedule the task among the cluster.
 type Client struct {
-	Manager            *Manager
-	Election           *Election
+	Cluster            *cluster.Client
+	Election           *election.Client
 	ConsumerDispatcher *ConsumerDispatcher
-	node               Node
+	node               node.Node
 }
 
 // Start the scheduler.
 func (c *Client) Start() {
-	c.Manager.start()
-	c.Election.start()
+	c.Cluster.Start()
+	c.Election.Start()
 
 	go func() {
 		<-time.After(10 * time.Second)
@@ -31,29 +35,29 @@ func (c *Client) Start() {
 
 // Stop the scheduler.
 func (c *Client) Stop() {
-	c.Manager.stop()
-	c.Election.stop()
+	c.Cluster.Stop()
+	c.Election.Stop()
 }
 
 // Init is used to initialize the scheduler.
 func (c *Client) Init() error {
-	c.node.init()
+	c.node.Init()
 
-	if c.Manager == nil {
-		return errors.New("missing Manager")
+	if c.Cluster == nil {
+		return errors.New("missing Cluster")
 	}
-	c.Manager.nodeID = c.node.ID
+	c.Cluster.NodeID = c.node.ID
 
-	if err := c.Manager.init(); err != nil {
-		return errors.Wrap(err, "error during Manager initialization")
+	if err := c.Cluster.Init(); err != nil {
+		return errors.Wrap(err, "error during Cluster initialization")
 	}
 
 	if c.Election == nil {
 		return errors.New("missing Election")
 	}
-	c.Election.nodeID = c.node.ID
 
-	if err := c.Election.init(); err != nil {
+	c.Election.NodeID = c.node.ID
+	if err := c.Election.Init(); err != nil {
 		return errors.Wrap(err, "error during Election initialization")
 	}
 
