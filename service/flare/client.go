@@ -49,6 +49,7 @@ func (c *Client) Start() error {
 	c.scheduler.locker = c.provider.getCassandraSchedulerLock()
 	c.scheduler.cluster = c.provider.getCassandraSchedulerCluster()
 	c.scheduler.dispatcher = c.provider.getCassandraSchedulerDispatcher()
+	c.scheduler.dispatcherWorker = c.provider.getCassandraSchedulerDispatcherWorker()
 	if err := c.scheduler.init(); err != nil {
 		panic(err)
 	}

@@ -1,6 +1,8 @@
 package flare
 
 import (
+	"time"
+
 	"github.com/go-kit/kit/log"
 
 	"github.com/diegobernardes/flare/infra/config"
@@ -13,6 +15,7 @@ type scheduler struct {
 	locker           base.Locker
 	cluster          base.ClusterStorager
 	dispatcher       base.DispatcherMasterStorager
+	dispatcherWorker base.DispatcherWorkerStorager
 	logger           log.Logger
 	clusterScheduler base.Cluster
 }
@@ -56,8 +59,18 @@ func (s *scheduler) init() error {
 		panic(err)
 	}
 
+	worker := &base.DispatcherWorker{
+		NodeID:   nodeID,
+		Interval: 10 * time.Second,
+		Storager: s.dispatcherWorker,
+	}
+
+	if err := worker.Init(); err != nil {
+		panic(err)
+	}
+
 	proxy := &base.Proxy{
-		Runners: []base.Runner{election},
+		Runners: []base.Runner{election, worker},
 	}
 	if err := proxy.Init(); err != nil {
 		panic(err)

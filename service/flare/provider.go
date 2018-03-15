@@ -9,12 +9,13 @@ import (
 )
 
 type provider struct {
-	cassandraClient                    *cassandra.Client
-	cassandraDomainConsumerClient      *cassandraConsumer.Client
-	cassandraSchedulerLockClient       *cassandraScheduler.Lock
-	cassandraSchedulerNodeClient       *cassandraScheduler.Node
-	cassandraSchedulerDispatcherClient *cassandraScheduler.Dispatcher
-	cfg                                *config.Client
+	cassandraClient                          *cassandra.Client
+	cassandraDomainConsumerClient            *cassandraConsumer.Client
+	cassandraSchedulerLockClient             *cassandraScheduler.Lock
+	cassandraSchedulerNodeClient             *cassandraScheduler.Node
+	cassandraSchedulerDispatcherClient       *cassandraScheduler.Dispatcher
+	cassandraScheculerDispatcherWorkerClient *cassandraScheduler.DispatcherWorker
+	cfg                                      *config.Client
 }
 
 func (p *provider) cassandra() error {
@@ -54,6 +55,13 @@ func (p *provider) cassandra() error {
 		panic(err)
 	}
 
+	p.cassandraScheculerDispatcherWorkerClient = &cassandraScheduler.DispatcherWorker{
+		Base: p.cassandraClient,
+	}
+	if err := p.cassandraScheculerDispatcherWorkerClient.Init(); err != nil {
+		panic(err)
+	}
+
 	return nil
 }
 
@@ -74,6 +82,13 @@ func (p *provider) getCassandraSchedulerCluster() baseScheduler.ClusterStorager 
 func (p *provider) getCassandraSchedulerDispatcher() baseScheduler.DispatcherMasterStorager {
 	if p.cassandraSchedulerDispatcherClient != nil {
 		return p.cassandraSchedulerDispatcherClient
+	}
+	return nil
+}
+
+func (p *provider) getCassandraSchedulerDispatcherWorker() baseScheduler.DispatcherWorkerStorager {
+	if p.cassandraScheculerDispatcherWorkerClient != nil {
+		return p.cassandraScheculerDispatcherWorkerClient
 	}
 	return nil
 }

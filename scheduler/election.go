@@ -114,6 +114,8 @@ func (e *Election) startElection() {
 		interval time.Duration
 		next     bool
 	)
+
+loop:
 	for {
 		if e.isMaster {
 			next, interval = e.electionAsMaster()
@@ -127,7 +129,7 @@ func (e *Election) startElection() {
 		select {
 		case <-time.After(interval):
 		case <-e.ctx.Done():
-			break
+			break loop
 		}
 	}
 }

@@ -260,6 +260,7 @@ como o cassandra eh colunar, podemos guardar os dados dos shards do kinesis nas 
 ler melhor sobre o lock: http://antirez.com/news/101
 
 ---
+
 ao inves de ficar fazendo pooling na base, poderia trabalhar com um esquema de logs, onde eu tenhoum offset, e se estiver fora, soh pego os logs que andaram.
 meio como o kafka funciona hoje.
 
@@ -311,3 +312,45 @@ sendo que temos que ter 2 createadats, 1 para as alteracoes de usuario e um para
 ---
 para processar a fila acho que faria sentido ter tipo um kafka, onde eu poderia gravar la as alteracoes e ir andando pra frente para pegar oq esta entrando.
 podemos simular isso no cassandra.
+
+---
+migrar para modelo de event source? algo com o nats.
+
+---
+onde fica o estado do kinesis? no scheduler ou no provider da aws?
+
+---
+cluster e eleicao sem depender do banco? 
+serf, raft, raft over nats? embed consul?
+
+---
+o master precisa periodicamente varrer os consumers e tirar os nodes dos nos que nao estiverem rodando.
+com isso o scheduler vai rodar.
+
+---
+service discovery pelo serf.
+
+---
+lease, distributed lock. precisamos do lock?
+usar para persistir os dados do kinesis como indice do shard.
+
+---
+usar o etcd: "github.com/coreos/etcd/client"
+github.com/coreos/etcd/clientv3
+
+tem como associar um lock a um nó? tipo, enquanto estivermos funcionando, o lock continua, se a gente desligar, ele libera o lock de geral.
+
+---
+notification, podemos fazer pelo etcd tambem.
+qnd um nó receber uma nova tarefa, vamos mandar no canal dele e ele vai conseguir consumir tudo
+
+
+WATCH /nodes/123/consumers
+PUT /nodes/123/consumers/456
+
+
+implementar o lock do go, o mutex em cima dos leases.
+dai a gente da um lease e enquanto nao damos um unlock ou cancelamos o contexto, o lease fica se renovando sozinho.
+
+---
+distributed mutex, election, notification, scheduler, runner
