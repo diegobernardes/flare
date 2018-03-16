@@ -176,3 +176,11 @@ queue      = "aws.sqs"
   port     = 9042
   timeout  = "1000ms"
   keyspace = "flare"
+
+
+[provider]
+consumer-state = "cassandra"
+repository     = "cassandra"
+election       = "etcd"
+lock           = "etcd"
+notification   = "etcd"

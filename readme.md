@@ -354,3 +354,33 @@ dai a gente da um lease e enquanto nao damos um unlock ou cancelamos o contexto,
 
 ---
 distributed mutex, election, notification, scheduler, runner
+
+---
+abstrair a insercao e o watcher. 
+qnd for inserir um consumer por exemplo, criar uma interface que quando for chamada, vai inserir no banco e em seguida notificar a alteracao.
+o msm vale para update e delete.
+
+---
+usar o etcd como database e outro banco como storage?
+e outro banco como storage, como o cassandra por exemplo.
+
+---
+qnd o etcd ligar, vamos criar uma sessao, essa sessao vai ter um lease.
+em seguida vamos dar o lock noq temos que trabalhar com esse lease.
+
+---
+podemos ter uma hard dependency no banco e no etcd.
+a fila podemos trocar. visto que pessoas podem querer rodar fora da aws.
+
+o modelo que estamos criando pro etcd, vamos ficar mt agarrados, outros providers podem nao ter essa funcionalidade, dai teriamos que ficar simulando.
+o cassandra e o etcd qualquer um pode rodar, o sqs nao pq eh privado.
+
+vamos manter no etcd o estado do kinesis stream por exemplo.
+
+---
+precisamos de fila hj?
+iniciamos o consumer.
+vamos no sqs e carregamos 1 mensagem.
+gravamos a mensagem no banco.
+
+precisamos disparar o a mensagem pro producer processar? aqui vamos precisar da fila...
