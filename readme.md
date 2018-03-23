@@ -137,3 +137,7 @@ dps vai pegar os consumers e associar aos outros nodes.
 
 podemos inverter, quem procura algo para processar é o node, se ele perceber que algo esta consumindo muito processo, ele pode largar o consumer.
 logo, alguem vai pegar.
+
+---
+no producer, vamos definir um ttl de consumo.
+podemos colocar o ttl maximo na config, mas vamos deixar o cara escolher.
