@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "error during pagination parse",
-    "detail": "error during parameter 'limit' parse with value 'sample': strconv.Atoi: parsing \"sample\": invalid syntax"
-  }
-}

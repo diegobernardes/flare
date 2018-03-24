@@ -1,5 +1,5 @@
-service/flare/cmd/flare
-service/flare/cmd/flare.toml
+cmd/flare
+cmd/flare.toml
 **/debug.test
 **/debug
 .vscode/tags

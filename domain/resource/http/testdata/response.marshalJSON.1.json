@@ -1,8 +1,0 @@
-{
-  "id": "123",
-  "endpoint": "http://flare.com/products/{*}",
-  "change": {
-    "field": "version"
-  },
-  "createdAt": "2009-11-10T23:00:00Z"
-}

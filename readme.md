@@ -1,73 +1,52 @@
-# <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
-<a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
-<a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>
-<a href="https://godoc.org/github.com/diegobernardes/flare"><img src="https://img.shields.io/badge/api-reference-blue.svg?style=flat-square" alt="GoDoc"></a>
+mudar o consumer para o watch e o load receberem uma id.
 
-Flare is a service that listen to changes on HTTP endpoints and notify subscripted clients about the changes. It help reduce the pressure on APIs by avoiding the clients to do pooling requests to search for new/changed content and the need of the APIs to develop workers to notify the clients about document changes.
+---
+oq acontece se o consumer assign mudar? tipo, um update.
+nesse caso, nao vamos saber que o cara mudou.
 
-There is no need to the the service know anything about who is consuming it's updates, this is abstracted and lead to a simpler design on APIs. Problems like scaling the workers to notify the changes if the number of subscriptions increase, need to control the delivery success of the messages, include/update/delete the clients on your subscription list and so on are just solved.
+posso analisar o prev kv, dai chamar a funcao 2x. com o delete.
 
-## How to run
-```bash
-go get github.com/diegobernardes/flare/services/flare/cmd
-cd github.com/diegobernardes/flare/services/flare/cmd
-go run flare.go start
+---
+e se a mensagem na fila (sqs) estiver errada? ficar retentando? 
+configurar e obrigar a ter um redrive?
+manter um cache interno e deletar a mensagem caso chegue em uma retentativa maxima!?
+
+---
+vamos suportar um sistema multi tenant e com utilizacao entre eles?
+
+```
+/consumers
+/tenants/123/consumers
 ```
 
-## How it works
-Flare has 3 basic entities: `Resource`, `Subscription` and `Document`. The origin of content is responsible for `Resource` and `Document` entities and the clients are responsible for `Subscription`.
+acho que a ideia eh ter somente 1 camada de tenant, na verdade, poderiamos chamar de account.
+ou entao, nem precisa ter endpoint, pode ser header na chamada.
 
-### Resource
-<p align="center">
-	<img src="misc/doc/resource.jpg">
-<p>
+account-id: xyz
 
-Resource represents the entity you want to track. It cannot be updated, only deleted, and to delete, first you need to remove all the associated subscriptions.
+---
+vale a pena usar o esquema que estamos fazendo de consumer/producer e abandonar o modelo antigo!?
+temos que pensar nisso.
 
+podemos esquecer esse esquema de REST e trabalhar em cima apenas das mensagens.
 
-| Field  | Description |
-| ------------- | ------------- |
-| `addresses` | All the addresses a resource can have. Very useful when the same API is exposed to the internet and intranet with different hosts. |
-| `path` | Is the actual document that gonna be tracked. `wildcards` are required to track the collection and they can be later used at subscriptions. |
-| `change.field` | The field that is used to track changes on a document. It can be a string containing a date or a auto incremented integer. |
-| `change.format` | If the field is a date, this fields has the format to parse the document date. More info about the format [here](https://golang.org/pkg/time/#pkg-constants). |
+o bom do modelo novo eh que ele funciona com grpc, graphql, etc...
 
+---
+o payload nao eh obrigatorio. mas se ele nao existir, nao vamos conseguir fazer a questao do controle de entrega. vamos ser um proxy transparente.
+tudo oq chega, vamos passar para frente.
 
-### Subscription
-<p align="center">
-	<img src="misc/doc/subscription.jpg">
-<p>
+na hora de criar o producer, nao vamos poder filtrar e ou controlar o que ja foi entregue.
 
+{payload} -> {payload}
 
-Subscription is the responsible to notify the clients when a document from a resource changes.
+se eu nao conseguir entregar no destino, faco oq? mantenho ateh conseguir entregar
+retentatvas, tempo, etc...?
 
-| Field  | Description |
-| ------------- | ------------- |
-| `endpoint.url` | The address of the client that gonna receive the notification. |
-| `endpoint.method` | The method used on the notification request. |
-| `endpoint.headers` | A list of headers to sent within the request. |
-| `delivery.success` | List of success status code. This is used to mark the notification as delivered for the respective client. |
-| `delivery.discard` | List of status code to discard the notification. |
-| `sendDocument` | Send the whole document body as it was received. Default value is false. |
-| `skipEnvelope` | The trigger send a envelope with some useful informations. Default value is false. |
-| `data` | Only sent if the `skipEnvelope` is false. Can be used to provide aditional information to the client that gonna receive the notification. It also can interpolate wildcards used at resource path definition. |
+se eu estiver na aws, o consumer pode ser um sns, dai eu vou registrando no sns os sqs que vao receber a mensagem. o msm vale pro rabbitmq.
+na verdade se o consumer e o producer forem na aws, se sim, podemos fazer esse esquema do sns, nos outros casos, temos que ir na mao.
 
-### Document
-<p align="center">
-	<img src="misc/doc/document-create.jpg">
-<p>
-
-To update a document, a `PUT` should be done at `http://flare/documents/{endpoint}`, where the `{endpoint}` is the real document endpoint and it should match the information inserted at the resource creation. The body should contain the document.
-If the origin send the same document or older documents more then one time, the service don't gonna notify the clients again because it know the document version each client has. The notification only happens when is really needed.  
-
-<p align="center">
-	<img src="misc/doc/document-update.jpg">
-<p>
-
-The difference from previous request is that the email has changed from `@gmail.com` to `@outlook.com` and the `updatedAt` from `08:30` to `08:35`. After this, the client receive a notifications of update.
-
-<p align="center">
-	<img src="misc/doc/document-delete.jpg">
-<p>
-
-The delete should be sent with the delete method and no body.
+---
+talvez o start tenha que receber um contexto, dai qnd eu cancelar, eu cancelo todos ao mesmo tempo.
+eh meio que o stop, pq o stop cancela o contexto. dai eo processos ai.
+a diferenca vai ser no start que recria o contexto denovo.

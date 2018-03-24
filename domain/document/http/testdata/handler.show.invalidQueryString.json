@@ -1,6 +1,0 @@
-{
-  "error": {
-    "title": "invalid id",
-    "detail": "should not have query string 'key=value'"
-  }
-}

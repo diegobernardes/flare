@@ -1,0 +1,146 @@
+# --------------------------------------------------------------------------------------------------
+#   More about this configuration at: https://github.com/diegobernardes/flare/wiki/Configuration   #
+# --------------------------------------------------------------------------------------------------
+# - log.level
+#   Control the minimum log level from messages to be displayed.
+#   Possible values: "debug", "info", "warn" and "error".
+#
+# - log.output
+#   Where the logs gonna be sent.
+#   Possible values: "stdout" and "discard".
+#
+# - log.format
+#   Format of the outputed log.
+#   Possible values: "human" and "json".
+#
+[log]
+level  = "debug"
+output = "stdout"
+format = "human"
+
+# --------------------------------------------------------------------------------------------------
+# - http.server.enable
+#   Used to enable or disable the HTTP server.
+#   Possible values: true or false.
+#
+# - http.server.addr
+#   Where the HTTP server gonna listen. The value should have this format: "host:port". The host
+#   can be omited, in this case, Flare gonna bind to all available interfaces.
+#
+# - http.server.timeout
+#   The max time a request has to be processed.
+#
+[http.server]
+enable  = true
+addr    = ":8080"
+timeout = "5s"
+
+# --------------------------------------------------------------------------------------------------
+# - pagination.default-limit
+#   The quantity of entities to be returned by default on collections.
+#
+[pagination]
+default-limit = 30
+
+# --------------------------------------------------------------------------------------------------
+# - consumer.state-source
+#   Possible value: "cassandra".
+#
+[consumer]
+state-source = "cassandra"
+
+# --------------------------------------------------------------------------------------------------
+# - producer.worker.enable
+#   Used to enable or disable the worker.
+#   Possible values: true or false.
+#
+# - producer.worker.{name}.timeout
+#   The time a given message has to be processed.
+#
+# - producer.worker.{name}.concurrency
+#   The quantity of goroutines to process.
+#
+# - producer.worker.{name}.concurrency-output
+#   After the worker finish the process it need to send the output to another worker. This value
+#   control the quantity of goroutines delivering the output.
+#
+[producer.worker]
+enable = true
+
+  [producer.worker.spread]
+  timeout            = "10s"
+  concurrency        = 100
+  concurrency-output = 100
+
+  [producer.worker.delivery]
+  timeout     = "10s"
+  concurrency = 1000
+
+# --------------------------------------------------------------------------------------------------
+# - cluster.source
+#   Possible value: "etcd".
+#
+# - cluster.master-eligible
+#   Flag used to mark the nodes as a candidate to master.
+#   Possible values: true or false.
+#
+# - cluster.etcd.register-ttl
+#   Control the ttl the register process have.
+#
+# - cluster.etcd.election-ttl
+#   Control the ttl the election process have.
+#
+# - cluster.etcd.election-ttl-refresh
+#   Control the interval the lease must be renewed to remain as master.
+#
+[cluster]
+source          = "etcd"
+master-eligible = true
+
+  [cluster.etcd]
+  register-ttl         = "5s"
+  election-ttl         = "10s"
+  election-ttl-refresh = "5s"
+
+# --------------------------------------------------------------------------------------------------
+# - queue.source
+#   Possible value: "sqs".
+#
+# - queue.sqs.{name}.name
+#   The SQS queue the messages gonna be delivered/consumed.
+#
+# - queue.sqs.{name}.ingress-timeout
+#   The max quantity of time to wait during a request to send the messages to SQS.
+#
+# - queue.sqs.{name}.receive-wait-time
+#   The quantity of time to wait a new message be ready to be delived.
+#
+[queue]
+source = "sqs"
+
+  [queue.sqs.producer.spread]
+  name              = "flare-producer-spread"
+  ingress-timeout   = "5s"
+  receive-wait-time = "20s"
+
+  [queue.sqs.producer.delivery]
+  name              = "flare-producer-delivery"
+  ingress-timeout   = "5s"
+  receive-wait-time = "20s"
+
+[external.aws]
+key    = ""
+secret = ""
+region = ""
+
+[external.cassandra]
+hosts    = ["127.0.0.1"]
+port     = 9042
+timeout  = "1000ms"
+keyspace = "flare"
+
+[external.etcd]
+addr         = ["localhost:2379"]
+dial-timeout = "5s"
+username     = ""
+password     = ""
