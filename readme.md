@@ -129,7 +129,7 @@ acho que vou fazer o ring mesmo, dai todo mundo fica rodando procurando oq proce
 vamos colucar os assigns de consumer para node dentro de um array.
 
 
-o cara vai se registrar.
+o cara vai se registrar. 
 dps vai tentar se eleger o master.
 dps vai pegar os consumers e associar aos outros nodes.
 
@@ -141,3 +141,41 @@ logo, alguem vai pegar.
 ---
 no producer, vamos definir um ttl de consumo.
 podemos colocar o ttl maximo na config, mas vamos deixar o cara escolher.
+
+---
+o ideal é ter uma comunicação entre eles, hoje estou usando o banco para fazer isso...
+futuramente, tendo um paxos/raft, nao precisaria nem do banco para isso.
+
+---
+imagina que tenhamos o etcd. ok?
+entao, vamos registar os nós lá, vamos registar o master lá também.
+
+o master vai dar um watch nas chaves do master, e então ele vai ficar recebendo notificacoes de alteracao.
+toda vez que entrar um nó, o master recebe notificacoes.
+toda vez que um master for eleito, ele vai dar um watch e em seguida vai carregar tudo em memoria, com isso nao perde nada.
+
+qnd o master for fazer o schedule, ele vai ficar monitorando uma lista de chaves cadastradas no etcd.
+dai qnd alguem for cadastrado, ele vai identificar o n;ó com menor carga e vai lancar para ele.
+
+mas como ele faz isso? ele vai publicar no nó o cara tipo `/node/123/consumer/456`, o nó 123 vai estar ouvindo esse consumer `456`.
+antes dele processar, ele vai tentar lockar a chave para processar, se ele conseguir, ele processa, se nao, fica na mao.
+
+election/registry/repository/queue
+
+certao, o etcd consegue tratar do election e registry. agora, eles podem funcionar isolados? #ficaaduvida
+
+se por acaso o master morrer, o lease do node some, e o consumer sai dele, nesse momento ele recebe uma notificacao, e solta o lock tb.
+
+
+
+qnd o nó começar a procesar algo, ele vai ter um lease 
+
+
+---
+acho que vale a pena se acoplhar no etcd, nao sei se tem como fazer sem se acoplhar.
+
+app ligou.
+conectamos no etcd.
+pegamos um lease.
+nos registramos (node) com o lease.
+tentamos lockar o master (com o lease).

@@ -86,6 +86,27 @@ enable = true
   concurrency = 1000
 
 # --------------------------------------------------------------------------------------------------
+# - registry.source
+#   Possible value: "cassandra".
+#
+# - registry.cassandra.ttl
+#   Control the ttl a master lease have.
+#
+# - registry.cassandra.renew
+#   Control the interval the lease must be renewed to remain as master.
+#
+# - registry.cassandra.delete-timeout
+#   The delete happens in background and this value set the max quantity of time it has to execute.
+#
+[registry]
+source = "cassandra"
+
+  [registry.cassandra]
+  ttl            = "10s"
+  renew          = "5s"
+  delete-timeout = "10s"
+
+# --------------------------------------------------------------------------------------------------
 # - election.source
 #   Possible value: "cassandra".
 #
@@ -107,27 +128,6 @@ source   = "cassandra"
 eligible = true
 
   [election.cassandra]
-  ttl            = "10s"
-  renew          = "5s"
-  delete-timeout = "10s"
-
-# --------------------------------------------------------------------------------------------------
-# - registry.source
-#   Possible value: "cassandra".
-#
-# - registry.cassandra.ttl
-#   Control the ttl a master lease have.
-#
-# - registry.cassandra.renew
-#   Control the interval the lease must be renewed to remain as master.
-#
-# - registry.cassandra.delete-timeout
-#   The delete happens in background and this value set the max quantity of time it has to execute.
-#
-[registry]
-source = "cassandra"
-
-  [registry.cassandra]
   ttl            = "10s"
   renew          = "5s"
   delete-timeout = "10s"
@@ -175,3 +175,8 @@ hosts    = ["127.0.0.1"]
 port     = 9042
 timeout  = "1000ms"
 keyspace = "flare"
+
+
+
+# nao existe registry e election, existe cluster. ele vai controlar tudo.
+# cluster, storage e queue. eh oq temos...
