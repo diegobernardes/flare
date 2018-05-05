@@ -9,8 +9,8 @@ There is no need to the the service know anything about who is consuming it's up
 
 ## How to run
 ```bash
-go get github.com/diegobernardes/flare/services/flare/cmd
-cd $GOPATH/github.com/diegobernardes/flare/services/flare/cmd
+go get github.com/diegobernardes/flare
+cd $GOPATH/src/github.com/diegobernardes/flare/service/flare/cmd
 go run flare.go start
 ```
 
