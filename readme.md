@@ -45,7 +45,7 @@ Subscription is the responsible to notify the clients when a document from a res
 | `endpoint.url` | The address of the client that gonna receive the notification. |
 | `endpoint.method` | The method used on the notification request. |
 | `endpoint.headers` | A list of headers to sent within the request. |
-| `endpoint.actions.|create,update,delete|.|url,method,headers|` | Override of attributes per action. |
+| `endpoint.actions.(create,update,delete).(url,method,headers)` | Override of attributes per action. |
 | `delivery.success` | List of success status code. This is used to mark the notification as delivered for the respective client. |
 | `delivery.discard` | List of status code to discard the notification. |
 | `content.document` | Send the document. |
@@ -75,7 +75,7 @@ Subscription is the responsible to notify the clients when a document from a res
 	"content": {
 		"envelope": true,
 		"document": true
-	}
+	},
 	"data": {
 		"service": "user",
 		"id": "{id}"
