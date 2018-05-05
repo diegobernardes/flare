@@ -27,6 +27,7 @@ Resource represents the entity you want to track. It cannot be updated, only del
 | `change.field` | The field that is used to track changes on a document. It can be a string containing a date or a auto incremented integer. |
 | `change.format` | If the field is a date, this fields has the format to parse the document date. More info about the format [here](https://golang.org/pkg/time/#pkg-constants). |
 
+Endpoint: `POST http://flare.com/resources`
 ```json
 {
 	"endpoint": "http://api.company.com/users/{id}",
@@ -52,6 +53,7 @@ Subscription is the responsible to notify the clients when a document from a res
 | `content.envelope` | Send the document, if marked, inside a envelope with some metadata. |
 | `data` | Can only be set if `content.envelope` is true. Can be used to provide aditional information to the client that gonna receive the notification. It also can interpolate wildcards used at resource endpoint definition. |
 
+Endpoint: `POST http://flare.com/resources/:resource-id/subscriptions`
 ```json
 {
 	"endpoint": {
@@ -84,7 +86,7 @@ Subscription is the responsible to notify the clients when a document from a res
 ```
 
 ### Document
-To update a document, a `PUT` should be done at `http://flare/documents/{endpoint}`, where the `{endpoint}` is the real document endpoint and it should match the information inserted at the resource creation. The body should contain the document.
+To update a document, a `PUT` should be done at `http://flare.com/documents/{endpoint}`, where the `{endpoint}` is the real document endpoint and it should match the information inserted at the resource creation. The body should contain the document.
 If the origin send the same document or older documents more then one time, the service don't gonna notify the clients again because it know the document version each client has. The notification only happens when is really needed.
 
 The delete should be sent with the delete method and no body.
