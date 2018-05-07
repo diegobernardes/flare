@@ -1,3 +1,10 @@
+https://github.com/josdejong/jsoneditor
+usar esse editor de json para criar os recursos.
+
+na verdade eu gostaria de usar o monaco. e usar um linter para validar as merdas direto no browser.
+https://github.com/Microsoft/monaco-editor
+
+
 # <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>

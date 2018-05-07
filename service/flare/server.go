@@ -16,6 +16,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
 
+	"github.com/diegobernardes/flare/domain/admin"
 	document "github.com/diegobernardes/flare/domain/document/http"
 	resource "github.com/diegobernardes/flare/domain/resource/http"
 	subscription "github.com/diegobernardes/flare/domain/subscription/http"
@@ -131,6 +132,7 @@ func (s *server) router() (http.Handler, error) {
 	r.Route("/resources", s.routerResource)
 	r.Route("/resources/{resourceID}/subscriptions", s.routerSubscription)
 	r.Route("/documents", s.routerDocument)
+	r.Route("/admin", s.routerAdmin)
 
 	return r, nil
 }
@@ -176,6 +178,24 @@ func (s *server) routerDocument(r chi.Router) {
 	r.Get("/*", s.handler.document.Show)
 	r.Put("/*", s.handler.document.Update)
 	r.Delete("/*", s.handler.document.Delete)
+}
+
+func (s *server) routerAdmin(r chi.Router) {
+	resource := admin.Resource{}
+	subscription := admin.Subscription{}
+
+	r.Get("/", resource.Index)
+	r.Get("/resources", resource.Index)
+	r.Get("/resources/{id}", resource.Show)
+	r.Get("/resources/{id}/new", resource.New)
+	r.Delete("/resources/{id}", resource.Delete)
+	r.Post("/resources", resource.Create)
+
+	r.Get("/resources/{resourceId}/subscriptions", subscription.Index)
+	r.Get("/resources/{resourceId}/subscriptions/{id}", subscription.Show)
+	r.Get("/resources/{resourceId}/subscriptions/{id}/new", subscription.New)
+	r.Delete("/resources/{resourceId}/subscriptions/{id}", subscription.Delete)
+	r.Post("/resources/{resourceId}/subscriptions", subscription.Create)
 }
 
 func (s *server) init() error {
