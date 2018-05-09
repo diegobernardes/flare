@@ -1,3 +1,61 @@
+---
+http://cubic-bezier.com/#.77,.13,1,.06, posso aceitar uma formula como essa no retry.
+
+---
+outra possibilidade com filas individuais eh pausar o consumo de uma fila por um determinado tempo.
+
+---
+temos 2 abordagens, uma por request http outra por websocket.
+a do websocket, me parece menos hack, sendo que a do http se integra muito melhor ao estilo ativo.
+acho que o request http eh melhor por nao involver muita programacao do lado do cliente.
+
+para essa abordagem funcionar, vamos ter que trabalhar no esquema das filas individuais.
+pq ai posso consumir diretamente da fila para entregar para o cliente.
+vamos conseguir controlar muito melhor tambem a questao do rate limit e concorrencia.
+
+---
+`"type": "passive"` no subscription.
+
+---
+ao inves de websocket eu posso ir sobre demanda. 
+vou ter um endpoint de chamada, qnd o usuario bater nesse endpoint, ai eu vou na origem.
+
+http://flare.com/resources/132/subscriptions/456/send-message?quantity=20&concurrency=20
+
+ws://flare.com/resources/132/subscriptions/456/stream
+
+reserve
+delete :id, :status (success, discard)
+release :id, :delay
+
+
+request:
+  
+  {"id": "uuid", "action": "reserve", "quantity": "20"}
+
+response:
+
+  {"id": "uuid", "error": "couldn't reserve the messages"}
+  {"id": "uuid", "messages": [{"id": "uuid"}]}
+
+---
+
+request:
+
+  {"id": "uuid", "action": "changeState", "messageID": "uuid", "status": "success"}
+  {"id": "uuid", "action": "changeState", "messageID": "uuid", "status": "discard"}
+  {"id": "uuid", "action": "changeState", "messageID": "uuid", "status": "delay", "delay": "300ms"}
+
+response:
+
+
+
+{"action": "reserve"}
+
+
+---
+
+
 # <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>

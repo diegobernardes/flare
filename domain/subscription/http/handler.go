@@ -128,6 +128,22 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	h.writer.Response(w, nil, http.StatusNoContent, nil)
 }
 
+// SendMessage is used trigger a delivery of messages to the client.
+func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
+	// http://flare.com/resources/132/subscriptions/456/send-message?quantity=20&concurrency=20
+
+	/*
+		o usuario vai poder pedir a quantidade de mensagens a serem entregues e a concorrencia para a
+		entrega das mensagens.
+
+		a concorrencia nao pode ser maior do que a quantidade de mensagens e ou o limite maximo.
+
+		a quantidade maxima tambem tem limites.
+
+		caso o resource não seja do tipo, passive, a chamada desse metodo deve retornar um bad request.
+	*/
+}
+
 func (h *Handler) parseSubscriptionCreateAndValidate(
 	body io.Reader,
 	resource *flare.Resource,
