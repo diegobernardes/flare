@@ -471,6 +471,21 @@ func TestHandlerFetchResource(t *testing.T) {
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
 					},
 				},
+				{
+					"return the resource with fallback on find by uri",
+					0,
+					nil,
+					nil,
+					url.URL{Scheme: "http", Host: "documents", Path: "/123"},
+					nil,
+					[]func(*testRepository.Document){
+						testRepository.DocumentLoadSliceByteDocument(infraTest.Load("document.1.json")),
+						testRepository.DocumentDate(time.Date(2009, time.November, 10, 23, 0, 0, 0, time.UTC)),
+					},
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.2.json")),
+					},
+				},
 			}
 
 			for _, tt := range tests {

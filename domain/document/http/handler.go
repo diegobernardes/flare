@@ -131,6 +131,11 @@ func (h *Handler) fetchResource(
 		resource, err = h.resourceRepository.FindByURI(ctx, *id)
 	} else {
 		resource, err = h.resourceRepository.FindByID(ctx, doc.Resource.ID)
+		if err != nil {
+			if errRepo := err.(flare.ResourceRepositoryError); errRepo.NotFound() {
+				resource, err = h.resourceRepository.FindByURI(ctx, *id)
+			}
+		}
 	}
 	if err != nil {
 		status := http.StatusInternalServerError
