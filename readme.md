@@ -1,3 +1,23 @@
+vou criar uma abstracao do repository.
+essa abstracao qnd der um create, ele vai criar uma fila no sqs e depois vai gravar o cara no banco.
+vamos ter que ter uma tarefa para deletar filas criadas erradamente. tipo, procurar as filas criadas e ver se estao
+associadas no banco, se noa estiverem, deletar. pode ser uma tarefa recorrente do flare fazer essa limpeza, podemos configurar 
+no arquivo de configuracao.
+
+essa regra tem que existir para os providers individualmente, tipo, soh para o aws sqs por exemplo.
+
+bom, salvei a fila no banco? como tudo vai funcionar agora? precisamos ligar o worker, como vamos ligar?
+dps de criar, ligamos ele?
+
+// qnd ligar
+procura todos os subscriptions, dai pega as ids e liga os workers pelas ids, se por acaso algum nao existir, tem que dar erro 
+de inicializacao e sair.
+
+periodicamente, o worker tem que monitorar por novaas filas para processar. esse processo hj no mongodb vai ser um pooling, mas 
+se estivessemos usando alguma ferramenta de comunicaao, poderiamos enviar na hora avisando que tem mais filas para processar. 
+tenho que fazer o watch da v4, exatamente igual.
+
+
 # <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>
