@@ -113,8 +113,9 @@ func (d *domain) initDocument() (*document.Handler, error) {
 
 	documentHandler, err := document.NewHandler(
 		document.HandlerDocumentRepository(d.repository.base.Document()),
-		document.HandlerGetDocumentID(func(r *http.Request) string { return chi.URLParam(r, "*") }),
+		document.HandlerSubscriptionRepository(d.repository.base.Subscription()),
 		document.HandlerResourceRepository(d.repository.base.Resource()),
+		document.HandlerGetDocumentID(func(r *http.Request) string { return chi.URLParam(r, "*") }),
 		document.HandlerSubscriptionTrigger(d.worker.subscriptionPartition),
 		document.HandlerWriter(writer),
 	)

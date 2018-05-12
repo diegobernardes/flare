@@ -18,11 +18,12 @@ import (
 
 // Handler implements the HTTP handler to manage documents.
 type Handler struct {
-	documentRepository  flare.DocumentRepositorier
-	resourceRepository  flare.ResourceRepositorier
-	subscriptionTrigger flare.SubscriptionTrigger
-	getDocumentID       func(*http.Request) string
-	writer              *infraHTTP.Writer
+	documentRepository     flare.DocumentRepositorier
+	resourceRepository     flare.ResourceRepositorier
+	subscriptionRepository flare.SubscriptionRepositorier
+	subscriptionTrigger    flare.SubscriptionTrigger
+	getDocumentID          func(*http.Request) string
+	writer                 *infraHTTP.Writer
 }
 
 // Show receive the request to show a given document.
@@ -57,29 +58,46 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, pagination, err := h.subscriptionRepository.Find(
+		r.Context(), &flare.Pagination{Limit: 1}, resource.ID,
+	)
+	if err != nil {
+		h.writer.Error(
+			w,
+			"error during check if the resource has any subscription",
+			err,
+			http.StatusInternalServerError,
+		)
+		return
+	}
+	if pagination.Total == 0 {
+		h.writer.Response(w, nil, http.StatusAccepted, nil)
+		return
+	}
+
 	rawDoc := &document{
 		ID:        *id,
 		Resource:  *resource,
 		UpdatedAt: time.Now(),
 	}
 
-	if err := rawDoc.parseBody(r.Body); err != nil {
+	if err = rawDoc.parseBody(r.Body); err != nil {
 		h.writer.Error(w, "invalid body", err, http.StatusBadRequest)
 		return
 	}
 
-	if err := rawDoc.parseRevision(); err != nil {
+	if err = rawDoc.parseRevision(); err != nil {
 		h.writer.Error(w, "invalid body", err, http.StatusBadRequest)
 		return
 	}
 
 	doc := marshal(rawDoc)
-	if err := h.documentRepository.Update(r.Context(), doc); err != nil {
+	if err = h.documentRepository.Update(r.Context(), doc); err != nil {
 		h.writer.Error(w, "error during document update", err, http.StatusInternalServerError)
 		return
 	}
 
-	err := h.subscriptionTrigger.Push(r.Context(), doc, flare.SubscriptionTriggerUpdate)
+	err = h.subscriptionTrigger.Push(r.Context(), doc, flare.SubscriptionTriggerUpdate)
 	if err != nil {
 		h.writer.Error(w, "error during subscription trigger", err, http.StatusInternalServerError)
 		return
@@ -180,6 +198,10 @@ func NewHandler(options ...func(*Handler)) (*Handler, error) {
 		return nil, errors.New("resourceRepository not found")
 	}
 
+	if h.subscriptionRepository == nil {
+		return nil, errors.New("subscriptionRepository not found")
+	}
+
 	if h.subscriptionTrigger == nil {
 		return nil, errors.New("subscriptionTrigger not found")
 	}
@@ -203,6 +225,11 @@ func HandlerDocumentRepository(repo flare.DocumentRepositorier) func(*Handler) {
 // HandlerResourceRepository set the repository to access the resources.
 func HandlerResourceRepository(repo flare.ResourceRepositorier) func(*Handler) {
 	return func(s *Handler) { s.resourceRepository = repo }
+}
+
+// HandlerSubscriptionRepository set the repository to access the subscriptions.
+func HandlerSubscriptionRepository(repo flare.SubscriptionRepositorier) func(*Handler) {
+	return func(s *Handler) { s.subscriptionRepository = repo }
 }
 
 // HandlerSubscriptionTrigger set the subscription trigger to process the document updates.

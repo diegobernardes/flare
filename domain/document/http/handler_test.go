@@ -34,6 +34,7 @@ func TestNewHandler(t *testing.T) {
 			options := []func(*Handler){
 				HandlerDocumentRepository(&testRepository.Document{}),
 				HandlerResourceRepository(&testRepository.Resource{}),
+				HandlerSubscriptionRepository(&testRepository.Subscription{}),
 				HandlerGetDocumentID(func(*http.Request) string { return "" }),
 				HandlerSubscriptionTrigger(&subscriptionTest.Trigger{}),
 				HandlerWriter(writer),
@@ -58,11 +59,18 @@ func TestNewHandler(t *testing.T) {
 				{
 					HandlerDocumentRepository(&testRepository.Document{}),
 					HandlerResourceRepository(&testRepository.Resource{}),
+					HandlerSubscriptionRepository(&testRepository.Subscription{}),
+				},
+				{
+					HandlerDocumentRepository(&testRepository.Document{}),
+					HandlerResourceRepository(&testRepository.Resource{}),
+					HandlerSubscriptionRepository(&testRepository.Subscription{}),
 					HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 				},
 				{
 					HandlerDocumentRepository(&testRepository.Document{}),
 					HandlerResourceRepository(&testRepository.Resource{}),
+					HandlerSubscriptionRepository(&testRepository.Subscription{}),
 					HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 					HandlerGetDocumentID(func(*http.Request) string { return "" }),
 				},
@@ -137,6 +145,7 @@ func TestServiceHandlerShow(t *testing.T) {
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
+						HandlerSubscriptionRepository(repo.Subscription()),
 						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 						HandlerWriter(writer),
@@ -230,6 +239,7 @@ func TestServiceHandlerDelete(t *testing.T) {
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
+						HandlerSubscriptionRepository(repo.Subscription()),
 						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(tt.triggerError)),
 						HandlerWriter(writer),
@@ -247,14 +257,15 @@ func TestServiceHandlerUpdate(t *testing.T) {
 	Convey("Feature: Serve a HTTP request to update a given document", t, func() {
 		Convey("Given a list of requests", func() {
 			tests := []struct {
-				title           string
-				req             *http.Request
-				status          int
-				header          http.Header
-				body            []byte
-				documentOptions []func(*testRepository.Document)
-				resourceOptions []func(*testRepository.Resource)
-				triggerError    error
+				title               string
+				req                 *http.Request
+				status              int
+				header              http.Header
+				body                []byte
+				documentOptions     []func(*testRepository.Document)
+				resourceOptions     []func(*testRepository.Resource)
+				subscriptionOptions []func(*testRepository.Subscription)
+				triggerError        error
 			}{
 				{
 					"return a error because it has a query string",
@@ -264,6 +275,7 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					http.StatusBadRequest,
 					http.Header{"Content-Type": []string{"application/json"}},
 					infraTest.Load("handler.update.invalidQueryString.json"),
+					nil,
 					nil,
 					nil,
 					nil,
@@ -285,6 +297,26 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					},
 					nil,
 					nil,
+					nil,
+				},
+				{
+					"return a error because of a repository subscription find error",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer([]byte("")),
+					),
+					http.StatusInternalServerError,
+					http.Header{"Content-Type": []string{"application/json"}},
+					infraTest.Load("handler.update.subscriptionFindError.json"),
+					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					[]func(*testRepository.Subscription){
+						testRepository.SubscriptionError(&testRepository.DocumentErr{Message: "generic error"}),
+					},
+					nil,
 				},
 				{
 					"return a error because of a body parse error",
@@ -299,6 +331,11 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					nil,
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					[]func(*testRepository.Subscription){
+						testRepository.SubscriptionLoadSliceByteSubscription(
+							infraTest.Load("subscription.1.json"),
+						),
 					},
 					nil,
 				},
@@ -315,6 +352,11 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					nil,
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					[]func(*testRepository.Subscription){
+						testRepository.SubscriptionLoadSliceByteSubscription(
+							infraTest.Load("subscription.1.json"),
+						),
 					},
 					nil,
 				},
@@ -334,6 +376,11 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
 					},
+					[]func(*testRepository.Subscription){
+						testRepository.SubscriptionLoadSliceByteSubscription(
+							infraTest.Load("subscription.1.json"),
+						),
+					},
 					nil,
 				},
 				{
@@ -349,6 +396,11 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					nil,
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					[]func(*testRepository.Subscription){
+						testRepository.SubscriptionLoadSliceByteSubscription(
+							infraTest.Load("subscription.1.json"),
+						),
 					},
 					errors.New("error during push"),
 				},
@@ -366,6 +418,28 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					[]func(*testRepository.Resource){
 						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
 					},
+					[]func(*testRepository.Subscription){
+						testRepository.SubscriptionLoadSliceByteSubscription(
+							infraTest.Load("subscription.1.json"),
+						),
+					},
+					nil,
+				},
+				{
+					"skip the document because it don't have any subscription",
+					httptest.NewRequest(
+						http.MethodPut,
+						"http://documents/123",
+						bytes.NewBuffer(infraTest.Load("handler.update.input.json")),
+					),
+					http.StatusAccepted,
+					http.Header{},
+					nil,
+					nil,
+					[]func(*testRepository.Resource){
+						testRepository.ResourceLoadSliceByteResource(infraTest.Load("resource.1.json")),
+					},
+					nil,
 					nil,
 				},
 			}
@@ -378,10 +452,12 @@ func TestServiceHandlerUpdate(t *testing.T) {
 					repo := testRepository.NewClient(
 						testRepository.ClientDocumentOptions(tt.documentOptions...),
 						testRepository.ClientResourceOptions(tt.resourceOptions...),
+						testRepository.ClientSubscriptionOptions(tt.subscriptionOptions...),
 					)
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
+						HandlerSubscriptionRepository(repo.Subscription()),
 						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(tt.triggerError)),
 						HandlerWriter(writer),
@@ -500,6 +576,7 @@ func TestHandlerFetchResource(t *testing.T) {
 					handler, err := NewHandler(
 						HandlerDocumentRepository(repo.Document()),
 						HandlerResourceRepository(repo.Resource()),
+						HandlerSubscriptionRepository(repo.Subscription()),
 						HandlerGetDocumentID(getDocumentID),
 						HandlerSubscriptionTrigger(subscriptionTest.NewTrigger(nil)),
 						HandlerWriter(writer),

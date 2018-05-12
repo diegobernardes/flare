@@ -1,0 +1,6 @@
+{
+  "error": {
+    "detail": "generic error",
+    "title": "error during check if the resource has any subscription"
+  }
+}

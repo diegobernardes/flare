@@ -1,0 +1,25 @@
+[
+  {
+    "endpoint": {
+      "url": "http://app.com",
+      "method": "POST"
+    },
+    "delivery": {
+      "success": [
+        200
+      ],
+      "discard": [
+        500
+      ]
+    },
+    "createdAt": "2009-11-10T23:00:00Z",
+    "id": "456",
+    "resource": {
+      "id": "1"
+    },
+    "content": {
+      "document": true,
+      "envelope": true
+    }
+  }
+]
