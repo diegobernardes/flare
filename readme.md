@@ -14,6 +14,14 @@ cd $GOPATH/src/github.com/diegobernardes/flare/service/flare/cmd
 go run flare.go start
 ```
 
+There is a example at `misc/example`, it's a `docker-compose` that starts a Flare server, a producer and a consumer. From times to times the producer create/update/delete a given document and the consumer receives this changes from Flare. You must have `docker-compose` and `docker` to run this example.
+
+```bash
+go get github.com/diegobernardes/flare
+cd $GOPATH/src/github.com/diegobernardes/flare/misc/example
+make run
+```
+
 ## How it works
 Flare has 3 basic entities: `Resource`, `Subscription` and `Document`. The origin of content is responsible for `Resource` and `Document` entities and the clients are responsible for `Subscription`.
 
