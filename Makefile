@@ -1,12 +1,12 @@
 DOCKER_VERSION  ?= 0.2
 DOCKER_IMAGE    ?= diegobernardes/flare-ci
 PROJECT_PATH    ?= github.com/diegobernardes/flare
-VERSION          = $(shell git describe --tags --always --dirty="-dev")
-DATE             = $(shell date -u '+%Y-%m-%d %H:%M UTC')
-COMMIT           = $(shell git rev-parse --short HEAD)
-VERSION_FLAGS    = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(VERSION)" \
-                             -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(DATE)" \
-                             -X "github.com/diegobernardes/flare/service/flare.Commit=$(COMMIT)"'
+FLARE_VERSION    = $(shell git describe --tags --always --dirty="-dev")
+FLARE_DATE       = $(shell date -u '+%Y-%m-%d %H:%M UTC')
+FLARE_COMMIT     = $(shell git rev-parse --short HEAD)
+VERSION_FLAGS    = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(FLARE_VERSION)" \
+                             -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(FLARE_DATE)" \
+                             -X "github.com/diegobernardes/flare/service/flare.Commit=$(FLARE_COMMIT)"'
 
 run:
 	@echo $(VERSION)
@@ -119,3 +119,7 @@ flare-build:
 git-clean:
 	@git remote prune origin
 	@git gc --auto
+
+release:
+	@(FLARE_VERSION='$(FLARE_VERSION)' FLARE_DATE='$(FLARE_DATE)' FLARE_COMMIT='$(FLARE_COMMIT)' goreleaser --rm-dist)
+	@rm -Rf dist

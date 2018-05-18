@@ -1,0 +1,42 @@
+project_name: flare
+
+before:
+  hooks:
+    - make pre-pr
+
+builds:
+  - main: ./service/flare/cmd/flare.go
+    goos: [linux, windows, darwin]
+    goarch: [386, amd64]
+
+    ldflags:
+      >
+        -X "github.com/diegobernardes/flare/service/flare.Version={{.Env.FLARE_VERSION}}"
+        -X "github.com/diegobernardes/flare/service/flare.BuildTime={{.Env.FLARE_DATE}}"
+        -X "github.com/diegobernardes/flare/service/flare.Commit={{.Env.FLARE_COMMIT}}"
+
+archive:
+  format: zip
+  name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+  files:
+    - readme.md
+    - LICENSE
+    - service/flare/cmd/flare.sample.toml
+
+release:
+  github:
+    owner: diegobernardes
+    name: flare
+
+  draft: true
+  prerelease: true
+  name_template: "v{{.Version}}"
+
+changelog:
+  sort: asc
+
+sign:
+  cmd: gpg
+  args: ["-u", "B90152DBE843DF7AD67B3328353ED4569528896C", "--output", "${signature}", "--detach-sign", "${artifact}"]
+  artifacts: all
