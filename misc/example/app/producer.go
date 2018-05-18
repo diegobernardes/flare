@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
+// Producer send product notifications to Flare.
 type Producer struct{}
 
+// Start the service.
 func (p *Producer) Start() {
 	// Wait the Flare server to be ready to accept requests.
 	p.wait()
@@ -30,7 +32,11 @@ func (*Producer) wait() {
 		if err != nil {
 			continue
 		}
-		defer resp.Body.Close()
+		defer func() {
+			if err := resp.Body.Close(); err != nil {
+				panic(err)
+			}
+		}()
 
 		if resp.StatusCode == http.StatusOK {
 			break
@@ -53,7 +59,11 @@ func (*Producer) createResource() {
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		panic("invalid resource status")
@@ -88,6 +98,8 @@ func (*Producer) sendUpdates() {
 		if err != nil {
 			panic(err)
 		}
-		defer resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			panic(err)
+		}
 	}
 }

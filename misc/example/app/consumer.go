@@ -9,8 +9,10 @@ import (
 	"time"
 )
 
+// Consumer holds the logic to consume the notifications from Flare.
 type Consumer struct{}
 
+// Start the consumer.
 func (c *Consumer) Start() {
 	// Wait the Flare server to be ready to accept requests.
 	c.wait()
@@ -40,10 +42,14 @@ func (c *Consumer) wait() {
 		var r result
 		dec := json.NewDecoder(resp.Body)
 		if err := dec.Decode(&r); err != nil {
-			resp.Body.Close()
+			if err := resp.Body.Close(); err != nil {
+				panic(err)
+			}
 			continue
 		}
-		resp.Body.Close()
+		if err := resp.Body.Close(); err != nil {
+			panic(err)
+		}
 
 		if r.Pagination.Total > 0 {
 			break
@@ -124,7 +130,11 @@ func (c *Consumer) createSubscription() {
 	if err != nil {
 		panic(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			panic(err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusCreated {
 		panic(errors.New("invalid status code"))
