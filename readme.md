@@ -22,6 +22,11 @@ cd $GOPATH/src/github.com/diegobernardes/flare/misc/example
 make run
 ```
 
+There is also a Docker image:
+```bash
+docker run --rm -p 8080:8080 diegobernardes/flare:v0.1.0-alpha
+```
+
 ## How it works
 Flare has 3 basic entities: `Resource`, `Subscription` and `Document`. The origin of content is responsible for `Resource` and `Document` entities and the clients are responsible for `Subscription`.
 
