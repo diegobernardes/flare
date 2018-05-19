@@ -1,12 +1,14 @@
-DOCKER_VERSION  ?= 0.2
-DOCKER_IMAGE    ?= diegobernardes/flare-ci
-PROJECT_PATH    ?= github.com/diegobernardes/flare
-FLARE_VERSION    = $(shell git describe --tags --always --dirty="-dev")
-FLARE_DATE       = $(shell date -u '+%Y-%m-%d %H:%M UTC')
-FLARE_COMMIT     = $(shell git rev-parse --short HEAD)
-VERSION_FLAGS    = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(FLARE_VERSION)" \
-                             -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(FLARE_DATE)" \
-                             -X "github.com/diegobernardes/flare/service/flare.Commit=$(FLARE_COMMIT)"'
+DOCKER_RUN_VERSION ?= v0.1.0-alpha
+DOCKER_RUN_IMAGE   ?= diegobernardes/flare
+DOCKER_CI_VERSION  ?= 0.2
+DOCKER_CI_IMAGE    ?= diegobernardes/flare-ci
+PROJECT_PATH       ?= github.com/diegobernardes/flare
+FLARE_VERSION       = $(shell git describe --tags --always --dirty="-dev")
+FLARE_DATE          = $(shell date -u '+%Y-%m-%d %H:%M UTC')
+FLARE_COMMIT        = $(shell git rev-parse --short HEAD)
+VERSION_FLAGS       = -ldflags='-X "github.com/diegobernardes/flare/service/flare.Version=$(FLARE_VERSION)" \
+                                -X "github.com/diegobernardes/flare/service/flare.BuildTime=$(FLARE_DATE)" \
+                                -X "github.com/diegobernardes/flare/service/flare.Commit=$(FLARE_COMMIT)"'
 
 run:
 	@echo $(VERSION)
@@ -26,7 +28,7 @@ coveralls:
 		-e "TERM=xterm-256color" \
 		-e TRAVIS_BRANCH=$(TRAVIS_BRANCH) \
 		-e COVERALLS_TOKEN=$(COVERALLS_TOKEN) \
-		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
+		$(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION) \
 		/bin/bash -c "gotest -race -failfast -covermode=atomic -coverprofile=profile.cov ./...; goveralls -coverprofile=profile.cov"
 
 pre-pr: test lint-fast lint-slow
@@ -39,7 +41,7 @@ test:
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
-		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
+		$(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION) \
 		gotest -v -race -failfast ./...
 
 lint-fast:
@@ -49,7 +51,7 @@ lint-fast:
 		-v "$(PWD)":/go/src/$(PROJECT_PATH) \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
-		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
+		$(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION) \
 		gometalinter ./... \
 			--disable-all \
 			--enable=gas \
@@ -80,7 +82,7 @@ lint-slow:
 		-v "$(PWD)":/go/src/$(PROJECT_PATH) \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
-		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
+		$(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION) \
 		gometalinter ./... \
 			--disable-all \
 			--enable=megacheck \
@@ -100,11 +102,19 @@ lint-slow:
 			--tests \
 			--vendor
 
-docker-build:
-	@docker build --network=host -t $(DOCKER_IMAGE):$(DOCKER_VERSION) misc/docker/ci
+docker-ci-build:
+	@docker build --network=host -t $(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION) misc/docker/ci
 
-docker-push:
-	@docker push $(DOCKER_IMAGE):$(DOCKER_VERSION)
+docker-ci-push:
+	@docker push $(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION)
+
+docker-run-build:
+	@($(MAKE) flare-build)
+	@docker build --network=host -t $(DOCKER_RUN_IMAGE):$(DOCKER_RUN_VERSION) misc/docker/run
+	@rm -Rf flare
+
+docker-run-push:
+	@docker push $(DOCKER_RUN_IMAGE):$(DOCKER_RUN_VERSION)
 
 flare-build:
 	@docker run \
@@ -113,7 +123,7 @@ flare-build:
 		-v "$(PWD)":/go/src/$(PROJECT_PATH) \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
-		$(DOCKER_IMAGE):$(DOCKER_VERSION) \
+		$(DOCKER_CI_IMAGE):$(DOCKER_CI_VERSION) \
 		go build $(VERSION_FLAGS) service/flare/cmd/flare.go
 
 git-clean:
