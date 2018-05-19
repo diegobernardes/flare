@@ -4,3 +4,4 @@ service/flare/cmd/flare.toml
 **/debug
 .vscode/tags
 profile.cov
+dist
