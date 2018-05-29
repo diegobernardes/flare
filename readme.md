@@ -103,3 +103,22 @@ To update a document, a `PUT` should be done at `http://flare.com/documents/{end
 If the origin send the same document or older documents more then one time, the service don't gonna notify the clients again because it know the document version each client has. The notification only happens when is really needed.
 
 The delete should be sent with the delete method and no body.
+
+## Roadmap
+
+I have a lot of ideas and plans for Flare, but, what i've planned to the stable release (v1.0.0) is this:
+
+* **Selective subscriptions**  
+	During the subscription would be nice to filter the messages like this: `message.quantity > 0`.
+
+* **Retry policy**  
+	Control how many times the message should try to deliver.
+
+* **Queue isolation**  
+	Isolate the queues. Today all the queues are shared and this disable other features like rate limit and backpressure.
+
+* **Rate limit**  
+	Control the concurrency to send the updates.
+
+* **Backpressure**  
+	Allow the subscriptions to stay at `passive` mode and only receive updates when ask.
