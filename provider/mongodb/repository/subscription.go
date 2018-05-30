@@ -59,7 +59,7 @@ type subscriptionURLEntity struct {
 // Subscription implements the data layer for the subscription service.
 type Subscription struct {
 	resourceRepository resourceRepositorier
-	documentRepository flare.DocumentRepositorier
+	documentRepository documentRepositorier
 	client             *mongodb.Client
 	database           string
 	collection         string
@@ -237,6 +237,8 @@ func (s *Subscription) FindByPartition(
 
 // Delete a given subscription.
 func (s *Subscription) Delete(ctx context.Context, resourceId, id string) error {
+	// chamar o worker para deletar o subscription e os subscriptiont triggers.
+
 	session := s.client.Session()
 	defer session.Close()
 
@@ -394,6 +396,7 @@ func (s *Subscription) upsertSubscriptionTrigger(
 	return nil
 }
 
+// TODO: em todos os casos de saida dessa funcao devemos fazer as verificacoes.
 func (s *Subscription) triggerProcess(
 	groupCtx context.Context,
 	subs *flare.Subscription,
@@ -428,6 +431,68 @@ func (s *Subscription) triggerProcess(
 
 	if err = s.upsertSubscriptionTrigger(session, subs, doc); err != nil {
 		return errors.Wrap(err, "error during update subscriptionTriggers")
+	}
+
+	if err := s.something(groupCtx, doc); err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func (s *Subscription) something(ctx context.Context, doc *flare.Document) error {
+	session := s.client.Session()
+	defer session.Close()
+
+	q := session.
+		DB(s.database).
+		C(s.collectionTrigger).
+		Find(bson.M{"document.id": doc.ID.String()}).
+		Select(bson.M{"document.revision": 1}).
+		Sort("-document.revision")
+
+	type result struct {
+		Document struct {
+			Revision int `bson:"revision"`
+		} `bson:"document"`
+	}
+
+	var r result
+	if err := q.One(&r); err != nil {
+		panic(err)
+	}
+
+	if err := s.deleteSomething(ctx, doc); err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func (s *Subscription) deleteSomething(ctx context.Context, doc *flare.Document) error {
+	if err := s.documentRepository.deleteOlder(ctx, doc); err != nil {
+		panic(err)
+	}
+
+	session := s.client.Session()
+	defer session.Close()
+
+	q := session.
+		DB(s.database).
+		C(s.collectionTrigger)
+
+	info, err := q.RemoveAll(bson.M{
+		"document.id": doc.ID.String(),
+		"document.revision": bson.M{
+			"$lt": doc.Revision,
+		},
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	if info.Matched != info.Removed {
+		panic("deu merda e nao conseguimos deletar tudo...")
 	}
 
 	return nil

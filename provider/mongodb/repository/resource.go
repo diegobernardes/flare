@@ -29,6 +29,11 @@ type resourceRepositorier interface {
 	joinPartition(ctx context.Context, id string) (string, error)
 }
 
+type documentRepositorier interface {
+	flare.DocumentRepositorier
+	deleteOlder(ctx context.Context, doc *flare.Document) error
+}
+
 type resourceEntity struct {
 	ID        string                 `bson:"_id"`
 	Endpoint  resourceEndpointEntity `bson:"endpoint"`

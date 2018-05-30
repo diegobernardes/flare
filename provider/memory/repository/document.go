@@ -58,4 +58,18 @@ func (d *Document) Delete(ctx context.Context, id url.URL) error {
 	return nil
 }
 
+// Delete all the documents from a given resource.
+func (d *Document) DeleteByResourceID(ctx context.Context, resourceID string) error {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	for id, document := range d.documents {
+		if document.Resource.ID == resourceID {
+			delete(d.documents, id)
+		}
+	}
+
+	return nil
+}
+
 func (d *Document) init() { d.documents = make(map[url.URL]flare.Document) }

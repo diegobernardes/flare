@@ -1,3 +1,190 @@
+procurar pelo document id ordenado por revisao, pegar o menor.
+deletar tudo que for menor que essa revisão.
+
+db.getCollection('subscriptionTriggers').find({"document.id": "http://user.com/users/141"}).sort({"document.revision": 1}).limit(1);
+db.getCollection('subscriptionTriggers').remove({"document.id": "http://user.com/users/141", "document.revision": { $ls: 123}});
+
+db.products.remove(
+    { qty: { $gt: 20 } },
+    { writeConcern: { w: "majority", wtimeout: 5000 } }
+)
+
+isso vai acabar sendo pesado, a melhor coisa a se fazer é colocar isso em um worker. sempre que uma mensagem processar, vamos criar um debounce worker.
+tipo, colocamos na fila e gravamos no banco o processamento, dai, se algo tentar rodar antes do debounce, ignoramos a mensagem. caso contrario, colocamos no banco.
+
+
+estudar sobre a questao dos tempos e colisao, atomico, vector, cassandra e riak.
+
+
+no futuro para evitar problemas, se um cliente ficar mt atras, podemos deletar em partes o historico dos  documentos. tipo
+vamos pensar que temos 5 estados, 1 cliente esta  no primeiro e todos os outros no ultimo. nesse caso, hj, nao deletariamos  nada.
+no caso otimizado, podemos deletar os estados do meio, dai qnd o cliente for pular, ele  ja pula para a ultima versao.
+
+
+---
+(system worker)
+
+We need to create a system worker. This worker gonna do actions to maintain the server running well. It gonna process multiples kinds of jobs, one of then is the document/subscription cleanup.
+
+After a document is processed by the delivery queue we should check if we should delete the old revisions of the given document. Doing this at the delivery flow is kinda bad because it envolves some queries and logics that don't belong to the delivery and may even cause a fail which disrupts the main purpose of the delivery worker.
+
+So, after every time the deliver run, a message gonna be send to the system worker for that document to check if it has revisions to be deleted.
+
+---
+(Debounce on document cleanup worker)
+
+The document cleanup worker should have a debounce to decrease database overhead. If we send 1000 updates for a given document, this should generate alot of unnecessary database access. 
+
+To solve this, we should add a cleanup message everytime a delivery is processed. Then, should check if there is already something on queue waiting to be processed, in this case, the message deleted. In case of a delete, where the subscriptionTrigger, in case of MongoDB, is deleted, another worker should be generate to handle this cases, if there is any subscriptionTriger using that document version.
+
+isso ainda eh factivel de falha, certo? por causa do debounce.
+
+---
+podemos criar um worker genérico que fica rodando outros workers. tipo, podemos colocar  os workers  de criacao d e fila, e manutencao rodando no mesmo pool.
+o worker de delecao de documentos, pode  rodar em outro pool.
+
+---
+
+um documento chega sem subscription, descartamos.
+um documento chega, atualizamos os clientes e rodamos o clean.
+um outro documento chega, atualizamos os clientes e rodamos o clean.
+o documento é deletado, atualizamos os clientes e rodamos o clean.
+
+o delete é problemático porque temos uma verificacao, se o documento estiver deletado, saimos do worker.
+acho que podemos tirar isso e tratar o delete de uma forma diferente.
+oq podemos verificar é se tem o subscriptionTrigger, pq se nao tiver, tempos que sair mesmo.
+
+---
+qnd as filas forem ser criadas, precisamos validar mais coisas. tipo se o prefixo do sqs for muito grande, podemos estourar o limite criando as filas dos subscriptions.
+entao temos que definir o tamanho maximo do prefix no caso do sqs, e isso tem que estar encapsulado dentro do sqs.
+
+---
+acho que o delete tem que ser feito no controller. o request chega de delete e ele coloca na fila.
+
+oq pode acontecer com esse delete? oq acontece se deletar e em seguida o cliente criar?
+vamos colocar na fila o delete, e o cliente vai criar, qnd o delete rodar, o documento vai ser deletado.
+talvez o interessante seja descobrir qual eh a ultima revisao e mandar um delete daquela revisao para trás.
+ai toda a reponsabilidade está no cliente para gerar as ids corretamente.
+
+---
+qnd um subscription for deletado, em tese é isso, sendo que pode existir casos, como no caso do mongodb que outras coisas tenham que ser deletadas também.
+tipo o subscriptionTrigger, nesse caso o provider do mongo deveria ter workers e se registrar e se registrar com um nome para receber a carga.
+
+---
+o mongodb qnd ligar tem que poder se registrar em um worker. agora, quem detem essa lógica? hoje isso está sendo feito no lado de fora, deveria?
+ou deveria ficar dentro do mongodb? outra coisa, deveria ter uma fila individual?
+
+---
+de qualquer forma, acho que temos que ter um outro sistema para rodar um tipo, cleanup, isso vai rodar tudo e procurar por coisas a serem deletadas.
+tipo, algo que passou e nao devia ter passado.
+
+---
+quais workers precisamos?
+
+- document_clean
+	qnd deletar o resource, temos que deletar todos os documentos
+
+- document_revision_clean
+	deletar versoes antigas do documento
+
+- subscription_clean
+	qnd um subscription for deletado, precisamos deletar os subscriptions triggers.
+	preciamos tb deletar as filas.
+
+- subscription_create
+	qnd um subscription é criado, precisamos criar as filas.
+
+o problema que os workers vao variar de provider para provider, como podemos fazer isso? precisa ser generico.
+hooks? callbacks?
+
+
+
+
+resource
+
+subscription
+	- precisa remover os subscriptionTriggers (aws.sqs)
+	- precisa criar as filas
+	- precisa remover as filas (aws.sqs)
+	
+document
+	- precisa remover os documentos
+	- precisa deletar as versoes antigas do documento
+
+---
+no caso do delete do subscription, eu poderia ter um status. esse status eh tipo, ativo, inativo e sendo deletado.
+dai, todo dia denoite, um worker roda para pegar quem esta sendo deletado e colocar na fila.
+a questao eh, ai vou ter que ter alguem que faca isso, eleger um master, ou entaouma cron, etc...?
+
+o etcd ia cair muito bem nesse caso.
+
+---
+quem chama o document delete revisions?
+o handler no delete ou cada subscription trigger?
+
+
+---
+suportar delay nos workers, tipo, o error, poderia ser um error tipado, dai eu poderia retornar um delay=true e o tempo que deveria ter delay.
+
+---
+podemos colocar triggers de callback? tipo, toda vez que um resource for criado/deletado.
+vão existir workers que rodam nos providers também, como resolver isso?
+
+podemos ligar os workers e assinar os callbacks, dai vamos receber esses callbacks.  
+
+resource:
+	* cron
+		* check if there is orphan documents to be deleted (mongodb)
+
+	* delete
+		* trigger no delete dos documentos
+
+subscription:
+	* cron
+		* check if there is queues that needed to create sqs queues (mongodb)
+
+	* create
+		* create the queues.
+
+	* delete
+		* trigger no delete do subscriptionTrigger (mongodb)
+		* delete queues
+
+document:
+	* processed
+		* delete old revisions
+		* compact revisions
+
+a questao eh que eu gostaria de rodar algumas rotinas de limpeza para garantir que tudo esta funcionando corretamente.
+para isso, preciso gerar apenas 1x, nao sei como... 
+vamos precisar entrar na questao do cluster para isso com talvz um etcd para eleger o master, etc...
+quai tarefas deveriam ser rodadas para garantir que tudo esta funcionando:
+
+subscription:
+	* check if the resource exists
+
+document:
+	* check if the subscription exists
+
+iriamos eleger um master, esse master vai ter uma cron que ele vai executar e vai colocar as mensagens na fila.
+por ser algo mais de manutencao, rodar menos vezes ou até mesmo criar um endpoint para forçar esse comando.
+só podemos focar nessa tasks de cleanup e nao nas primeiras.
+
+
+usar o repository hook para injetar os processamentos sem ter que ficar metrificando em tudo qnt eh lugar. vai ser mais simples e elegante.
+
+---
+no mongodb talvez seja interessante fazer algo como two phase commit. (https://docs.mongodb.com/manual/tutorial/perform-two-phase-commits/)
+vamos deletar um resource. primeiro, marco ele para soft delete. em seguida, gero uma mensagem pro worker que vai entao deletar os documentos e depois deletar de vez o resource.
+a cada x tempo, um worker roda para pegar resources que estao em soft delete e ainda não foram deletados, pegando, ele gera a mensagem e repete o processamento.
+
+talvez seja interessante marcar no documento quantas vezes ja estamos fazendo isso para detectar falha.
+
+---
+preciso criar um worker generico agora e dar a trigger no cara para colocar na fila.
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+---
 # <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>

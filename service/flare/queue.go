@@ -83,7 +83,9 @@ func (q *queue) setup(ctx context.Context) error {
 }
 
 func (q *queue) setupAWSSQS(ctx context.Context) error {
-	names := []string{"subscription.partition", "subscription.spread", "subscription.delivery"}
+	names := []string{
+		"subscription.partition", "subscription.spread", "subscription.delivery", "generic",
+	}
 
 	logger := level.Info(q.logger)
 	for _, name := range names {

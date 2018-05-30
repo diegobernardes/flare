@@ -38,6 +38,7 @@ type Client struct {
 	server     *server
 	worker     *worker
 	domain     *domain
+	hook       *hook
 }
 
 // Start the service.
@@ -48,6 +49,7 @@ func (c *Client) Start() error {
 	c.worker.repository = c.repository
 	c.worker.queue = c.queue
 	c.worker.logger = c.logger
+	c.worker.hook = c.hook
 	if err := c.worker.init(); err != nil {
 		return errors.Wrap(err, "error during worker initialization")
 	}
@@ -56,6 +58,7 @@ func (c *Client) Start() error {
 	c.domain.repository = c.repository
 	c.domain.worker = c.worker
 	c.domain.cfg = c.config
+	c.domain.hook = c.hook
 	if err := c.domain.init(); err != nil {
 		return errors.Wrap(err, "error during domain initialization")
 	}
@@ -122,6 +125,8 @@ func (c *Client) init() error {
 		return errors.Wrap(err, "error during log initialization")
 	}
 
+	c.hook.init()
+
 	c.repository.cfg = c.config
 	if err := c.repository.init(); err != nil {
 		return errors.Wrap(err, "error during repository initialization")
@@ -168,6 +173,8 @@ func (c *Client) loadDefaultValues() {
 	fn("worker.subscription.spread.concurrency-output", 100)
 	fn("worker.subscription.delivery.timeout", "10s")
 	fn("worker.subscription.delivery.concurrency", 10)
+	fn("worker.generic.timeout", "180s")
+	fn("worker.generic.concurrency", 100)
 
 	fn("provider.repository", "memory")
 	fn("provider.queue", "memory")
@@ -181,6 +188,9 @@ func (c *Client) loadDefaultValues() {
 	fn("provider.aws.sqs.queue.subscription.delivery.queue", "flare-subscription-delivery")
 	fn("provider.aws.sqs.queue.subscription.delivery.ingress.timeout", "1s")
 	fn("provider.aws.sqs.queue.subscription.delivery.egress.receive-wait-time", "20s")
+	fn("provider.aws.sqs.queue.generic.queue", "flare-generic")
+	fn("provider.aws.sqs.queue.generic.ingress.timeout", "1s")
+	fn("provider.aws.sqs.queue.generic.egress.receive-wait-time", "20s")
 
 	fn("provider.mongodb.addrs", []string{"localhost:27017"})
 	fn("provider.mongodb.database", "flare")
@@ -198,6 +208,7 @@ func NewClient(options ...func(*Client)) (*Client, error) {
 		server:     &server{},
 		worker:     &worker{},
 		domain:     &domain{},
+		hook:       &hook{},
 	}
 
 	for _, option := range options {
