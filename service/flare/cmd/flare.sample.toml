@@ -101,6 +101,10 @@ enable = true
   timeout     = "10s"
   concurrency = 1000
 
+  [worker.generic]
+  timeout     = "180s"
+  concurrency = 100
+
 # --------------------------------------------------------------------------------------------------
 # - provider.repository
 #   The content location.
@@ -163,6 +167,15 @@ queue      = "memory"
       timeout = "1s"
 
       [provider.aws.sqs.queue.subscription.delivery.egress]
+      receive-wait-time = "20s"
+
+    [provider.aws.sqs.queue.generic]
+    queue = "flare-generic"
+
+      [provider.aws.sqs.queue.generic.ingress]
+      timeout = "1s"
+
+      [provider.aws.sqs.queue.generic.egress]
       receive-wait-time = "20s"
 
   # -------------------------------------------------------------------------------------------------

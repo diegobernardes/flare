@@ -32,6 +32,7 @@ type DocumentRepositorier interface {
 	FindByID(ctx context.Context, id url.URL) (*Document, error)
 	Update(context.Context, *Document) error
 	Delete(ctx context.Context, id url.URL) error
+	DeleteByResourceID(ctx context.Context, id string) error
 }
 
 // DocumentRepositoryError implements all the errrors the repository can return.

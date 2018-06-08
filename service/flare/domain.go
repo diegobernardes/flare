@@ -17,6 +17,7 @@ import (
 	subscription "github.com/diegobernardes/flare/domain/subscription/http"
 	"github.com/diegobernardes/flare/infra/config"
 	infraHTTP "github.com/diegobernardes/flare/infra/http"
+	repositoryHook "github.com/diegobernardes/flare/provider/hook/repository"
 )
 
 type domain struct {
@@ -27,6 +28,7 @@ type domain struct {
 	repository   *repository
 	worker       *worker
 	cfg          *config.Client
+	hook         *hook
 }
 
 func (d *domain) init() error {
@@ -57,6 +59,14 @@ func (d *domain) initResource() (*resource.Handler, error) {
 		return nil, errors.Wrap(err, "error during http.Writer initialization")
 	}
 
+	repository := &repositoryHook.Resource{
+		Repository: d.repository.base.Resource(),
+		Hook:       d.hook.resource,
+	}
+	if err = repository.Init(); err != nil {
+		return nil, errors.Wrap(err, "error during initialize resource hook repository")
+	}
+
 	handler, err := resource.NewHandler(
 		resource.HandlerGetResourceID(func(r *http.Request) string { return chi.URLParam(r, "id") }),
 		resource.HandlerGetResourceURI(func(id string) string {
@@ -66,7 +76,7 @@ func (d *domain) initResource() (*resource.Handler, error) {
 			infraHTTP.ParsePagination(d.cfg.GetInt("domain.pagination.default-limit")),
 		),
 		resource.HandlerWriter(writer),
-		resource.HandlerRepository(d.repository.base.Resource()),
+		resource.HandlerRepository(repository),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during resource.Handler initialization")

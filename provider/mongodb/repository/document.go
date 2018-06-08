@@ -105,6 +105,24 @@ func (d *Document) Delete(_ context.Context, id url.URL) error {
 	}, bson.M{"deleted": true})
 }
 
+// DeleteByResourceID delete all the documents from a given resource.
+func (d *Document) DeleteByResourceID(ctx context.Context, id string) error {
+	session := d.client.Session()
+	defer session.Close()
+
+	status, err := session.DB(d.database).C(d.collection).RemoveAll(bson.M{"resourceID": id})
+	if err != nil {
+		return err
+	}
+
+	if status.Matched != status.Removed {
+		return fmt.Errorf(
+			"could not delete all the documents, matched: %d, deleted: %d", status.Matched, status.Removed,
+		)
+	}
+	return nil
+}
+
 func (d *Document) marshal(document *flare.Document) documentEntity {
 	return documentEntity{
 		ID: documentIDEntity{

@@ -13,6 +13,8 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 
+	"github.com/diegobernardes/flare"
+	documentWorker "github.com/diegobernardes/flare/domain/document/worker"
 	subscriptionWorker "github.com/diegobernardes/flare/domain/subscription/worker"
 	"github.com/diegobernardes/flare/infra/config"
 	infraWorker "github.com/diegobernardes/flare/infra/worker"
@@ -23,10 +25,12 @@ type worker struct {
 	subscriptionPartition *subscriptionWorker.Partition
 	subscriptionSpread    *subscriptionWorker.Spread
 	subscriptionDelivery  *subscriptionWorker.Delivery
+	generic               *flare.Worker
 	logger                log.Logger
 	cfg                   *config.Client
 	repository            *repository
 	queue                 *queue
+	hook                  *hook
 }
 
 func (w *worker) init() error {
@@ -45,6 +49,10 @@ func (w *worker) init() error {
 
 	if err := w.initSubscriptionPartition(); err != nil {
 		return errors.Wrap(err, "error during subscription.partition worker initialization")
+	}
+
+	if err := w.initGeneric(); err != nil {
+		return errors.Wrap(err, "error during generic worker initialization")
 	}
 
 	for i := 0; i < len(w.base); i++ {
@@ -182,5 +190,62 @@ func (w *worker) initSubscriptionSpread() error {
 	client.Start()
 	w.subscriptionSpread = unitOfWork
 
+	return nil
+}
+
+func (w *worker) initGeneric() error {
+	unitOfWork := &flare.Worker{
+		Logger: w.logger,
+	}
+
+	client, err := w.processor("generic", unitOfWork)
+	if err != nil {
+		return err
+	}
+	unitOfWork.Pusher = client
+
+	if err := unitOfWork.Init(); err != nil {
+		return errors.Wrap(err, "error during init generic worker")
+	}
+
+	if err := w.initGenericRegister(unitOfWork); err != nil {
+		return errors.Wrap(err, "error during register processors into generic worker")
+	}
+
+	client.Start()
+	w.generic = unitOfWork
+
+	return nil
+}
+
+func (w *worker) initGenericRegister(unitOfWork *flare.Worker) error {
+	if err := w.initGenericRegisterDocumentClean(unitOfWork); err != nil {
+		return errors.Wrap(err, "")
+	}
+
+	return nil
+}
+
+func (w *worker) initGenericRegisterDocumentClean(unitOfWork *flare.Worker) error {
+	task := "document.cleanDocument"
+
+	documentWrap := &flare.WorkerWrap{Worker: unitOfWork, Task: task}
+	if err := documentWrap.Init(); err != nil {
+		return errors.Wrap(err, "error during document worker wrap initialization")
+	}
+
+	documentClean := &documentWorker.CleanDocument{
+		Pusher:     documentWrap,
+		Repository: w.repository.base.Document(),
+	}
+	w.hook.resource.RegisterDelete(documentClean.Enqueue)
+
+	if err := documentClean.Init(); err != nil {
+		return errors.Wrap(err, "error during document.cleanDocument initialization")
+	}
+
+	if err := unitOfWork.Register(task, documentClean); err != nil {
+		return errors.Wrap(err, "error during document.cleanDocument register")
+	}
 	return nil
 }

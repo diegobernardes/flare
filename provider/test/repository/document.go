@@ -75,6 +75,16 @@ func (d *Document) Delete(ctx context.Context, id url.URL) error {
 	return d.base.Delete(ctx, id)
 }
 
+// DeleteByResourceID mock flare.DocumentRepositorier.DeleteByResourceID.
+func (d *Document) DeleteByResourceID(ctx context.Context, resourceID string) error {
+	if d.deleteErr != nil {
+		return d.deleteErr
+	} else if d.err != nil {
+		return d.err
+	}
+	return d.base.DeleteByResourceID(ctx, resourceID)
+}
+
 func newDocument(options ...func(*Document)) *Document {
 	d := &Document{}
 
