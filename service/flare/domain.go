@@ -91,6 +91,14 @@ func (d *domain) initSubscription() (*subscription.Handler, error) {
 		return nil, errors.Wrap(err, "error during http.Writer initialization")
 	}
 
+	repository := &repositoryHook.Subscription{
+		Repository: d.repository.base.Subscription(),
+		Hook:       d.hook.subscription,
+	}
+	if err = repository.Init(); err != nil {
+		return nil, errors.Wrap(err, "error during initialize subscription hook repository")
+	}
+
 	subscriptionService, err := subscription.NewHandler(
 		subscription.HandlerParsePagination(
 			infraHTTP.ParsePagination(d.cfg.GetInt("domain.pagination.default-limit")),
@@ -106,7 +114,7 @@ func (d *domain) initSubscription() (*subscription.Handler, error) {
 			return fmt.Sprintf("/resources/%s/subscriptions/%s", resourceId, id)
 		}),
 		subscription.HandlerResourceRepository(d.repository.base.Resource()),
-		subscription.HandlerSubscriptionRepository(d.repository.base.Subscription()),
+		subscription.HandlerSubscriptionRepository(repository),
 	)
 	if err != nil {
 		return nil, errors.Wrap(err, "error during subscription.Handler initialization")

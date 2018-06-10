@@ -13,14 +13,14 @@ import (
 	"github.com/diegobernardes/flare"
 )
 
-type hook interface {
+type resourceHook interface {
 	Delete(context.Context, string) error
 }
 
 // Resource implements the hook for resource repository.
 type Resource struct {
 	Repository flare.ResourceRepositorier
-	Hook       hook
+	Hook       resourceHook
 }
 
 // Init check if everything needed is set.

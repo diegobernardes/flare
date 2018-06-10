@@ -1,3 +1,18 @@
+entao, criei um hook pro repositorio, qnd crio um subscription, eu crio a fila.
+blz, isso tudo ta funcionando, mas dps que eu criei a fila, qq eu faco?
+
+vamos ter um worker (partition, spread, delivery), o push do delivery tem que ser uma estrutura que vai receber notificacoes das filas sendo criadas e ou entao monitora por tempo e entao pega as filas.
+
+o banco nao precisa saber das filas, pq elas rodam independentes.
+
+no caso da fila in memory, tenho que ter um gerenciador de filas na frente para poder ficar cuidando de quem a fila eh e para poder criar
+e outra pessoa usar a fila.
+
+alguem chama o create queuer. a fila efetivamente é criada, dai chama o register.
+o register vai notificar a criacao dessa fila pro cluster processar também.
+em algum lugar vamos ter que ficar ouvindo a notificacao e entao subir um worker pra processar essa fila.
+e os workers que tentam enviar mensagem? temos que registar neles tb....
+
 # <img src="misc/doc/logo.png" border="0" alt="flare" height="45">
 <a href="https://travis-ci.org/diegobernardes/flare"><img src="https://img.shields.io/travis/diegobernardes/flare/master.svg?style=flat-square" alt="Build Status"></a>
 <a href="https://coveralls.io/github/diegobernardes/flare"><img src="https://img.shields.io/coveralls/diegobernardes/flare/master.svg?style=flat-square" alt="Coveralls"></a>

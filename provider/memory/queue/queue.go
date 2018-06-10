@@ -6,14 +6,42 @@ package queue
 
 import (
 	"context"
+	"os"
 	"sync"
 	"time"
+
+	"github.com/kr/pretty"
 )
+
+type queue interface {
+	Push(ctx context.Context, payload []byte) error
+	Pull(ctx context.Context, fn func(context.Context, []byte) error) error
+}
 
 // Client implements the queue interface.
 type Client struct {
-	mutex    sync.Mutex
-	messages [][]byte
+	mutex         sync.Mutex
+	messages      [][]byte
+	RegisterQueue func(queue) error
+}
+
+func (c *Client) Create(ctx context.Context, id string) error {
+	pretty.Println("chamei aqui...")
+	os.Exit(1)
+
+	if err := c.RegisterQueue(c); err != nil {
+		panic(err)
+	}
+
+	// mas e ai, oq eue faco aqui, crio uma fila e registro em algum lugar?
+	// onde posso registrar essa merda!?
+	// queue register? toda vez que criar uma fila, registrar no queue register.
+	// se o queu register registrar, enviar pro queue notifier.
+	// dai temos que ter o worker em algum lugar que vai ouvir e entao comecar a processar a fila.
+
+	// o register precisa ter uma interface para a fila, se nao vai dar merda.
+
+	return nil
 }
 
 // Push the message to queue.

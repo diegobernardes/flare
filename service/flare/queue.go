@@ -23,6 +23,10 @@ type queuer interface {
 	Pull(context.Context, func(context.Context, []byte) error) error
 }
 
+type queueCreator interface {
+	Create(ctx context.Context, id string) error
+}
+
 type queue struct {
 	cfg        *config.Client
 	awsSession *aws.Session
@@ -80,6 +84,28 @@ func (q *queue) setup(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// type queue interface {
+// 	Push(ctx context.Context, payload []byte) error
+// 	Pull(ctx context.Context, fn func(context.Context, []byte) error) error
+// }
+
+func something(queuer) error {
+	return nil
+}
+
+// a ideia desse cara eh devolver alguem que consiga criar uma fila.
+func (q *queue) creator() (queueCreator, error) {
+	switch q.cfg.GetString("provider.queue") {
+	case providerMemory:
+		var x queuer
+
+		return &memoryQueue.Client{RegisterQueue: something}, nil
+	case providerAWSSQS:
+	}
+
+	return nil, nil
 }
 
 func (q *queue) setupAWSSQS(ctx context.Context) error {

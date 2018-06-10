@@ -220,7 +220,11 @@ func (w *worker) initGeneric() error {
 
 func (w *worker) initGenericRegister(unitOfWork *flare.Worker) error {
 	if err := w.initGenericRegisterDocumentClean(unitOfWork); err != nil {
-		return errors.Wrap(err, "")
+		return errors.Wrap(err, "error during document.documentClean initialization")
+	}
+
+	if err := w.initGenericRegisterSubscriptionCreateQueue(unitOfWork); err != nil {
+		return errors.Wrap(err, "error during subscription.createQueue initialization")
 	}
 
 	return nil
@@ -246,6 +250,35 @@ func (w *worker) initGenericRegisterDocumentClean(unitOfWork *flare.Worker) erro
 
 	if err := unitOfWork.Register(task, documentClean); err != nil {
 		return errors.Wrap(err, "error during document.cleanDocument register")
+	}
+	return nil
+}
+
+func (w *worker) initGenericRegisterSubscriptionCreateQueue(unitOfWork *flare.Worker) error {
+	task := "subscription.createQueue"
+
+	documentWrap := &flare.WorkerWrap{Worker: unitOfWork, Task: task}
+	if err := documentWrap.Init(); err != nil {
+		return errors.Wrap(err, "error during document worker wrap initialization")
+	}
+
+	queueCreator, err := w.queue.creator()
+	if err != nil {
+		return errors.Wrap(err, "error during fetch queue creator")
+	}
+
+	createQueue := &subscriptionWorker.CreateQueue{
+		Pusher:  documentWrap,
+		Creator: queueCreator,
+	}
+	w.hook.subscription.RegisterCreate(createQueue.Enqueue)
+
+	if err := createQueue.Init(); err != nil {
+		return errors.Wrap(err, "error during subscription.createQueue initialization")
+	}
+
+	if err := unitOfWork.Register(task, createQueue); err != nil {
+		return errors.Wrap(err, "error during subscription.createQueue register")
 	}
 	return nil
 }

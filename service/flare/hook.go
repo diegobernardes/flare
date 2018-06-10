@@ -7,9 +7,11 @@ package flare
 import "github.com/diegobernardes/flare"
 
 type hook struct {
-	resource *flare.HookResource
+	resource     *flare.HookResource
+	subscription *flare.HookSubscription
 }
 
 func (h *hook) init() {
 	h.resource = &flare.HookResource{}
+	h.subscription = &flare.HookSubscription{}
 }
