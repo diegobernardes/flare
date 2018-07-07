@@ -11,8 +11,7 @@ VERSION_FLAGS       = -ldflags='-X "github.com/diegobernardes/flare/service/flar
                                 -X "github.com/diegobernardes/flare/service/flare.Commit=$(FLARE_COMMIT)"'
 
 run:
-	@echo $(VERSION)
-	@echo $(DATE)
+	@go run service/flare/cmd/flare.go start
 
 configure:
 	@git config pull.rebase true
@@ -23,7 +22,6 @@ coveralls:
 		-t \
 		--rm \
 		-v "$(PWD)":/go/src/$(PROJECT_PATH) \
-		-v /var/run/docker.sock:/var/run/docker.sock \
 		-w /go/src/$(PROJECT_PATH) \
 		-e "TERM=xterm-256color" \
 		-e TRAVIS_BRANCH=$(TRAVIS_BRANCH) \
