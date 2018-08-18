@@ -1,0 +1,6 @@
+{
+  "error": {
+    "detail": "custom error",
+    "title": "invalid request"
+  }
+}

@@ -1,7 +1,15 @@
-service/flare/cmd/flare
-service/flare/cmd/flare.toml
+# binary
+cmd/flare/flare
+
+# config
+cmd/flare/flare.toml
+
+# debug
 **/debug.test
 **/debug
-.vscode/tags
-profile.cov
-dist
+
+# editor
+.vscode
+
+# os
+.DS_Store

@@ -1,0 +1,6 @@
+{
+  "error": {
+    "detail": "invalid query 'not-valid'",
+    "title": "invalid request"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "id": "1",
+  "endpoint": "http://app1.com/resources/{*}",
+  "change": {
+    "format": "2006-01-02T15:04:05Z07:00",
+    "field": "updatedAt"
+  }
+}

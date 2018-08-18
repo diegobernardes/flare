@@ -1,0 +1,6 @@
+{
+  "error": {
+    "detail": "custom error",
+    "title": "error during find"
+  }
+}

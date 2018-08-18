@@ -1,0 +1,6 @@
+{
+  "error": {
+    "title": "invalid pagination",
+    "detail": "error during parameter 'limit' parse with value '-1': strconv.ParseUint: parsing \"-1\": invalid syntax"
+  }
+}

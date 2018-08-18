@@ -1,0 +1,17 @@
+[
+  {
+    "id": "123",
+    "endpoint": "http://users/{id}",
+    "change": {
+      "field": "updatedAt",
+      "format": "2006-01-02T15:04:05Z07:00"
+    }
+  },
+  {
+    "id": "456",
+    "endpoint": "http://posts/{id}",
+    "change": {
+      "field": "revision"
+    }
+  }
+]

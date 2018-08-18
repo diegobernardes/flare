@@ -1,0 +1,7 @@
+{
+  "endpoint": "http://host with space.com/users/{id}",
+  "change": {
+    "field": "updatedAt",
+    "format": "2006-01-02T15:04:05Z07:00"
+  }
+}

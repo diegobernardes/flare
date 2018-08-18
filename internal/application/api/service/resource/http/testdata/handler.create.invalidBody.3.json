@@ -1,0 +1,6 @@
+{
+  "error": {
+    "detail": "error during parse endpoint: parse http://host with space.com/users/{id}: invalid character \" \" in host name",
+    "title": "error during resource initialization"
+  }
+}
