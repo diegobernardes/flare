@@ -223,6 +223,14 @@
   revision = "70e15c650864f4fc47f5d3c82ea117285480895d"
 
 [[projects]]
+  digest = "1:da8d4acfde6ab8378152320f96377912e81200e5ac65232a22782163a710e5a4"
+  name = "github.com/tj/go-spin"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "30574f5fadef1aa5c61d4c42e936785af9f03ada"
+  version = "v1.1.0"
+
+[[projects]]
   branch = "master"
   digest = "1:f92f6956e4059f6a3efc14924d2dd58ba90da25cc57fe07ae3779ef2f5e0c5f2"
   name = "golang.org/x/crypto"
@@ -266,6 +274,7 @@
     "github.com/smartystreets/goconvey/convey",
     "github.com/spf13/cobra",
     "github.com/streadway/amqp",
+    "github.com/tj/go-spin",
     "golang.org/x/sync/errgroup",
   ]
   solver-name = "gps-cdcl"
